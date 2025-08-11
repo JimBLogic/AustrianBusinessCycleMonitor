@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+import sys
+from pathlib import Path
+
+# Ensure the project root is in sys.path for absolute imports
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+
 """
 Austrian Business Cycle Monitor Dashboard - Final Version
 
@@ -13,8 +20,6 @@ It combines the best features from all previous dashboard implementations.
 - Secure handling of credentials
 - Sample endpoints for metrics, status, and cycle analysis
 """
-
-from __future__ import annotations
 
 import json
 import logging
