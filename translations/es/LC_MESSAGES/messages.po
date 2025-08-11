@@ -1,0 +1,321 @@
+# Spanish translations for Austrian Business Cycle Monitor
+# Copyright (C) 2025 Austrian Business Cycle Monitor Project
+msgid ""
+msgstr ""
+"Project-Id-Version: Austrian Business Cycle Monitor 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-08-07 12:00+0000\n"
+"PO-Revision-Date: 2025-08-07 12:00+0000\n"
+"Last-Translator: Austrian Monitor Team\n"
+"Language: es\n"
+"Language-Team: Spanish\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# Main Dashboard Title
+msgid "Austrian Business Cycle Monitor"
+msgstr "Monitor del Ciclo Económico Austríaco"
+
+msgid "Real-Time Economic Analysis with Austrian Economics Framework"
+msgstr "Análisis Económico en Tiempo Real con Marco de Economía Austríaca"
+
+# Navigation and Controls
+msgid "Control Panel"
+msgstr "Panel de Control"
+
+msgid "Start Real-Time"
+msgstr "Iniciar Tiempo Real"
+
+msgid "Stop"
+msgstr "Detener"
+
+msgid "Refresh"
+msgstr "Actualizar"
+
+msgid "Download PDF Report"
+msgstr "Descargar Informe PDF"
+
+msgid "Language"
+msgstr "Idioma"
+
+# Connection Status
+msgid "Connected"
+msgstr "Conectado"
+
+msgid "Connecting..."
+msgstr "Conectando..."
+
+msgid "Disconnected"
+msgstr "Desconectado"
+
+msgid "Last updated"
+msgstr "Última actualización"
+
+msgid "Never"
+msgstr "Nunca"
+
+# Three Pillars Risk Monitor
+msgid "Three Pillars Risk Monitor"
+msgstr "Monitor de Riesgo de Tres Pilares"
+
+msgid "Core market risk indicators: Risk Premiums • High-Yield Bonds • Bank of America Indices"
+msgstr "Indicadores centrales de riesgo de mercado: Primas de Riesgo • Bonos de Alto Rendimiento • Índices de Bank of America"
+
+msgid "Risk Premiums"
+msgstr "Primas de Riesgo"
+
+msgid "High-Yield Bonds"
+msgstr "Bonos de Alto Rendimiento"
+
+msgid "Bank of America Indices"
+msgstr "Índices de Bank of America"
+
+msgid "Investment Grade Spreads"
+msgstr "Diferenciales de Grado de Inversión"
+
+msgid "High Yield Spreads"
+msgstr "Diferenciales de Alto Rendimiento"
+
+msgid "MOVE Index (Bond Volatility)"
+msgstr "Índice MOVE (Volatilidad de Bonos)"
+
+msgid "Austrian Cycle"
+msgstr "Ciclo Austríaco"
+
+msgid "Overall Risk"
+msgstr "Riesgo General"
+
+# Risk Levels
+msgid "LOW"
+msgstr "BAJO"
+
+msgid "MODERATE"
+msgstr "MODERADO"
+
+msgid "HIGH"
+msgstr "ALTO"
+
+msgid "CRITICAL"
+msgstr "CRÍTICO"
+
+msgid "LOADING..."
+msgstr "CARGANDO..."
+
+# Asset Prices Section
+msgid "Sound Money Assets"
+msgstr "Activos de Dinero Sólido"
+
+msgid "Bitcoin & Gold price monitoring with Austrian perspective"
+msgstr "Monitoreo de precios de Bitcoin y Oro con perspectiva Austríaca"
+
+msgid "Bitcoin Price"
+msgstr "Precio de Bitcoin"
+
+msgid "Gold Price"
+msgstr "Precio del Oro"
+
+msgid "Network Hash Rate"
+msgstr "Tasa de Hash de Red"
+
+msgid "Block Height"
+msgstr "Altura de Bloque"
+
+msgid "per oz"
+msgstr "por onza"
+
+# Austrian Economics Section
+msgid "Austrian Economics Insights"
+msgstr "Perspectivas de Economía Austríaca"
+
+msgid "Educational content and theory application"
+msgstr "Contenido educativo y aplicación de la teoría"
+
+msgid "Current Analysis"
+msgstr "Análisis Actual"
+
+msgid "Market Structure"
+msgstr "Estructura de Mercado"
+
+msgid "Time Preference"
+msgstr "Preferencia Temporal"
+
+msgid "Capital Formation"
+msgstr "Formación de Capital"
+
+# Economic Indicators
+msgid "Economic Indicators"
+msgstr "Indicadores Económicos"
+
+msgid "FRED Economic Data Integration"
+msgstr "Integración de Datos Económicos FRED"
+
+msgid "National Financial Conditions Index"
+msgstr "Índice Nacional de Condiciones Financieras"
+
+msgid "Credit Growth Rate"
+msgstr "Tasa de Crecimiento del Crédito"
+
+msgid "Yield Curve (10Y-2Y)"
+msgstr "Curva de Rendimiento (10A-2A)"
+
+msgid "Real Interest Rate"
+msgstr "Tasa de Interés Real"
+
+# Cycle Analysis
+msgid "Cycle Analysis"
+msgstr "Análisis del Ciclo"
+
+msgid "Current cycle stage with Austrian theory integration"
+msgstr "Etapa actual del ciclo con integración de teoría Austríaca"
+
+msgid "Cycle Stage"
+msgstr "Etapa del Ciclo"
+
+msgid "Malinvestment Risk"
+msgstr "Riesgo de Mala Inversión"
+
+msgid "Credit Expansion"
+msgstr "Expansión del Crédito"
+
+msgid "Capital Structure"
+msgstr "Estructura de Capital"
+
+# Blockchain Integration
+msgid "Bitcoin Blockchain Metrics"
+msgstr "Métricas de Blockchain de Bitcoin"
+
+msgid "Network statistics and Austrian monetary theory"
+msgstr "Estadísticas de red y teoría monetaria Austríaca"
+
+msgid "Difficulty Adjustment"
+msgstr "Ajuste de Dificultad"
+
+msgid "Mempool Size"
+msgstr "Tamaño de Mempool"
+
+msgid "Transaction Fees"
+msgstr "Comisiones de Transacción"
+
+msgid "Network Hashrate"
+msgstr "Tasa de Hash de Red"
+
+# Market Regime
+msgid "Market Regime Analysis"
+msgstr "Análisis de Régimen de Mercado"
+
+msgid "Austrian business cycle stage identification"
+msgstr "Identificación de etapa del ciclo económico Austríaco"
+
+msgid "Early Recovery"
+msgstr "Recuperación Temprana"
+
+msgid "Mid Boom Expansion"
+msgstr "Expansión de Auge Medio"
+
+msgid "Late Boom"
+msgstr "Auge Tardío"
+
+msgid "Crisis/Correction"
+msgstr "Crisis/Corrección"
+
+# Data Quality Indicators
+msgid "Data Quality"
+msgstr "Calidad de Datos"
+
+msgid "API Status"
+msgstr "Estado de API"
+
+msgid "Last FRED Update"
+msgstr "Última Actualización FRED"
+
+msgid "Bitcoin Network Status"
+msgstr "Estado de Red Bitcoin"
+
+msgid "Active"
+msgstr "Activo"
+
+msgid "Inactive"
+msgstr "Inactivo"
+
+msgid "Error"
+msgstr "Error"
+
+# Austrian Theory Quotes
+msgid "The boom produces impoverishment. But still more disastrous are its moral ravages."
+msgstr "El auge produce empobrecimiento. Pero aún más desastrosos son sus estragos morales."
+
+msgid "What is needed for a sound expansion of production is additional capital goods, not money or fiduciary media."
+msgstr "Lo que se necesita para una expansión sólida de la producción son bienes de capital adicionales, no dinero o medios fiduciarios."
+
+msgid "The gold standard alone makes the determination of money's purchasing power independent of governments and political parties."
+msgstr "Solo el patrón oro hace que la determinación del poder adquisitivo del dinero sea independiente de gobiernos y partidos políticos."
+
+# Time Periods
+msgid "1 Hour"
+msgstr "1 Hora"
+
+msgid "24 Hours"
+msgstr "24 Horas"
+
+msgid "7 Days"
+msgstr "7 Días"
+
+msgid "30 Days"
+msgstr "30 Días"
+
+msgid "1 Year"
+msgstr "1 Año"
+
+# Status Messages
+msgid "System Running"
+msgstr "Sistema Funcionando"
+
+msgid "Monitoring Active"
+msgstr "Monitoreo Activo"
+
+msgid "Monitoring Paused"
+msgstr "Monitoreo Pausado"
+
+msgid "Updating Data"
+msgstr "Actualizando Datos"
+
+msgid "Connection Lost"
+msgstr "Conexión Perdida"
+
+msgid "Reconnecting"
+msgstr "Reconectando"
+
+# Error Messages
+msgid "Failed to load data"
+msgstr "Error al cargar datos"
+
+msgid "API Error"
+msgstr "Error de API"
+
+msgid "Network Error"
+msgstr "Error de Red"
+
+msgid "Data unavailable"
+msgstr "Datos no disponibles"
+
+# Educational Content
+msgid "Austrian School of Economics"
+msgstr "Escuela Austríaca de Economía"
+
+msgid "Learn More"
+msgstr "Aprender Más"
+
+msgid "About This Project"
+msgstr "Acerca de Este Proyecto"
+
+msgid "Open Source Austrian Economics Monitor"
+msgstr "Monitor de Economía Austríaca de Código Abierto"
+
+# Footer
+msgid "Powered by Austrian Economics Theory"
+msgstr "Impulsado por la Teoría de Economía Austríaca"
+
+msgid "Real-time data from FRED, Mempool.space, and market sources"
+msgstr "Datos en tiempo real de FRED, Mempool.space y fuentes de mercado"

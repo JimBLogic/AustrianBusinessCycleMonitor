@@ -1,0 +1,158 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Ignore stray root-level test scripts (keep tests/ directory)
+/test_*.py
+/test*.py
+!tests/
+!tests/*.py
+
+# Ignore generated success/status markdown reports
+*_SUCCESS_REPORT.md
+*_STATUS_REPORT.md
+*_STATUS_COMPLETE.md
+*_COMPLETE.md
+*_COMPLETE_SUCCESS*.md
+*_READY.md
+*_PERFECTION_*.md
+MASTER_*_COMPLETE.txt
+COMPLETE_*_BACKUP*.md
+
+# Ignore stray root-level test scripts (keep tests/ directory)
+/test_*.py
+/test*.py
+!tests/
+!tests/*.py
+
+# Ignore generated success/status markdown reports
+*_SUCCESS_REPORT.md
+*_STATUS_REPORT.md
+*_STATUS_COMPLETE.md
+*_COMPLETE.md
+*_COMPLETE_SUCCESS*.md
+*_READY.md
+*_PERFECTION_*.md
+MASTER_*_COMPLETE.txt
+COMPLETE_*_BACKUP*.md
+
+# Runtime / generated artifacts
+data/*.json
+data/*.csv
+data/*.png
+data/*.log
+logs/*.log
+*.zip
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+*.log
+data/*.json
+data/*.csv
+data/*.png
+archive/
+ITERATION_COMPLETE_*
+SYSTEM_PERFECTION_*
+devops_optimizer.py
+final_cleanup.py
+# Tests are now included (removed broad ignore patterns)
+!tests/
+!tests/test_*.py
+
+# Allow test files (previous patterns would ignore all tests)
+!tests/
+!tests/test_*.py
+
+# API Keys and secrets
+.env
+*.key
+*.pem
+secrets.*
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Austrian Monitor specific
+data/*.csv
+data/*.json
+data/*.png
+data/*.log
+*.pdf
+archive/
+temp/
+tmp/
+# Kubernetes local override files (keep sample manifests)
+k8s/secret.yaml
+k8s/*.local.yaml
+k8s/kubeconfig*
+
+# System files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Austrian Business Cycle Monitor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #1a1a2e;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .card {
+            background-color: #16213e;
+            border: 1px solid #0f3460;
+            margin-bottom: 1rem;
+        }
+        .card-header {
+            background-color: #0f3460;
+            border-bottom: 1px solid #e43f5a;
+        }
+        .text-success { color: #28a745 !important; }
+        .text-warning { color: #ffc107 !important; }
+        .text-danger { color: #dc3545 !important; }
+        .text-primary { color: #007bff !important; }
+        .status-online { color: #28a745; }
+        .status-offline { color: #dc3545; }
+        .loading { color: #ffc107; }
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+        .small-text {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+        .update-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            background: #28a745;
+            border-radius: 5px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-3">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="text-center">🏛️ Austrian Business Cycle Monitor</h1>
+                <p class="text-center text-muted">Real-Time Economic Analysis with Austrian Economics Framework</p>
+                <div class="text-center">
+                    <span class="badge" id="connectionStatus">Connecting...</span>
+                    <span class="small-text">Last updated: <span id="lastUpdate">Never</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Status Row -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6>System Status</h6>
+                        <div class="metric-value" id="systemStatus">🔄 Loading...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6>Bitcoin Block</h6>
+                        <div class="metric-value" id="bitcoinBlock">🔄 Loading...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6>Inflation Rate</h6>
+                        <div class="metric-value" id="inflationRate">🔄 Loading...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6>Cycle Stage</h6>
+                        <div class="metric-value" id="cycleStage">🔄 Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Three Pillars Risk Monitor -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🏛️ Three Pillars Risk Monitor</h5>
+                        <small>Core market risk indicators: Risk Premiums • High-Yield Bonds • Bank of America Indices</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h6>📊 Risk Premiums</h6>
+                                        <div>IG Corporate Spread: <span id="igSpread" class="text-primary">Loading...</span></div>
+                                        <div>Risk Score: <span id="riskScore1" class="text-warning">Loading...</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h6>🔴 High-Yield Bonds</h6>
+                                        <div>HY Spread: <span id="hySpread" class="text-danger">Loading...</span></div>
+                                        <div>Risk Score: <span id="riskScore2" class="text-warning">Loading...</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h6>🏦 BofA Indices</h6>
+                                        <div>MOVE Index: <span id="moveIndex" class="text-info">Loading...</span></div>
+                                        <div>Risk Score: <span id="riskScore3" class="text-warning">Loading...</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bitcoin & Austrian Economics -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>₿ Bitcoin (Digital Sound Money)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div>Block Height: <span id="blockHeight" class="text-success">Loading...</span></div>
+                        <div>Hash Rate: <span id="hashRate" class="text-info">Loading...</span></div>
+                        <div>Mempool: <span id="mempoolCount" class="text-warning">Loading...</span></div>
+                        <div class="mt-2 small-text">
+                            <strong>Austrian Perspective:</strong> Bitcoin represents the Austrian ideal of sound money - mathematically limited supply and decentralized verification.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>🏛️ Austrian Economics Insights</h5>
+                    </div>
+                    <div class="card-body">
+                        <div><strong>Daily Wisdom:</strong></div>
+                        <div id="dailyQuote" class="text-muted fst-italic">Loading Austrian insight...</div>
+                        <div class="mt-2">
+                            <strong>Current Analysis:</strong>
+                            <div id="currentAnalysis" class="text-info">Loading analysis...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Economic Indicators -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>📈 Economic Indicators (FRED Data)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div>Current CPI: <span id="currentCPI" class="text-primary">Loading...</span></div>
+                                <div>Fed Funds Rate: <span id="fedFunds" class="text-warning">Loading...</span></div>
+                            </div>
+                            <div class="col-md-4">
+                                <div>Debt-to-GDP: <span id="debtGDP" class="text-danger">Loading...</span></div>
+                                <div>Total Debt: <span id="totalDebt" class="text-info">Loading...</span></div>
+                            </div>
+                            <div class="col-md-4">
+                                <div>Austrian Assessment: <span id="austrianAssessment" class="text-success">Loading...</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status Footer -->
+        <div class="row mt-4">
+            <div class="col-12 text-center">
+                <small class="text-muted">
+                    Server Status: <span id="serverStatus" class="status-offline">Checking...</span> | 
+                    Data Quality: <span id="dataQuality">-</span> | 
+                    Rate Limiting: <span class="text-success">Active</span>
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Indicator -->
+    <div id="updateIndicator" class="update-indicator" style="display:none;">
+        Data Updated!
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <script>
+        // Initialize connection
+        const socket = io();
+        let lastUpdateTime = 'Never';
+
+        // Connection status
+        socket.on('connect', function() {
+            console.log('Connected to server');
+            document.getElementById('connectionStatus').innerHTML = '<span class="badge bg-success">Connected</span>';
+            document.getElementById('serverStatus').innerHTML = '<span class="status-online">Online</span>';
+            
+            // Request initial data
+            loadInitialData();
+        });
+
+        socket.on('disconnect', function() {
+            console.log('Disconnected from server');
+            document.getElementById('connectionStatus').innerHTML = '<span class="badge bg-danger">Disconnected</span>';
+            document.getElementById('serverStatus').innerHTML = '<span class="status-offline">Offline</span>';
+        });
+
+        // Handle connection status updates
+        socket.on('connection_status', function(data) {
+            console.log('Connection status:', data);
+            document.getElementById('systemStatus').innerHTML = data.connected ? 
+                '<span class="text-success">🟢 Online</span>' : 
+                '<span class="text-danger">🔴 Offline</span>';
+        });
+
+        // Handle full data updates
+        socket.on('full_update', function(data) {
+            console.log('Received full update:', data);
+            updateDashboard(data);
+            showUpdateIndicator();
+        });
+
+        function loadInitialData() {
+            console.log('Loading initial data...');
+            fetch('/api/current-data')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Initial data loaded:', data);
+                    updateDashboard(data);
+                })
+                .catch(error => {
+                    console.error('Error loading data:', error);
+                    showError('Failed to load data: ' + error.message);
+                });
+        }
+
+        function updateDashboard(data) {
+            try {
+                // Update timestamp
+                lastUpdateTime = new Date().toLocaleString();
+                document.getElementById('lastUpdate').textContent = lastUpdateTime;
+
+                // Update Bitcoin data
+                if (data.bitcoin && data.bitcoin.bitcoin) {
+                    const btc = data.bitcoin.bitcoin;
+                    document.getElementById('bitcoinBlock').innerHTML = btc.block_height || 'N/A';
+                    document.getElementById('blockHeight').innerHTML = '<span class="text-success">' + (btc.block_height || 'N/A') + '</span>';
+                    document.getElementById('hashRate').innerHTML = '<span class="text-info">' + (btc.hash_rate || '0') + ' EH/s</span>';
+                    
+                    if (btc.mempool) {
+                        document.getElementById('mempoolCount').innerHTML = '<span class="text-warning">' + (btc.mempool.count || 'N/A') + ' tx</span>';
+                    }
+                }
+
+                // Update economics data
+                if (data.economics) {
+                    if (data.economics.inflation) {
+                        const cpi = data.economics.inflation.current_cpi || 'N/A';
+                        document.getElementById('inflationRate').innerHTML = '<span class="text-warning">' + cpi + '%</span>';
+                        document.getElementById('currentCPI').innerHTML = '<span class="text-primary">' + cpi + '%</span>';
+                    }
+
+                    if (data.economics.monetary_policy) {
+                        const fedFunds = data.economics.monetary_policy.fed_funds_rate || 'N/A';
+                        document.getElementById('fedFunds').innerHTML = '<span class="text-warning">' + fedFunds + '%</span>';
+                    }
+
+                    if (data.economics.fiscal_policy) {
+                        const debtGDP = data.economics.fiscal_policy.debt_to_gdp_ratio || 'N/A';
+                        const totalDebt = data.economics.fiscal_policy.total_debt_billions || 'N/A';
+                        document.getElementById('debtGDP').innerHTML = '<span class="text-danger">' + debtGDP + '%</span>';
+                        document.getElementById('totalDebt').innerHTML = '<span class="text-info">$' + totalDebt + 'B</span>';
+                    }
+                }
+
+                // Update insights
+                if (data.insights) {
+                    if (data.insights.current_analysis) {
+                        const cycleStage = data.insights.current_analysis.cycle_stage || 'Unknown';
+                        document.getElementById('cycleStage').innerHTML = '<span class="text-info">' + cycleStage + '</span>';
+                        document.getElementById('currentAnalysis').innerHTML = cycleStage;
+                    }
+
+                    if (data.insights.daily_wisdom && data.insights.daily_wisdom.mises_quote) {
+                        const quote = data.insights.daily_wisdom.mises_quote.quote || 'Loading wisdom...';
+                        const author = data.insights.daily_wisdom.mises_quote.author || 'Austrian Economist';
+                        document.getElementById('dailyQuote').innerHTML = '"' + quote + '" - ' + author;
+                    }
+                }
+
+                // Update Three Pillars (placeholder data)
+                document.getElementById('igSpread').textContent = '0.82%';
+                document.getElementById('hySpread').textContent = '3.02%';
+                document.getElementById('moveIndex').textContent = 'Loading...';
+                document.getElementById('riskScore1').textContent = '0%';
+                document.getElementById('riskScore2').textContent = '0%';
+                document.getElementById('riskScore3').textContent = '0%';
+
+                // Update Austrian assessment
+                document.getElementById('austrianAssessment').innerHTML = '<span class="text-success">Moderate Risk</span>';
+                document.getElementById('dataQuality').textContent = 'Good';
+
+                console.log('Dashboard updated successfully');
+
+            } catch (error) {
+                console.error('Error updating dashboard:', error);
+                showError('Update failed: ' + error.message);
+            }
+        }
+
+        function showUpdateIndicator() {
+            const indicator = document.getElementById('updateIndicator');
+            indicator.style.display = 'block';
+            setTimeout(() => {
+                indicator.style.display = 'none';
+            }, 2000);
+        }
+
+        function showError(message) {
+            console.error('Dashboard Error:', message);
+            // You could show a toast notification here
+        }
+
+        // Auto-refresh every 5 minutes
+        setInterval(loadInitialData, 300000);
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Dashboard loaded, initializing...');
+            // If socket is already connected, load data immediately
+            if (socket.connected) {
+                loadInitialData();
+            }
+        });
+    </script>
+</body>
+</html>

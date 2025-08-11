@@ -1,0 +1,63 @@
+# Austrian Business Cycle Monitor Configuration v2.0
+
+# Analysis periods for different indicators
+analysis_periods:
+  nfci_weeks: 16        # Number of weeks to analyze for NFCI trend
+  credit_quarters: 4    # Number of quarters to analyze for credit growth
+  yield_weeks: 8        # Number of weeks to analyze for yield trends
+  credit_risk_weeks: 12 # Number of weeks to analyze for credit risk spreads
+
+# Signal thresholds and sensitivity
+thresholds:
+  nfci_threshold: 0.0              # NFCI threshold (negative = loose conditions)
+  credit_growth_threshold: 0.0     # Credit growth threshold (negative = contraction)
+  yield_curve_inversion: 0.0       # 10-2 spread inversion threshold
+  credit_risk_threshold: 4.0       # High yield spread threshold (400 basis points)
+  
+  # Advanced thresholds
+  trend_significance: 0.3          # R-squared threshold for trend significance
+  volatility_multiplier: 1.5       # Multiplier for high volatility detection
+  confidence_minimum: 0.1          # Minimum confidence for signal activation
+
+# NetTime synchronization settings
+nettime:
+  use_nettime: true                # Enable NetTime SNTP client for accurate timestamps
+  auto_sync: true                  # Automatically sync time before analysis
+  sync_interval: 3600              # Auto-sync interval in seconds (1 hour)
+  timeout: 5.0                     # Network timeout for NTP queries
+  max_servers: 5                   # Maximum NTP servers to query per sync
+  samples_per_server: 3            # Number of samples per server
+
+# Data quality requirements
+data_quality:
+  min_data_points: 10              # Minimum data points required for analysis
+  max_missing_percentage: 20       # Maximum percentage of missing data allowed
+  outlier_threshold: 3.0           # Standard deviations for outlier detection
+
+# Output settings
+output:
+  save_charts: true
+  save_data: true
+  export_csv: true
+  chart_resolution: 300            # DPI for saved charts
+  chart_style: "seaborn-v0_8"     # Matplotlib style
+  
+# Alert settings
+alerts:
+  enabled: false
+  email_notifications: false
+  webhook_url: null
+  risk_level_threshold: "HIGH"     # Minimum risk level for alerts
+  
+# Advanced analysis options
+advanced:
+  enable_regime_detection: true     # Enable volatility regime detection
+  enable_structural_breaks: false  # Enable structural break analysis (experimental)
+  smoothing_method: "ewm"          # Options: ewm, sma, savgol
+  smoothing_alpha: 0.1             # Smoothing parameter
+
+# Austrian Theory specific settings
+austrian_theory:
+  emphasize_credit_cycles: true     # Weight credit indicators more heavily
+  malinvestment_threshold: 0.75     # Signal combination threshold for malinvestment warning
+  liquidation_phase_indicators: ["nfci", "credit", "yield_curve"]  # Key indicators for liquidation phase

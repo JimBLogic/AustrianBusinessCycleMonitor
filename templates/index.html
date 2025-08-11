@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Austrian Business Cycle Monitor</title>
+    
+    <!-- Bootstrap & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --info-color: #3498db;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .risk-low { border-left: 5px solid var(--success-color); }
+        .risk-moderate { border-left: 5px solid var(--warning-color); }
+        .risk-high { border-left: 5px solid var(--danger-color); }
+        .risk-critical { border-left: 5px solid #8e44ad; }
+        .risk-extreme { border-left: 5px solid #2c3e50; }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-connected { background-color: var(--success-color); animation: pulse 2s infinite; }
+        .status-disconnected { background-color: var(--danger-color); }
+        .status-updating { background-color: var(--warning-color); animation: pulse 1s infinite; }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .btn-gradient {
+            background: linear-gradient(135deg, var(--info-color) 0%, #2980b9 100%);
+            border: none;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+            color: white;
+        }
+        
+        .indicator-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .asset-price {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--warning-color);
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="fas fa-chart-line me-2"></i>
+                Austrian Business Cycle Monitor
+            </span>
+            <div class="d-flex align-items-center">
+                <span class="status-indicator" id="connectionStatus"></span>
+                <span id="connectionText" class="text-white me-3">Connecting...</span>
+                <span id="lastUpdated" class="text-white-50 small">Never</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Control Panel -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-cogs me-2"></i>
+                                Dashboard Controls
+                            </h5>
+                            <div>
+                                <button class="btn btn-gradient me-2" onclick="refreshAnalysis()">
+                                    <i class="fas fa-sync-alt"></i> Refresh Data
+                                </button>
+                                <button class="btn btn-success" onclick="downloadReport()">
+                                    <i class="fas fa-file-pdf"></i> Download Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Assessment -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card risk-low" id="riskCard">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            Overall Risk Assessment
+                        </h5>
+                        <div class="metric-value" id="overallRisk">LOADING...</div>
+                        <p class="text-muted mb-0" id="riskDescription">Analyzing current conditions...</p>
+                        <div class="mt-2">
+                            <span class="badge bg-secondary" id="activeSignals">0/0 signals active</span>
+                            <span class="badge bg-info ms-2" id="confidence">0% confidence</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-coins me-2"></i>
+                            Asset Prices
+                        </h5>
+                        <div class="row">
+                            <div class="col-6 text-center">
+                                <div class="metric-card">
+                                    <div class="small text-muted">Bitcoin</div>
+                                    <div class="asset-price" id="bitcoinPrice">$--,---</div>
+                                </div>
+                            </div>
+                            <div class="col-6 text-center">
+                                <div class="metric-card">
+                                    <div class="small text-muted">Gold</div>
+                                    <div class="asset-price" id="goldPrice">$--,---.--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Economic Indicators -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-area me-2"></i>
+                            Austrian Economic Indicators
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="indicator-grid" id="indicatorGrid">
+                            <!-- Indicators will be populated here -->
+                            <div class="text-center text-muted">
+                                <div class="loading"></div>
+                                <p class="mt-2">Loading economic indicators...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Austrian Analysis -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-university me-2"></i>
+                            Austrian Economic Analysis
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p id="austrianSummary" class="text-muted">Loading Austrian economic interpretation...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            Investment Guidance
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p id="investmentGuidance" class="text-muted">Loading investment guidance...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historical Context -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history me-2"></i>
+                            Historical Context
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p id="historicalContext" class="text-muted">Loading historical context...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap & SocketIO -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    
+    <script>
+        // Initialize SocketIO
+        const socket = io();
+        
+        // DOM elements
+        const connectionStatus = document.getElementById('connectionStatus');
+        const connectionText = document.getElementById('connectionText');
+        const lastUpdated = document.getElementById('lastUpdated');
+        
+        // Connection status
+        socket.on('connect', function() {
+            connectionStatus.className = 'status-indicator status-connected';
+            connectionText.textContent = 'Connected';
+            console.log('Connected to server');
+        });
+        
+        socket.on('disconnect', function() {
+            connectionStatus.className = 'status-indicator status-disconnected';
+            connectionText.textContent = 'Disconnected';
+            console.log('Disconnected from server');
+        });
+        
+        // Analysis updates
+        socket.on('analysis_update', function(data) {
+            console.log('Analysis update received:', data);
+            updateDashboard(data);
+            lastUpdated.textContent = new Date().toLocaleTimeString();
+        });
+        
+        socket.on('update_status', function(data) {
+            if (data.success) {
+                showNotification('Analysis updated successfully', 'success');
+            } else {
+                showNotification('Update failed: ' + data.error, 'error');
+            }
+        });
+        
+        // Update dashboard with analysis data
+        function updateDashboard(analysis) {
+            // Risk assessment
+            updateRiskAssessment(analysis);
+            
+            // Asset prices
+            updateAssetPrices(analysis.asset_data);
+            
+            // Indicators
+            updateIndicators(analysis.indicators);
+            
+            // Austrian analysis
+            updateAustrianAnalysis(analysis);
+        }
+        
+        function updateRiskAssessment(analysis) {
+            const riskCard = document.getElementById('riskCard');
+            const overallRisk = document.getElementById('overallRisk');
+            const activeSignals = document.getElementById('activeSignals');
+            const confidence = document.getElementById('confidence');
+            
+            overallRisk.textContent = analysis.overall_risk || 'UNKNOWN';
+            activeSignals.textContent = `${analysis.active_signals || 0}/${analysis.total_signals || 0} signals active`;
+            confidence.textContent = `${Math.round((analysis.confidence || 0) * 100)}% confidence`;
+            
+            // Update risk styling
+            riskCard.className = 'card risk-' + (analysis.overall_risk || 'low').toLowerCase();
+        }
+        
+        function updateAssetPrices(assetData) {
+            if (assetData) {
+                if (assetData.bitcoin) {
+                    document.getElementById('bitcoinPrice').textContent = 
+                        '$' + (assetData.bitcoin.price || 0).toLocaleString();
+                }
+                if (assetData.gold) {
+                    document.getElementById('goldPrice').textContent = 
+                        '$' + (assetData.gold.price || 0).toLocaleString(undefined, {minimumFractionDigits: 2});
+                }
+            }
+        }
+        
+        function updateIndicators(indicators) {
+            const indicatorGrid = document.getElementById('indicatorGrid');
+            
+            if (!indicators || Object.keys(indicators).length === 0) {
+                indicatorGrid.innerHTML = '<div class="text-center text-muted">No indicator data available</div>';
+                return;
+            }
+            
+            let html = '';
+            for (const [key, indicator] of Object.entries(indicators)) {
+                const statusClass = indicator.signal_active ? 'danger' : 'success';
+                const statusText = indicator.signal_active ? 'ACTIVE' : 'INACTIVE';
+                const statusIcon = indicator.signal_active ? 'exclamation-triangle' : 'check-circle';
+                
+                html += `
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-${statusIcon} text-${statusClass} me-2"></i>
+                                ${indicator.name}
+                            </h6>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-${statusClass}">${statusText}</span>
+                                <span class="text-muted">${Math.round(indicator.confidence * 100)}%</span>
+                            </div>
+                            <p class="text-muted small mb-2">${indicator.description}</p>
+                            <p class="small">${indicator.austrian_interpretation}</p>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            indicatorGrid.innerHTML = html;
+        }
+        
+        function updateAustrianAnalysis(analysis) {
+            document.getElementById('austrianSummary').textContent = 
+                analysis.austrian_summary || 'No Austrian analysis available';
+            document.getElementById('investmentGuidance').textContent = 
+                analysis.investment_guidance || 'No investment guidance available';
+            document.getElementById('historicalContext').textContent = 
+                analysis.historical_context || 'No historical context available';
+        }
+        
+        // Manual refresh
+        function refreshAnalysis() {
+            connectionStatus.className = 'status-indicator status-updating';
+            connectionText.textContent = 'Updating...';
+            socket.emit('request_update');
+        }
+        
+        // Download report
+        function downloadReport() {
+            window.open('/api/download-report', '_blank');
+        }
+        
+        // Notifications
+        function showNotification(message, type) {
+            // Simple alert for now - could be enhanced with toast notifications
+            if (type === 'error') {
+                alert('Error: ' + message);
+            } else {
+                console.log('Success: ' + message);
+            }
+        }
+        
+        // Load initial data
+        fetch('/api/analysis')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.log('No initial data available');
+                } else {
+                    updateDashboard(data);
+                    lastUpdated.textContent = new Date().toLocaleTimeString();
+                }
+            })
+            .catch(error => {
+                console.error('Failed to load initial data:', error);
+            });
+    </script>
+</body>
+</html>

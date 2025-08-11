@@ -1,0 +1,41 @@
+# English translations for Austrian Business Cycle Monitor
+# Copyright (C) 2025 Austrian Business Cycle Monitor Project
+msgid ""
+msgstr ""
+"Project-Id-Version: Austrian Business Cycle Monitor 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-08-07 12:00+0000\n"
+"PO-Revision-Date: 2025-08-07 12:00+0000\n"
+"Last-Translator: Austrian Monitor Team\n"
+"Language: en\n"
+"Language-Team: English\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# Main Dashboard Title
+msgid "Austrian Business Cycle Monitor"
+msgstr "Austrian Business Cycle Monitor"
+
+msgid "Real-Time Economic Analysis with Austrian Economics Framework"
+msgstr "Real-Time Economic Analysis with Austrian Economics Framework"
+
+# Navigation and Controls
+msgid "Control Panel"
+msgstr "Control Panel"
+
+msgid "Start Real-Time"
+msgstr "Start Real-Time"
+
+msgid "Stop"
+msgstr "Stop"
+
+msgid "Refresh"
+msgstr "Refresh"
+
+msgid "Download PDF Report"
+msgstr "Download PDF Report"
+
+msgid "Language"
+msgstr "Language"

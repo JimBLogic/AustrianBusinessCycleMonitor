@@ -1,0 +1,85 @@
+======================================================================
+AUSTRIAN BUSINESS CYCLE MONITOR REPORT
+======================================================================
+Generated: 2025-08-05 18:27:18 UTC
+Analysis Period: 16 weeks NFCI, 4 quarters Credit
+
+OVERALL RISK ASSESSMENT:
+-------------------------
+Risk Level: 🔍 MODERATE
+Risk Score: 0.329 (0.0 = Low, 1.0 = Critical)
+
+DETAILED INDICATOR ANALYSIS:
+------------------------------
+NFCI: 🔴 ACTIVE
+  Value: -0.5695
+  Confidence: ★★★★ (0.995)
+  Trend: -0.012280
+  Analysis: Financial conditions loose, slope=-0.012280, momentum=14.11%, R²=0.994
+
+Credit Growth: 🟢 INACTIVE
+  Value: 0.0200
+  Confidence: ★★★★ (0.928)
+  Trend: -0.005151
+  Analysis: Credit growth +2.0% (YoY), trend slope=-0.0052, Growing
+
+2Y Yield: 🟢 INACTIVE
+  Value: 3.6900
+  Confidence: ★ (0.302)
+  Trend: -0.013571
+  Analysis: Yield 3.69%, momentum=-5.63%, R²=0.167, stable/rising
+
+10-2 Spread: 🟢 INACTIVE
+  Value: 0.5300
+  Confidence: ★★★★ (0.800)
+  Trend: +0.000476
+  Analysis: Spread +0.53%, persistence=0.0%, normal
+
+SIGNAL SUMMARY:
+---------------
+Active Signals: 1/4
+Interpretation: � SINGLE SIGNAL - Monitor situation closely
+
+AUSTRIAN BUSINESS CYCLE INTERPRETATION:
+--------------------------------------
+✅ STABLE CONDITIONS: Current indicators do not show the typical Austrian business 
+cycle peak pattern. However, Austrian economists emphasize that:
+
+• Cycles are inevitable in systems with central banking and fiat currency
+• Artificial credit expansion will eventually lead to corrections
+• Continuous monitoring is essential as conditions can change rapidly
+
+Maintain awareness of cycle dynamics while participating in productive economic activity.
+
+BITCOIN & GOLD ANALYSIS (AUSTRIAN PERSPECTIVE):
+---------------------------------------------
+₿ Bitcoin: $113,124.00 (Source: CoinGecko)
+🥇 Gold: $3,438.60/oz (Source: Yahoo_Gold)
+
+₿ Bitcoin Signal: ⚡ HIGH_VOLATILITY
+  Increased volatility may indicate monetary uncertainty
+  Confidence: 95.0%
+
+🥇 Gold Signal: 🔥 HIGH_DEMAND
+  High gold prices suggest monetary debasement concerns
+  Confidence: 70.0%
+
+AUSTRIAN ASSET STRATEGY:
+-----------------------
+Assessment: CAUTION - Some cycle signals active, monitor asset behavior
+Recommendations:
+  • Maintain diversified asset allocation
+  • Watch for increasing correlations during stress
+  • Gradual shift toward hard assets if signals intensify
+Risk Factors:
+  ⚠️ Bitcoin volatility suggests monetary uncertainty
+  ⚠️ Gold strength indicates fiat currency concerns
+
+DATA SOURCES & METHODOLOGY:
+----------------------------
+• NFCI: Chicago Fed National Financial Conditions Index
+• Credit: Total Credit to Private Non-Financial Sector (BIS/FRED)
+• Yields: U.S. Treasury Constant Maturity Rates (Federal Reserve)
+• Analysis: Linear regression trends, momentum, statistical significance
+
+======================================================================
