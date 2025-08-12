@@ -49,6 +49,7 @@ try:
     import fredapi
     FRED_AVAILABLE = True
 except ImportError:
+    fredapi = None  # <-- Solución: define fredapi como None si falla el import
     FRED_AVAILABLE = False
     logging.warning("fredapi not available; using fallback data")
 
@@ -90,12 +91,13 @@ class AustrianCycleMonitor:
     - Capital consumption indicators
     """
     
-    def __init__(self) -> None:
+    def __init__(self, api_key=None) -> None:
         """Initialize the Austrian Cycle Monitor with default settings."""
         self.last_analysis_time: Optional[datetime] = None
         self.last_market_data: Dict[str, Any] = {}
         self.system_status: str = "operational"
         self.austrian_score: float = 5.0  # Neutral position to start
+        self.api_key = api_key
         
         # Initialize cache for storing temporary data
         self.cache: Dict[str, Any] = {}
@@ -104,7 +106,7 @@ class AustrianCycleMonitor:
         self.fred = None
         self.use_real_data = False
         fred_api_key = os.environ.get('FRED_API_KEY')
-        if FRED_AVAILABLE and fred_api_key:
+        if FRED_AVAILABLE and fred_api_key and fredapi is not None:
             try:
                 self.fred = fredapi.Fred(api_key=fred_api_key)
                 self.use_real_data = True

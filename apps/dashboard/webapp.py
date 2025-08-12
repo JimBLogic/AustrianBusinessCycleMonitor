@@ -109,6 +109,11 @@ class AustrianDashboard:
         self._register_routes()
         self._register_error_handlers()
 
+        # Load FRED API key from environment
+        self.fred_api_key = os.getenv("FRED_API_KEY")
+        if not self.fred_api_key:
+            print("⚠️  FRED_API_KEY not set, using demo mode")
+
     # --------------------------------------------------------------------- #
     # Internal helpers
     # --------------------------------------------------------------------- #
@@ -310,9 +315,15 @@ class AustrianDashboard:
     # --------------------------------------------------------------------- #
     # Public helpers
     # --------------------------------------------------------------------- #
-    def run(self) -> None:
-        """Run the dashboard application"""
-        self.socketio.run(self.app, host=self.host, port=self.port, debug=self.debug)
+    def run(self, host=None, port=None, debug=False):
+        """Run the dashboard Flask app with debug support."""
+        host = host or self.host
+        port = port or self.port
+        # If using Flask-SocketIO, use socketio.run; else, use app.run
+        if hasattr(self, "socketio"):
+            self.socketio.run(self.app, host=host, port=port, debug=debug)
+        else:
+            self.app.run(host=host, port=port, debug=debug)
 
 
 def create_app() -> Flask:
