@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 from __future__ import annotations
 import sys
 from pathlib import Path
@@ -34,7 +34,10 @@ from flask_socketio import SocketIO
 
 # Core domain imports
 from apps.core.austrian_monitor import AustrianCycleMonitor
-from apps.utils.asset_tracker import AssetTracker
+from apps.utils.live_asset_tracker import AssetTracker
+from apps.utils.blockchain_tracker import get_blockchain_tracker
+from apps.utils.stock_tracker import get_stock_tracker
+from apps.utils.optimized_data_fetcher import register_optimized_routes
 
 # Configure logging for dashboard
 logging.basicConfig(
@@ -49,8 +52,8 @@ DASHBOARD_HOST = os.environ.get("DASHBOARD_HOST", "127.0.0.1")
 
 PROJECT_VERSION = "0.1.1"
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-_TEMPLATES = _REPO_ROOT / "templates"
-_STATIC = _REPO_ROOT / "static"
+_TEMPLATES = _REPO_ROOT / "packages" / "frontend" / "dist"
+_STATIC = _REPO_ROOT / "packages" / "frontend" / "dist" / "assets"
 _TRANSLATIONS_JSON = _REPO_ROOT / "translations" / "translations.json"
 
 
@@ -93,6 +96,8 @@ class AustrianDashboard:
         # Domain services
         self.monitor = AustrianCycleMonitor()
         self.asset_tracker = AssetTracker()
+        self.blockchain_tracker = get_blockchain_tracker()
+        self.stock_tracker = get_stock_tracker()
 
         # Flask / SocketIO setup
         self.app = Flask(
@@ -108,11 +113,16 @@ class AustrianDashboard:
         self._register_before_request()
         self._register_routes()
         self._register_error_handlers()
+        
+        # Register optimized unified data fetching routes
+        logger.info("Registering optimized data fetching routes...")
+        register_optimized_routes(self.app)
+        logger.info("✅ Optimized routes registered: /api/dashboard-snapshot, /api/cache/stats")
 
         # Load FRED API key from environment
         self.fred_api_key = os.getenv("FRED_API_KEY")
         if not self.fred_api_key:
-            print("⚠️  FRED_API_KEY not set, using demo mode")
+              print("WARNING: FRED_API_KEY not set, using demo mode")
 
     # --------------------------------------------------------------------- #
     # Internal helpers
@@ -189,19 +199,10 @@ class AustrianDashboard:
         @app.route("/")
         def index():
             """
-            Render the main dashboard page.
+            Serve the React dashboard (index.html from frontend build).
             """
             try:
-                analysis = self.monitor.run_analysis()
-                pillars = self.monitor.get_three_pillars_data()
-                market = self.monitor.get_market_data()
-                return render_template(
-                    "dashboard.html",
-                    analysis=analysis,
-                    pillars=pillars,
-                    market=market,
-                    title=self.t("dashboard_title"),
-                )
+                return render_template("index.html")
             except Exception as e:
                 logger.error(f"Dashboard rendering error: {e}")
                 return "<h1>Dashboard Error</h1><p>Could not load dashboard data.</p>", 500
@@ -263,6 +264,39 @@ class AustrianDashboard:
                 "timestamp": self._timestamp(),
             })
 
+        @app.route("/api/blockchain-stats")
+        def api_blockchain_stats():
+            """Real-time blockchain statistics endpoint"""
+            try:
+                stats = self.blockchain_tracker.get_blockchain_stats()
+                self.metrics["requests_2xx"] += 1
+                return jsonify(stats)
+            except Exception as e:
+                logger.error(f"Blockchain stats API error: {e}")
+                return jsonify({"error": "Could not fetch blockchain stats"}), 500
+
+        @app.route("/api/difficulty-adjustment")
+        def api_difficulty_adjustment():
+            """Difficulty adjustment info endpoint"""
+            try:
+                info = self.blockchain_tracker.get_difficulty_adjustment_info()
+                self.metrics["requests_2xx"] += 1
+                return jsonify(info)
+            except Exception as e:
+                logger.error(f"Difficulty adjustment API error: {e}")
+                return jsonify({"error": "Could not fetch difficulty info"}), 500
+
+        @app.route("/api/stock-markets")
+        def api_stock_markets():
+            """Stock market indices with Austrian analysis endpoint"""
+            try:
+                stocks = self.stock_tracker.get_stock_markets()
+                self.metrics["requests_2xx"] += 1
+                return jsonify(stocks)
+            except Exception as e:
+                logger.error(f"Stock markets API error: {e}")
+                return jsonify({"error": "Could not fetch stock market data"}), 500
+
         @app.route("/api/start-monitoring", methods=["POST"])
         def api_start():
             self.monitor_active = True
@@ -296,6 +330,143 @@ class AustrianDashboard:
                 logger.error(f"API cycle analysis error: {e}")
                 return jsonify({"error": "Could not fetch cycle analysis"}), 500
 
+        @app.route("/api/austrian-insights")
+        def api_austrian_insights():
+            """
+            Get rich, context-aware Austrian economic insights for current market conditions.
+            Integrates wisdom from classical and modern Austrian economists.
+            """
+            try:
+                from apps.core.austrian_insights import get_insights_engine, CyclePhase, RiskLevel
+                
+                # Get current market data
+                market = self.monitor.get_market_data()
+                analysis = self.monitor.analyze()
+                
+                # Initialize insights engine
+                engine = get_insights_engine()
+                
+                # Determine cycle phase
+                cycle_phase_map = {
+                    "early-expansion": CyclePhase.EARLY_EXPANSION,
+                    "mid-expansion": CyclePhase.MID_EXPANSION,
+                    "late-boom": CyclePhase.LATE_BOOM,
+                    "crisis": CyclePhase.CRISIS,
+                    "liquidation": CyclePhase.LIQUIDATION,
+                    "recovery": CyclePhase.RECOVERY
+                }
+                cycle_phase = cycle_phase_map.get(analysis.cycle_phase, CyclePhase.MID_EXPANSION)
+                
+                # Determine risk level
+                risk = analysis.overall_risk
+                if risk < 3:
+                    risk_level = RiskLevel.LOW
+                elif risk < 5:
+                    risk_level = RiskLevel.MODERATE
+                elif risk < 7:
+                    risk_level = RiskLevel.ELEVATED
+                elif risk < 9:
+                    risk_level = RiskLevel.HIGH
+                else:
+                    risk_level = RiskLevel.EXTREME
+                
+                # Get insights for different categories
+                bitcoin_insights = engine.get_bitcoin_insights(
+                    market['bitcoin']['price'],
+                    cycle_phase,
+                    risk_level
+                )
+                
+                gold_silver_insights = engine.get_gold_silver_insights(
+                    market['commodities']['gold'],
+                    market['commodities']['silver'],
+                    market['commodities']['gold'] / market['commodities']['silver'],
+                    risk_level
+                )
+                
+                interest_rate_insights = engine.get_interest_rate_insights(
+                    market['interest_rates']['fed_funds'],
+                    market['interest_rates']['natural_rate_estimate'],
+                    market['interest_rates']['natural_rate_estimate'] - market['interest_rates']['fed_funds'],
+                    cycle_phase
+                )
+                
+                # Get stock market data
+                stocks = None
+                try:
+                    stocks = self.stock_tracker.get_stock_markets()
+                    stock_insights = engine.get_stock_market_insights(
+                        stocks['indices']['sp500'],
+                        stocks['indices']['nasdaq'],
+                        stocks['volatility']['vix'],
+                        cycle_phase,
+                        stocks['austrian_analysis'].get('boom_psychology', False)
+                    )
+                except:
+                    stock_insights = []
+                
+                inflation_insights = engine.get_inflation_insights(
+                    market['economic_indicators']['cpi'],
+                    market['economic_indicators']['ppi'],
+                    7.2,  # M2 growth estimate
+                    risk_level
+                )
+                
+                commodity_insights = engine.get_commodity_insights(
+                    market['commodities']['oil'],
+                    market['commodities']['copper'],
+                    cycle_phase
+                )
+                
+                # Get comprehensive cycle narrative
+                cycle_narrative = engine.get_cycle_narrative(
+                    cycle_phase,
+                    risk,
+                    {
+                        'vix': stocks['volatility']['vix'] if stocks else 17.0,
+                        'spread': market['interest_rates']['natural_rate_estimate'] - market['interest_rates']['fed_funds'],
+                        'm2_growth': 7.2,
+                        'credit_gdp': 330.5,
+                        'fed_funds': market['interest_rates']['fed_funds'],
+                        'yield_curve_inverted': market['yield_curve']['inverted']
+                    }
+                )
+                
+                # Serialize insights
+                def serialize_insight(insight):
+                    return {
+                        'title': insight.title,
+                        'content': insight.content,
+                        'economist': insight.economist,
+                        'source': insight.source,
+                        'relevance_score': insight.relevance_score,
+                        'tags': insight.tags
+                    }
+                
+                self.metrics["requests_2xx"] += 1
+                return jsonify({
+                    "timestamp": datetime.now(UTC).isoformat(),
+                    "cycle_phase": analysis.cycle_phase,
+                    "overall_risk": risk,
+                    "risk_level": risk_level.value,
+                    "cycle_narrative": cycle_narrative,
+                    "insights": {
+                        "bitcoin": [serialize_insight(i) for i in bitcoin_insights],
+                        "gold_silver": [serialize_insight(i) for i in gold_silver_insights],
+                        "interest_rates": [serialize_insight(i) for i in interest_rate_insights],
+                        "stock_markets": [serialize_insight(i) for i in stock_insights],
+                        "inflation": [serialize_insight(i) for i in inflation_insights],
+                        "commodities": [serialize_insight(i) for i in commodity_insights]
+                    },
+                    "economists_referenced": {
+                        "classical": list(engine.classical_economists.keys()),
+                        "modern": list(engine.modern_voices.keys())
+                    }
+                })
+            except Exception as e:
+                logger.error(f"Austrian insights API error: {e}", exc_info=True)
+                return jsonify({"error": "Could not generate Austrian insights"}), 500
+
         @app.route("/metrics")
         def metrics():
             """Prometheus-compatible metrics endpoint"""
@@ -321,7 +492,7 @@ class AustrianDashboard:
         port = port or self.port
         # If using Flask-SocketIO, use socketio.run; else, use app.run
         if hasattr(self, "socketio"):
-            self.socketio.run(self.app, host=host, port=port, debug=debug)
+            self.socketio.run(self.app, host=host, port=port, debug=debug, allow_unsafe_werkzeug=True)
         else:
             self.app.run(host=host, port=port, debug=debug)
 

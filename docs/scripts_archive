@@ -1,0 +1,145 @@
+# Austrian Business Cycle Monitor - Project Cleanup Script
+# Created: October 22, 2025
+# Purpose: Remove redundant files while keeping essential application code
+
+Write-Host "`n🏛️  Austrian Business Cycle Monitor - Project Cleanup" -ForegroundColor Cyan
+Write-Host "═══════════════════════════════════════════════════════`n" -ForegroundColor DarkGray
+
+# Navigate to project root
+$projectRoot = "C:\Users\JimBLogic\AustrianBusinessCycleMonitor-1"
+Set-Location $projectRoot
+
+# Create backup before deletion
+$timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+$backupDir = ".\cleanup_backup_$timestamp"
+Write-Host "📦 Creating backup directory: $backupDir" -ForegroundColor Yellow
+New-Item -ItemType Directory -Path $backupDir | Out-Null
+
+# Files to delete (root level)
+$filesToDelete = @(
+    "SESSION_1_SUMMARY.md",
+    "CONSOLIDATED_HISTORY.md",
+    "CHANGELOG.md",
+    "PHASE_1_COMPLETE.md",
+    "PHASE_2_PROGRESS.md",
+    "MODERNIZATION_PLAN.md",
+    "MODERNIZATION_SUMMARY.md",
+    "DASHBOARD_FEATURES_RESTORED.md",
+    "DASHBOARD_REFINEMENTS.md",
+    "DASHBOARD_QUICKSTART.md",
+    "CLEANUP_TODO.md",
+    "BEFORE_AFTER_COMPARISON.md",
+    "API_INTEGRATION_SUMMARY.md",
+    "API_SETUP_GUIDE.md",
+    "setup-apis.ps1",
+    "QUICK_START.md",
+    "QUICK_REFERENCE.md",
+    "START_HERE.md",
+    "ENHANCED_DASHBOARD_FEATURES.md",
+    "import logging.py",
+    "import os.py",
+    "import sys.py",
+    "import unittest.py",
+    "main_application.py",
+    "prepare_github_repo.py",
+    "verify_dashboard.py",
+    "check_dashboard.py",
+    "test_flask.py",
+    "compile_translations.py",
+    "start_simple.ps1",
+    "babel.cfg",
+    ".env.ultimate"
+)
+
+Write-Host "`n🗑️  Deleting redundant root files..." -ForegroundColor Magenta
+$fileCount = 0
+foreach ($file in $filesToDelete) {
+    if (Test-Path $file) {
+        Copy-Item $file $backupDir -Force
+        Remove-Item $file -Force
+        Write-Host "  ✅ Deleted: $file" -ForegroundColor Green
+        $fileCount++
+    }
+}
+Write-Host "  Total files deleted: $fileCount" -ForegroundColor Cyan
+
+# Directories to delete
+$dirsToDelete = @(
+    ".github\TOLEARNFROMANDIMPROVEMYCODE",
+    "k8s",
+    "src",
+    "launchers",
+    "abcm",
+    "translations",
+    "templates",
+    "static"
+)
+
+Write-Host "`n🗑️  Deleting obsolete directories..." -ForegroundColor Magenta
+$dirCount = 0
+foreach ($dir in $dirsToDelete) {
+    if (Test-Path $dir) {
+        Write-Host "  📁 Backing up: $dir" -ForegroundColor Yellow
+        Copy-Item $dir $backupDir -Recurse -Force
+        Remove-Item $dir -Recurse -Force
+        Write-Host "  ✅ Deleted directory: $dir" -ForegroundColor Green
+        $dirCount++
+    }
+}
+Write-Host "  Total directories deleted: $dirCount" -ForegroundColor Cyan
+
+# Clean up specific files in subdirectories
+Write-Host "`n🗑️  Cleaning up backup/legacy files in subdirectories..." -ForegroundColor Magenta
+$subFileCount = 0
+
+$subFilesToDelete = @{
+    "apps\utils\asset_tracker.py" = "Old asset tracker (replaced by live version)"
+    "apps\utils\asset_tracker_backup.py" = "Backup file"
+    "apps\utils\asset_tracker_clean.py" = "Backup file"
+    "apps\dashboard\webapp_backups.py" = "Backup file"
+    "apps\core\import os.py" = "Leftover import file"
+    "apps\core\import sys.py" = "Leftover import file"
+    "docs\AUSTRIAN_INTEGRATION_IMPLEMENTATION.md" = "Duplicate content"
+    "docs\austrian_theory.md" = "Duplicate content"
+    "docs\indicator_guide.md" = "Covered in quick reference"
+    "docs\NETTIME_GUIDE.md" = "Not used"
+    "docs\REPO_MANIFEST.md" = "Auto-generated"
+    "docs\manifest.json" = "Auto-generated"
+    "docs\README.md" = "Redundant"
+    "scripts\README.md" = "Just placeholder"
+    "scripts\script_template.py" = "Not used"
+    "logs\deployment_20250807_151618.json" = "Old log"
+    "logs\system_test_20250807_150657.json" = "Old log"
+    "logs\README.md" = "Just placeholder"
+    "data\austrian_analysis_comprehensive_2025-08-05_18-27-18.md" = "Old analysis"
+    "data\dashboard.html" = "Old dashboard"
+    "data\latest_report.txt" = "Old report"
+}
+
+foreach ($file in $subFilesToDelete.Keys) {
+    if (Test-Path $file) {
+        $reason = $subFilesToDelete[$file]
+        Copy-Item $file $backupDir -Force -ErrorAction SilentlyContinue
+        Remove-Item $file -Force -ErrorAction SilentlyContinue
+        Write-Host "  ✅ Deleted: $file ($reason)" -ForegroundColor Green
+        $subFileCount++
+    }
+}
+Write-Host "  Total subdirectory files deleted: $subFileCount" -ForegroundColor Cyan
+
+# Summary
+Write-Host "`n═══════════════════════════════════════════════════════" -ForegroundColor DarkGray
+Write-Host "🎉 Cleanup Complete!" -ForegroundColor Green
+Write-Host "`n📊 Summary:" -ForegroundColor Cyan
+Write-Host "  - Root files deleted: $fileCount" -ForegroundColor White
+Write-Host "  - Directories deleted: $dirCount" -ForegroundColor White
+Write-Host "  - Subdirectory files deleted: $subFileCount" -ForegroundColor White
+Write-Host "  - Total items removed: $($fileCount + $dirCount + $subFileCount)" -ForegroundColor White
+Write-Host "`n📦 Backup saved to: $backupDir" -ForegroundColor Yellow
+Write-Host "`n⚠️  IMPORTANT: Test the application!" -ForegroundColor Red
+Write-Host "  1. cd apps\dashboard" -ForegroundColor Gray
+Write-Host "  2. python webapp.py" -ForegroundColor Gray
+Write-Host "  3. Open http://127.0.0.1:5002" -ForegroundColor Gray
+Write-Host "`n  If issues arise, restore from backup folder." -ForegroundColor Yellow
+Write-Host "`n✨ Your project is now lean and efficient!" -ForegroundColor Green
+Write-Host "═══════════════════════════════════════════════════════`n" -ForegroundColor DarkGray

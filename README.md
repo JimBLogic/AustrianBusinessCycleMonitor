@@ -2,19 +2,60 @@
 
 A comprehensive real-time economic monitoring system built on Austrian School economic theory principles.
 
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Flask](https://img.shields.io/badge/flask-3.0+-green.svg)](https://flask.palletsprojects.com/)
-[![Production Ready](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)]()
+[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/fastapi-0.109+-green.svg)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/react-19-blue.svg)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/typescript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+[![Production Ready](https://img.shields.io/badge/status-modernizing-yellow.svg)]()
 [![Austrian Economics](https://img.shields.io/badge/economics-Austrian%20School-gold.svg)](https://mises.org)
 [![Real-time](https://img.shields.io/badge/data-real--time-red.svg)](https://fred.stlouisfed.org/)
 
+## ✨ What's New - Modernization in Progress!
+
+**We're transforming this project into a modern, production-ready monorepo!**
+
+- ✅ **Phase 1 Complete**: FastAPI backend with JWT auth
+- 🚧 **Phase 2**: React + TypeScript frontend (coming soon)
+- 📚 **Better Docs**: Comprehensive guides and API documentation
+- 🏗️ **Monorepo**: Organized, scalable architecture
+
+**👉 [See Modernization Plan](./MODERNIZATION_PLAN.md) | [Quick Start Guide](./QUICK_START.md)**
+
 ## 🚀 Quick Start
 
-### Prerequisites
-- Python 3.8 or higher
-- Virtual environment (recommended)
+> **New to the project?** Check out our [Quick Start Guide](./QUICK_START.md) for detailed setup instructions!
 
-### Installation
+### Prerequisites
+- **Python 3.11+** and Poetry
+- **Node.js 18+** and npm
+- (Optional) PostgreSQL and Redis
+
+### Modern Installation (Recommended)
+
+1. **Install all dependencies**
+   ```bash
+   npm run install:all
+   ```
+
+2. **Configure backend**
+   ```bash
+   cd packages/backend
+   cp .env.example .env
+   # Edit .env with your SECRET_KEY and other settings
+   ```
+
+3. **Start the backend**
+   ```bash
+   npm run start:backend
+   # Or: cd packages/backend && poetry run uvicorn app.main:app --reload
+   ```
+
+4. **Access the API**
+   - Swagger UI: http://localhost:8000/docs
+   - Health Check: http://localhost:8000/api/health
+   - API Status: http://localhost:8000/api/status
+
+### Legacy Installation (Original Method)
 
 1. **Clone the repository**
    ```bash

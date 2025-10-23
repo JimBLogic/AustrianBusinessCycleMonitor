@@ -156,3 +156,4 @@ k8s/kubeconfig*
 # System files
 .DS_Store
 Thumbs.db
+node_modules

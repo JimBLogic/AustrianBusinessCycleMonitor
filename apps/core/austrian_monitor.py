@@ -49,12 +49,19 @@ try:
     import fredapi
     FRED_AVAILABLE = True
 except ImportError:
+    FRED_AVAILABLE = False
+    logging.warning("fredapi not available, some features will be limited")
+
+# Import Austrian Economics Insights Engine
+try:
+    from apps.core.austrian_insights import get_insights_engine, CyclePhase, RiskLevel
+    INSIGHTS_ENGINE_AVAILABLE = True
+except ImportError:
+    INSIGHTS_ENGINE_AVAILABLE = False
+    logging.warning("Austrian insights engine not available")
     fredapi = None  # <-- Solución: define fredapi como None si falla el import
     FRED_AVAILABLE = False
     logging.warning("fredapi not available; using fallback data")
-
-# Import the asset tracker
-from apps.utils.asset_tracker import AssetTracker
 
 # Configure logging
 logging.basicConfig(
@@ -62,6 +69,10 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Import the asset tracker (after logger is defined)
+from apps.utils.live_asset_tracker import AssetTracker
+logger.info("✅ Using Live Asset Tracker with real API integration")
 
 
 @dataclass
@@ -451,6 +462,7 @@ class AustrianCycleMonitor:
         # Check asset prices from AssetTracker
         bitcoin_data = self.asset_tracker.get_bitcoin_price()
         gold_data = self.asset_tracker.get_gold_price()
+        silver_data = self.asset_tracker.get_silver_price()
         
         # In a complete implementation, this would fetch real data
         market_data = {
@@ -465,6 +477,7 @@ class AustrianCycleMonitor:
             },
             "commodities": {
                 "gold": gold_data.get("price", 2100.50),
+                "silver": silver_data.get("price", 32.50),
                 "oil": 78.25,
                 "copper": 4.1,
             },
