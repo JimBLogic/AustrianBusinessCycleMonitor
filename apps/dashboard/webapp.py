@@ -214,9 +214,14 @@ class AustrianDashboard:
             """
             self.metrics["requests_2xx"] += 1
             return jsonify({
-                "status": "ok",
+                "status": "operational",
                 "version": PROJECT_VERSION,
                 "timestamp": self._timestamp(),
+                "austrian_monitor": {
+                    "active": self.monitor_active,
+                    "version": PROJECT_VERSION,
+                },
+                "monitoring": self.monitor_active,
                 "monitor_active": self.monitor_active,
                 "metrics": self.metrics,
             })
@@ -224,7 +229,123 @@ class AustrianDashboard:
         @app.route("/api/health")
         def api_health():
             self.metrics["requests_2xx"] += 1
-            return jsonify({"ok": True, "ts": self._timestamp()})
+            return jsonify({
+                "ok": True,
+                "ts": self._timestamp(),
+                "austrian_monitor": {
+                    "active": self.monitor_active,
+                    "status": "operational" if self.monitor_active else "idle",
+                },
+            })
+
+        @app.route("/api/meta")
+        def api_meta():
+            """OpenAPI metadata endpoint"""
+            self.metrics["requests_2xx"] += 1
+            return jsonify({
+                "version": PROJECT_VERSION,
+                "title": "Austrian Business Cycle Monitor API",
+                "description": "Real-time Austrian economics monitoring and analysis",
+            })
+
+        @app.route("/api/openapi.json")
+        def api_openapi():
+            """OpenAPI specification endpoint"""
+            self.metrics["requests_2xx"] += 1
+            return jsonify({
+                "openapi": "3.0.0",
+                "info": {
+                    "title": "Austrian Business Cycle Monitor API",
+                    "version": PROJECT_VERSION,
+                },
+                "paths": {
+                    "/api/status": {
+                        "get": {
+                            "summary": "Get system status",
+                            "responses": {"200": {"description": "OK"}},
+                        }
+                    },
+                    "/api/health": {
+                        "get": {
+                            "summary": "Health check",
+                            "responses": {"200": {"description": "OK"}},
+                        }
+                    },
+                    "/api/market-data": {
+                        "get": {
+                            "summary": "Get market data",
+                            "responses": {"200": {"description": "OK"}},
+                        }
+                    },
+                },
+            })
+
+        @app.route("/api/current-data")
+        def api_current_data():
+            """Combined current data endpoint"""
+            self.metrics["requests_2xx"] += 1
+            market_data = self.monitor.get_market_data()
+            return jsonify({
+                "success": True,
+                "data": {
+                    "status": "operational",
+                    "market_data": market_data,
+                    "timestamp": self._timestamp(),
+                },
+            })
+
+        @app.route("/api/refresh", methods=["POST"])
+        def api_refresh():
+            """Refresh monitoring data"""
+            try:
+                import time
+                self._last_full_refresh = time.time()
+                self.metrics["requests_2xx"] += 1
+                return jsonify({
+                    "success": True,
+                    "refreshed": True,
+                    "timestamp": self._timestamp(),
+                })
+            except Exception as e:
+                logger.error(f"Refresh error: {e}")
+                return jsonify({"error": "Could not refresh data"}), 503
+
+        @app.route("/api/live-assets")
+        def api_live_assets():
+            """Live asset tracking endpoint"""
+            try:
+                prices = self.asset_tracker.get_latest_prices()
+                self.metrics["requests_2xx"] += 1
+                return jsonify({
+                    "success": True,
+                    "data": {
+                        "assets": prices,
+                    },
+                    "timestamp": self._timestamp(),
+                })
+            except Exception as e:
+                logger.error(f"Live assets error: {e}")
+                return jsonify({"error": "Could not fetch live assets"}), 500
+
+        @app.route("/api/live-snapshot")
+        def api_live_snapshot():
+            """Live snapshot of all tracked data"""
+            try:
+                prices = self.asset_tracker.get_latest_prices()
+                market_data = self.monitor.get_market_data()
+                self.metrics["requests_2xx"] += 1
+                return jsonify({
+                    "success": True,
+                    "data": {
+                        **prices,  # Flatten bitcoin, ethereum, etc. at top level
+                        "market": market_data,
+                        "timestamp": self._timestamp(),
+                    },
+                })
+            except Exception as e:
+                logger.error(f"Live snapshot error: {e}")
+                return jsonify({"error": "Could not fetch live snapshot"}), 500
+
 
         @app.route("/api/analysis")
         def api_analysis():
@@ -237,7 +358,12 @@ class AustrianDashboard:
         def api_market_data():
             data = self.monitor.get_market_data()
             self.metrics["requests_2xx"] += 1
-            return jsonify({"market_data": data, "generated_at": self._timestamp()})
+            return jsonify({
+                "success": True,
+                "data": data,
+                "market_data": data,
+                "generated_at": self._timestamp(),
+            })
 
         @app.route("/api/three-pillars")
         def api_three_pillars():
@@ -258,6 +384,13 @@ class AustrianDashboard:
             btc = prices.get("bitcoin", {})
             self.metrics["requests_2xx"] += 1
             return jsonify({
+                "success": True,
+                "data": {
+                    "symbol": "BTC",
+                    "price": btc.get("price"),
+                    "source": btc.get("source"),
+                    "timestamp": self._timestamp(),
+                },
                 "symbol": "BTC",
                 "price": btc.get("price"),
                 "source": btc.get("source"),
@@ -300,12 +433,20 @@ class AustrianDashboard:
         @app.route("/api/start-monitoring", methods=["POST"])
         def api_start():
             self.monitor_active = True
-            return jsonify({"started": True, "timestamp": self._timestamp()})
+            return jsonify({
+                "success": True,
+                "started": True,
+                "timestamp": self._timestamp(),
+            })
 
         @app.route("/api/stop-monitoring", methods=["POST"])
         def api_stop():
             self.monitor_active = False
-            return jsonify({"stopped": True, "timestamp": self._timestamp()})
+            return jsonify({
+                "success": True,
+                "stopped": True,
+                "timestamp": self._timestamp(),
+            })
 
         @app.route("/api/cycle-analysis")
         def api_cycle_analysis():

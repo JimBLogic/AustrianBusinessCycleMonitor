@@ -499,6 +499,20 @@ class AustrianCycleMonitor:
         self.last_market_data = market_data
         return market_data
 
+    def get_dashboard_data(self) -> Dict[str, Any]:
+        """
+        Retrieve comprehensive dashboard data including market data and analysis.
+        This is an alias/combined method for backward compatibility.
+        
+        Returns:
+            Dict containing all dashboard-relevant data
+        """
+        return {
+            "market_data": self.get_market_data(),
+            "analysis": self.get_current_analysis(),
+            "three_pillars": self.get_three_pillars_data(),
+        }
+
 
 def main() -> None:
     """Run a simple demonstration of the Austrian Cycle Monitor."""
