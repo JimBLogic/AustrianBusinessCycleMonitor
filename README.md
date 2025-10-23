@@ -26,34 +26,41 @@ A comprehensive real-time economic monitoring system built on Austrian School ec
 > **New to the project?** Check out our [Quick Start Guide](./QUICK_START.md) for detailed setup instructions!
 
 ### Prerequisites
-- **Python 3.11+** and Poetry
-- **Node.js 18+** and npm
-- (Optional) PostgreSQL and Redis
+- Python 3.11+
+- Node.js 18+ and npm
+- A FRED API key (free): https://fred.stlouisfed.org/
 
-### Modern Installation (Recommended)
+### Local Development (Current Stack)
 
-1. **Install all dependencies**
+The current stack is Flask (backend/API) + React/Vite (frontend). The Flask app serves the built frontend directly from `packages/frontend/dist`.
+
+1. Install Python dependencies
    ```bash
-   npm run install:all
+   pip install -r requirements.txt
    ```
 
-2. **Configure backend**
+2. Build the frontend
    ```bash
-   cd packages/backend
-   cp .env.example .env
-   # Edit .env with your SECRET_KEY and other settings
+   cd packages/frontend
+   npm install
+   npm run build
+   cd ../..
    ```
 
-3. **Start the backend**
-   ```bash
-   npm run start:backend
-   # Or: cd packages/backend && poetry run uvicorn app.main:app --reload
+3. Set your FRED API key (PowerShell example)
+   ```powershell
+   $env:FRED_API_KEY = "YOUR_FRED_API_KEY"
    ```
 
-4. **Access the API**
-   - Swagger UI: http://localhost:8000/docs
-   - Health Check: http://localhost:8000/api/health
-   - API Status: http://localhost:8000/api/status
+4. Run the dashboard (Flask)
+   ```bash
+   python apps/dashboard/webapp.py
+   ```
+
+5. Open the app
+   - Dashboard: http://127.0.0.1:5002
+   - Health: http://127.0.0.1:5002/api/health
+   - Status: http://127.0.0.1:5002/api/status
 
 ### Legacy Installation (Original Method)
 
@@ -85,19 +92,73 @@ A comprehensive real-time economic monitoring system built on Austrian School ec
    # Edit .env and add your FRED API key from https://fred.stlouisfed.org/
    ```
 
-5. **Run the application**
+5. **Run the application (current entry point)**
    ```bash
-   python launchers/main.py
-   ```
+   # Build frontend (one time or when UI changes)
+   cd packages/frontend && npm install && npm run build && cd ../..
 
-   Or with Docker (build + run):
-   ```bash
-   docker build -t abcm:latest .
-   docker run -p 5002:5002 --env FRED_API_KEY=your_key_here abcm:latest
+   # Run Flask dashboard
+   python apps/dashboard/webapp.py
    ```
 
 6. **Open your browser**
    Navigate to http://127.0.0.1:5002
+
+> Note: The Docker section in older docs was removed during cleanup. If you want a containerized deploy (e.g., Google Cloud Run), we can add a minimal Dockerfile on request.
+
+## ☁️ Hosting Options
+
+You have three good deployment paths—choose based on your needs:
+
+### 1) GitHub Pages / Netlify (Frontend) + Managed Backend (Recommended)
+- Host the built frontend (`packages/frontend/dist`) on GitHub Pages, Netlify, or Vercel
+- Host the Flask API on a platform like Render, Railway, Fly.io, or a small VPS
+- Set the frontend to call your API by configuring `VITE_API_URL`
+
+Steps:
+1. Deploy frontend (static):
+   - GitHub Pages: publish `packages/frontend/dist` (may need `base` in Vite if using a repo path)
+   - Netlify: drag-and-drop `dist/` or connect repo, build: `npm run build`, publish: `packages/frontend/dist`
+2. Deploy backend:
+   - Render/Railway: new Python web service
+   - Start command example:
+     ```bash
+     gunicorn -k gevent -w 1 -b 0.0.0.0:$PORT 'apps.dashboard.webapp:create_app()'
+     ```
+   - Set env vars: `FRED_API_KEY`, `SECRET_KEY`
+3. Point the frontend to backend:
+   - Build with: `VITE_API_URL=https://your-api.example.com npm run build`
+
+### 2) Firebase Hosting (.web.app) + Cloud Run (Single Domain)
+- Frontend on Firebase Hosting (`.web.app`)
+- Backend on Google Cloud Run (container or buildpack)
+- Use Firebase Hosting rewrites to proxy `/api` to Cloud Run, so your app is entirely under `.web.app`
+
+Sample `firebase.json`:
+```json
+{
+  "hosting": {
+    "public": "packages/frontend/dist",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      { "source": "/api/**", "run": { "serviceId": "abcm-backend", "region": "us-central1" } },
+      { "source": "**", "destination": "/index.html" }
+    ]
+  }
+}
+```
+
+Cloud Run start command example (websockets optional):
+```bash
+gunicorn -k gevent -w 1 -b 0.0.0.0:$PORT 'apps.dashboard.webapp:create_app()'
+```
+
+### 3) Single VM/Container (All-in-one)
+- Any VM (AWS Lightsail/EC2, DigitalOcean, etc.)
+- Install Python + Node, build frontend, run Flask systemd service
+- Or run via Docker/Cloud Run (we can add a Dockerfile if you prefer)
+
+> WebSockets/SocketIO: The app uses Flask-SocketIO with `threading` by default. Most platforms work fine for REST polling. For true websockets at scale, prefer `gevent`/`eventlet` workers.
 
 ## 🌟 Features
 
