@@ -61,6 +61,16 @@ The current stack is Flask (backend/API) + React/Vite (frontend). The Flask app 
    - Dashboard: http://127.0.0.1:5002
    - Health: http://127.0.0.1:5002/api/health
    - Status: http://127.0.0.1:5002/api/status
+   - **NEW**: Data manifest (verifiability): http://127.0.0.1:5002/api/data-manifest
+
+### 🔬 Verifiability & Transparency
+
+Every metric comes with **provenance records** linking to primary sources (FRED series, BIS stats, etc.). Check the following endpoints:
+
+- `/api/explanations` — Detailed explanations and clickable sources for each metric
+- `/api/analysis` — Analysis results with embedded `provenance` fields mapping metrics to source series
+- `/api/three-pillars` — Three-pillars data with `provenance` for monetary, credit, and real economy metrics
+- `/api/data-manifest` — Schema and provenance summary for all endpoints
 
 ### Legacy Installation (Original Method)
 

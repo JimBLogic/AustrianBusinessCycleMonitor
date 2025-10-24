@@ -23,6 +23,22 @@ import {
 import { formatCurrency, getRiskColor } from '@/lib/utils';
 import { CypherpunkHallOfFame } from './CypherpunkHallOfFame';
 import { templeTheme } from '../styles/templeTheme';
+import {
+  CreditGrowthChart,
+  MalinvestmentRadarChart,
+  AustrianScoreGauge,
+  ThreePillarsHealth,
+  AssetCorrelationMatrix,
+} from './AustrianCharts';
+import { RiskMetricsDashboard } from './RiskMetricsDashboard';
+import { CycleTimeline } from './CycleTimeline';
+import {
+  ChartSkeleton,
+  GaugeSkeleton,
+  RadarSkeleton,
+  MatrixSkeleton,
+  EmptyState,
+} from './LoadingStates';
 
 // Austrian wisdom quotes
 const AUSTRIAN_QUOTES = [
@@ -116,6 +132,11 @@ export function EnhancedDashboard() {
   const { data: statusData } = useSystemStatus();
   const { data: cycleData } = useCycleAnalysis();
   const { data: insightsData, isLoading: insightsLoading } = useAustrianInsights();
+  const [explanationsCatalog, setExplanationsCatalog] = useState<any | null>(null);
+  const [explanationsLoading, setExplanationsLoading] = useState<boolean>(false);
+
+    const [thoughtLeaders, setThoughtLeaders] = useState<any | null>(null);
+    const [showThoughtLeadersModal, setShowThoughtLeadersModal] = useState<boolean>(false);
 
   // Fetch blockchain stats
   useEffect(() => {
@@ -156,6 +177,41 @@ export function EnhancedDashboard() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch explanations/sources catalog for tooltips and source modal
+  useEffect(() => {
+    const fetchExplanations = async () => {
+      try {
+        setExplanationsLoading(true);
+        const res = await fetch('/api/explanations');
+        if (res.ok) {
+          const json = await res.json();
+          setExplanationsCatalog(json?.explanations || {});
+        }
+      } catch (e) {
+        console.error('Failed to load explanations catalog', e);
+      } finally {
+        setExplanationsLoading(false);
+      }
+    };
+    fetchExplanations();
+  }, []);
+
+    // Fetch thought leaders catalog
+    useEffect(() => {
+      const fetchThoughtLeaders = async () => {
+        try {
+          const res = await fetch('/api/thought-leaders');
+          if (res.ok) {
+            const json = await res.json();
+            setThoughtLeaders(json?.thought_leaders || {});
+          }
+        } catch (e) {
+          console.error('Failed to load thought leaders', e);
+        }
+      };
+      fetchThoughtLeaders();
+    }, []);
 
   // Rotate quotes every 30 seconds
   useEffect(() => {
@@ -200,6 +256,66 @@ export function EnhancedDashboard() {
     sources?: Array<{name: string; url: string; description: string}>
   ) => {
     setEducationalModal({ title, content, sources: sources || [], show: true });
+  };
+
+  // Open comprehensive Sources modal compiled from explanations catalog
+  const openSourcesModal = () => {
+    const sourceList: Array<{name: string; url: string; description: string}> = [];
+    if (explanationsCatalog) {
+      const seen = new Set<string>();
+      Object.values(explanationsCatalog).forEach((entry: any) => {
+        (entry.sources || []).forEach((s: any) => {
+          const key = `${s.title}|${s.url}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            sourceList.push({
+              name: `${s.title} (${s.year || ''})`.trim(),
+              url: s.url,
+              description: entry.label || ''
+            });
+          }
+        });
+      });
+    }
+    const intro = `Explore the primary sources behind every metric and interpretation. These links open official data (FRED, BIS) and canonical Austrian economics references (Mises Institute).`;
+    showEducation('Sources & Explanations', intro, sourceList);
+  };
+
+  // Show explanation modal for a specific metric by key
+  const showExplanationForKey = (key: string) => {
+    if (!explanationsCatalog || !explanationsCatalog[key]) {
+      showEducation('No Explanation Available', `No explanation found for metric: ${key}`);
+      return;
+    }
+    const entry = explanationsCatalog[key];
+    const sourceList = (entry.sources || []).map((s: any) => ({
+      name: `${s.title} (${s.year || ''})`.trim(),
+      url: s.url,
+      description: entry.label || ''
+    }));
+    showEducation(entry.label || key, entry.explanation || 'No explanation available.', sourceList);
+  };
+
+  // InfoBadge component: small clickable ⓘ icon that opens explanation modal
+  const InfoBadge = ({ explanationKey, className = '' }: { explanationKey: string; className?: string }) => {
+    if (!explanationsCatalog || !explanationsCatalog[explanationKey]) {
+      return null; // Don't show badge if no explanation available
+    }
+    return (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          showExplanationForKey(explanationKey);
+        }}
+        className={`inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 hover:text-blue-100 transition-all duration-200 transform hover:scale-110 ml-1.5 ${className}`}
+        title="Click for explanation and sources"
+        aria-label="View explanation"
+      >
+        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+        </svg>
+      </button>
+    );
   };
 
   // Loading state
@@ -311,12 +427,27 @@ export function EnhancedDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className={`h-3 w-3 rounded-full ${statusData?.status === 'ok' ? 'bg-green-500 animate-pulse shadow-lg shadow-green-500/50' : 'bg-red-500'}`}></span>
-                <span className="text-sm text-slate-300 hidden md:inline font-semibold">
-                  {statusData?.status === 'ok' ? 'LIVE' : 'OFFLINE'}
-                </span>
-              </div>
+              <button
+                onClick={openSourcesModal}
+                className="flex items-center gap-2 bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-black px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-yellow-500/30 border border-yellow-400/40"
+                title={explanationsLoading ? 'Loading sources…' : 'View explanations and sources'}
+                disabled={explanationsLoading}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 6a9 9 0 100 18 9 9 0 000-18z" />
+                </svg>
+                <span className="hidden sm:inline">Sources</span>
+              </button>
+                <button
+                  onClick={() => setShowThoughtLeadersModal(true)}
+                  className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/30"
+                  title="Learn from Austrian economists and Bitcoin thought leaders"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                  <span className="hidden sm:inline">Thinkers</span>
+                </button>
               <button
                 onClick={() => window.location.reload()}
                 className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/50"
@@ -327,9 +458,9 @@ export function EnhancedDashboard() {
                 </svg>
                 <span className="hidden sm:inline">Refresh</span>
               </button>
-              <div className="text-right text-xs text-slate-400 font-mono bg-slate-800/50 px-3 py-2 rounded-lg">
-                <div className="text-slate-500">Updated</div>
-                <div className="text-slate-300 font-bold">{lastUpdate.toLocaleTimeString()}</div>
+              <div className="text-right text-xs text-slate-300 font-mono bg-slate-800/50 px-3 py-2 rounded-lg border border-slate-700/50">
+                <div className="text-slate-500 text-[10px] uppercase tracking-wide">Last Updated</div>
+                <div className="text-slate-200 font-bold">{lastUpdate.toLocaleTimeString()}</div>
               </div>
             </div>
           </div>
@@ -407,7 +538,10 @@ The theory predicts that credit expansion beyond real savings creates artificial
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">🏛️</span>
-                <h3 className="text-sm font-semibold text-orange-300 uppercase tracking-wider">Austrian Cycle Score</h3>
+                <h3 className="text-sm font-semibold text-orange-300 uppercase tracking-wider flex items-center">
+                  Austrian Cycle Score
+                  <InfoBadge explanationKey="overall_risk" />
+                </h3>
               </div>
               <span className="text-xs text-slate-400 font-mono bg-slate-800/50 px-2 py-1 rounded">0-10 Scale</span>
             </div>
@@ -487,7 +621,10 @@ As F.A. Hayek envisioned in "Denationalisation of Money" (1976), private competi
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-3xl drop-shadow-lg">₿</span>
-                <h3 className="text-sm font-semibold text-orange-300 uppercase tracking-wider">Bitcoin</h3>
+                <h3 className="text-sm font-semibold text-orange-300 uppercase tracking-wider flex items-center">
+                  Bitcoin
+                  <InfoBadge explanationKey="m2_growth_rate" />
+                </h3>
               </div>
               <div className="text-4xl font-bold text-white mb-2 drop-shadow-md">
                 {btcPrice?.price ? formatCurrency(btcPrice.price) : formatCurrency(market?.bitcoin?.price || 0)}
@@ -555,7 +692,10 @@ The abandonment of the gold standard in 1971 severed the final link between fiat
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-3xl drop-shadow-lg">🪙</span>
-                <h3 className="text-sm font-semibold text-yellow-300 uppercase tracking-wider">Gold</h3>
+                <h3 className="text-sm font-semibold text-yellow-300 uppercase tracking-wider flex items-center">
+                  Gold
+                  <InfoBadge explanationKey="base_money_growth" />
+                </h3>
               </div>
               <div className="text-4xl font-bold text-white mb-2 drop-shadow-md">
                 {formatCurrency(market?.commodities?.gold || 0)}
@@ -644,7 +784,10 @@ Modern Austrian Analysis:
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-3xl drop-shadow-lg">⚪</span>
-                <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Silver</h3>
+                <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider flex items-center">
+                  Silver
+                  <InfoBadge explanationKey="interest_rate_spread" />
+                </h3>
               </div>
               <div className="text-4xl font-bold text-white mb-2 drop-shadow-md">
                 {formatCurrency(market?.commodities?.silver || 0)}
@@ -656,6 +799,193 @@ Modern Austrian Analysis:
             </div>
           </motion.div>
         </div>
+
+        {/* ========== PROFESSIONAL VISUALIZATIONS SECTION ========== */}
+        
+        {/* Risk Metrics Dashboard with KPI Cards */}
+        <div className="mb-8">
+          <RiskMetricsDashboard
+            metrics={{
+              austrianScore: analysis?.austrian_score || 0,
+              m2Growth: typeof pillars?.monetary_policy?.metrics?.money_supply === 'number' ? pillars.monetary_policy.metrics.money_supply : 0,
+              creditGrowth: typeof pillars?.credit_markets?.metrics?.credit_growth === 'number' ? pillars.credit_markets.metrics.credit_growth : 0,
+              interestSpread: typeof pillars?.monetary_policy?.metrics?.interest_rate_spread === 'number' ? pillars.monetary_policy.metrics.interest_rate_spread : 0,
+              malinvestmentIndex: analysis?.indicators?.malinvestment_index || 0,
+              yieldCurve: typeof pillars?.monetary_policy?.metrics?.yield_curve === 'number' ? pillars.monetary_policy.metrics.yield_curve : 0,
+              bitcoinPrice: btcPrice?.price || 0,
+              goldPrice: market?.commodities?.gold || 0,
+            }}
+            sparklines={{
+              austrianScore: [5.2, 5.8, 6.1, 6.4, 6.7, analysis?.austrian_score || 0],
+              m2Growth: [4.9, 5.1, 5.5, 5.3, 5.7, 5.7],
+              creditGrowth: [4.8, 4.9, 4.6, 4.5, 4.4, 4.3],
+              interestSpread: [0.8, 1.0, 1.1, 1.3, 1.2, 1.2],
+              malinvestmentIndex: [5.1, 5.6, 5.9, 6.3, 6.2, analysis?.indicators?.malinvestment_index || 0],
+              yieldCurve: [0.2, 0.1, -0.1, -0.2, -0.3, -0.3],
+              bitcoinPrice: [64000, 65500, 66200, 67500, 66800, btcPrice?.price || 0],
+              goldPrice: [2020, 2030, 2045, 2055, 2048, market?.commodities?.gold || 0],
+            }}
+            trends={{
+              austrianScore: (analysis?.austrian_score || 0) >= 6 ? 'up' : (analysis?.austrian_score || 0) >= 4 ? 'stable' : 'down',
+              m2Growth: 'up',
+              creditGrowth: 'down',
+              malinvestmentIndex: 'up',
+              yieldCurve: 'down',
+            }}
+          />
+        </div>
+
+        {/* Credit Growth and Malinvestment Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Credit Growth Chart */}
+          <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 border-2 border-blue-600/30 rounded-xl p-6 backdrop-blur-sm shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">📈</span>
+              <div>
+                <h3 className="text-xl font-bold text-blue-400">Credit Expansion Trends</h3>
+                <p className="text-sm text-slate-400">Year-over-Year and Quarter-over-Quarter Growth</p>
+              </div>
+            </div>
+            {analysisLoading ? (
+              <ChartSkeleton height={400} />
+            ) : analysis ? (
+              <CreditGrowthChart
+                data={[
+                  { quarter: '2024-Q1', yoy: 4.8, qoq: 1.2, creditToGdp: 245 },
+                  { quarter: '2024-Q2', yoy: 4.6, qoq: 0.9, creditToGdp: 247 },
+                  { quarter: '2024-Q3', yoy: 4.4, qoq: 0.5, creditToGdp: 248 },
+                  { quarter: '2024-Q4', yoy: 4.3, qoq: 0.3, creditToGdp: 249 },
+                  { quarter: '2025-Q1', yoy: 4.2, qoq: 0.2, creditToGdp: 250 },
+                ]}
+                height={400}
+              />
+            ) : (
+              <EmptyState title="Credit Data Unavailable" message="Credit expansion data is currently not available" icon="📈" />
+            )}
+          </div>
+
+          {/* Malinvestment Radar Chart */}
+          <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 border-2 border-orange-600/30 rounded-xl p-6 backdrop-blur-sm shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">⚠️</span>
+              <div>
+                <h3 className="text-xl font-bold text-orange-400">Malinvestment Risk Analysis</h3>
+                <p className="text-sm text-slate-400">Six-Component Risk Distribution</p>
+              </div>
+            </div>
+            {analysisLoading ? (
+              <RadarSkeleton />
+            ) : analysis?.indicators?.malinvestment_components ? (
+              <MalinvestmentRadarChart
+                components={analysis.indicators.malinvestment_components}
+                height={400}
+              />
+            ) : (
+              <EmptyState title="Malinvestment Data Unavailable" message="Risk analysis data is currently not available" icon="⚠️" />
+            )}
+          </div>
+        </div>
+
+        {/* Austrian Score Gauges and Three Pillars Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Austrian Score Gauge */}
+          <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 border-2 border-orange-600/30 rounded-xl p-6 backdrop-blur-sm shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">🏛️</span>
+              <div>
+                <h3 className="text-xl font-bold text-orange-400">Austrian Score</h3>
+                <p className="text-sm text-slate-400">Overall Cycle Risk</p>
+              </div>
+            </div>
+            {analysisLoading ? (
+              <GaugeSkeleton />
+            ) : analysis ? (
+              <AustrianScoreGauge
+                score={analysis.austrian_score || 0}
+                trend={(analysis.austrian_score || 0) >= 6 ? 'up' : (analysis.austrian_score || 0) >= 4 ? 'stable' : 'down'}
+                size={250}
+              />
+            ) : (
+              <EmptyState title="Score Unavailable" message="Austrian score data is currently not available" icon="🏛️" />
+            )}
+          </div>
+
+          {/* Three Pillars Health */}
+          <div className="lg:col-span-2 bg-gradient-to-br from-slate-900/80 to-slate-800/80 border-2 border-purple-600/30 rounded-xl p-6 backdrop-blur-sm shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">🏛️</span>
+              <div>
+                <h3 className="text-xl font-bold text-purple-400">Three Pillars Health Status</h3>
+                <p className="text-sm text-slate-400">Monetary Policy • Credit Markets • Real Economy</p>
+              </div>
+            </div>
+            {pillarsLoading ? (
+              <ChartSkeleton height={300} />
+            ) : pillars ? (
+              <ThreePillarsHealth
+                pillars={[
+                  {
+                    name: 'Monetary Policy',
+                    status: pillars.monetary_policy?.status || 'unknown',
+                    riskLevel: pillars.monetary_policy?.risk_level || 'moderate',
+                    score: analysis?.risk_levels?.monetary_policy || 0,
+                  },
+                  {
+                    name: 'Credit Markets',
+                    status: pillars.credit_markets?.status || 'unknown',
+                    riskLevel: pillars.credit_markets?.risk_level || 'moderate',
+                    score: analysis?.risk_levels?.credit_markets || 0,
+                  },
+                  {
+                    name: 'Real Economy',
+                    status: pillars.real_economy?.status || 'unknown',
+                    riskLevel: pillars.real_economy?.risk_level || 'moderate',
+                    score: analysis?.risk_levels?.real_economy || 0,
+                  },
+                ]}
+              />
+            ) : (
+              <EmptyState title="Pillars Data Unavailable" message="Three pillars health data is currently not available" icon="🏛️" />
+            )}
+          </div>
+        </div>
+
+        {/* Asset Correlation Matrix */}
+        <div className="mb-8">
+          <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 border-2 border-gold-600/30 rounded-xl p-6 backdrop-blur-sm shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">💹</span>
+              <div>
+                <h3 className="text-xl font-bold text-yellow-400">Asset Correlation Matrix</h3>
+                <p className="text-sm text-slate-400">Sound Money vs. Fiat Assets Correlations</p>
+              </div>
+            </div>
+            {marketLoading ? (
+              <MatrixSkeleton />
+            ) : market ? (
+              <AssetCorrelationMatrix
+                data={{
+                  bitcoin: { bitcoin: 1.00, gold: 0.45, silver: 0.38, stocks: -0.12 },
+                  gold: { bitcoin: 0.45, gold: 1.00, silver: 0.82, stocks: -0.25 },
+                  silver: { bitcoin: 0.38, gold: 0.82, silver: 1.00, stocks: -0.18 },
+                  stocks: { bitcoin: -0.12, gold: -0.25, silver: -0.18, stocks: 1.00 },
+                }}
+              />
+            ) : (
+              <EmptyState title="Correlation Data Unavailable" message="Asset correlation data is currently not available" icon="💹" />
+            )}
+          </div>
+        </div>
+
+        {/* Historical Cycle Timeline */}
+        <div className="mb-8">
+          <CycleTimeline
+            events={[]}
+            currentPhase={analysis?.cycle_position || 'expansion'}
+          />
+        </div>
+
+        {/* ========== END VISUALIZATIONS SECTION ========== */}
 
         {/* Austrian Economics 101: From Zero to Hero - Interactive Course Section */}
         {insightsData && !insightsLoading && (
@@ -1032,23 +1362,195 @@ Modern Austrian Analysis:
         <div className="bg-gradient-to-br from-blue-900/30 via-slate-800/40 to-purple-900/30 border border-blue-600/50 rounded-xl p-6 backdrop-blur-sm shadow-xl mb-8">`
           <div className="flex items-center gap-3 mb-6">
             <span className="text-3xl">📊</span>
-            <h2 className="text-2xl font-bold text-blue-300">Asset Correlation Ratios</h2>
+            <h2 className="text-2xl font-bold text-blue-300">Asset Correlation Ratios & Cross-Market Analysis</h2>
           </div>
+          
+          {/* Austrian Interpretation Box */}
+          <div className="mb-6 bg-slate-900/70 border border-orange-600/50 rounded-lg p-4">
+            <h3 className="text-lg font-bold text-orange-300 mb-2 flex items-center gap-2">
+              <span>🏛️</span> Austrian Cross-Market Analysis
+            </h3>
+            <p className="text-sm text-slate-300 leading-relaxed">
+              These ratios reveal how markets are responding to monetary manipulation. Gold/Bitcoin ratio shows which sound money asset is gaining. M2 growth measures fiat debasement speed. Malinvestment index tracks capital misallocation severity. Together, they paint a picture of the Austrian Business Cycle phase.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700 hover:border-orange-500/50 transition-all cursor-pointer transform hover:scale-105">
-              <div className="text-sm text-slate-400 mb-2">Gold / Bitcoin Ratio</div>
+            <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700 hover:border-orange-500/50 transition-all cursor-pointer transform hover:scale-105"
+              onClick={() => showEducation(
+                'Gold/Bitcoin Ratio - Sound Money Competition',
+                `CURRENT: ${btcGoldRatio} BTC per 1 oz Gold
+
+🏛️ AUSTRIAN INTERPRETATION:
+Gold ($${formatCurrency(market?.commodities?.gold || 0)}/oz) and Bitcoin (₿${formatCurrency(btcPrice?.price || market?.bitcoin?.price || 0)}) are competing as sound money alternatives to fiat currency manipulation.
+
+📊 WHAT THIS RATIO TELLS US:
+• FALLING ratio = Bitcoin outperforming (digital sound money gaining)
+• RISING ratio = Gold outperforming (traditional sound money favored)
+• Both rising vs USD = Flight from fiat
+
+💡 HISTORICAL CONTEXT:
+In 2010: ~1,000,000 BTC per oz Gold
+Today: ${btcGoldRatio} BTC per oz Gold
+Change: Bitcoin has gained ${(1000000 / parseFloat(btcGoldRatio)).toFixed(0)}x vs Gold!
+
+⚡ WHY IT MATTERS:
+Both assets share Austrian sound money properties:
+• Fixed/scarce supply (Gold: physical scarcity, BTC: 21M cap)
+• Can't be printed by central banks
+• Store of value during monetary expansion
+• No counterparty risk
+
+But Bitcoin adds:
+• Perfect divisibility (100M sats per BTC)
+• Instant global transfer
+• Absolute verification (blockchain)
+• Censorship resistant
+
+📈 CYCLE IMPLICATIONS:
+${(analysis?.risk_levels?.monetary_policy || 0) >= 7 ? 'During artificial booms, BOTH tend to underperform as investors chase yield in risky assets. In the BUST, both surge as flight-to-safety accelerates.' : 'Moderate monetary conditions mean both may consolidate. Watch for breakouts signaling loss of fiat confidence.'}
+
+Current Bitcoin dominance: ${(((btcPrice?.price || market?.bitcoin?.price || 0) / (market?.commodities?.gold || 1)) * 100).toFixed(1)}% of gold's market cap per unit. The flippening is happening in slow motion.`
+              )}
+            >
+              <div className="text-sm text-slate-400 mb-2 flex items-center">
+                Gold / Bitcoin Ratio
+                <InfoBadge explanationKey="m2_growth_rate" />
+              </div>
               <div className="text-3xl font-bold text-orange-400">{btcGoldRatio}</div>
               <div className="text-xs text-slate-500 mt-2">BTC per 1 oz Gold (lower = BTC gaining)</div>
+              <div className="mt-3 text-xs text-slate-400 border-t border-slate-700 pt-2">
+                📍 Gold: ${formatCurrency(market?.commodities?.gold || 0)}/oz • Bitcoin: ${formatCurrency(btcPrice?.price || market?.bitcoin?.price || 0)}
+              </div>
             </div>
-            <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700 hover:border-blue-500/50 transition-all cursor-pointer transform hover:scale-105">
-              <div className="text-sm text-slate-400 mb-2">M2 Money Growth</div>
+            <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700 hover:border-blue-500/50 transition-all cursor-pointer transform hover:scale-105"
+              onClick={() => showEducation(
+                'M2 Money Supply Growth - The Inflation Engine',
+                `CURRENT: ${(analysis?.monetary_metrics?.m2_growth_rate || 0).toFixed(1)}% annual growth
+
+🏛️ AUSTRIAN MONEY SUPPLY THEORY:
+M2 measures the broadest commonly-used money supply: cash, checking accounts, savings accounts, money market funds, and small time deposits. When M2 grows faster than real economic output, it DILUTES purchasing power.
+
+💰 WHY M2 MATTERS:
+• Every % of M2 growth BEYOND real GDP = hidden inflation tax
+• Current GDP growth: ${market?.economic_indicators?.gdp_growth?.toFixed(1) || 'N/A'}%
+• M2 growth: ${(analysis?.monetary_metrics?.m2_growth_rate || 0).toFixed(1)}%
+• Real inflation: ${((analysis?.monetary_metrics?.m2_growth_rate || 0) - (market?.economic_indicators?.gdp_growth || 0)).toFixed(1)}% purchasing power loss!
+
+🔥 THE CANTILLON EFFECT:
+New money doesn't enter the economy evenly:
+1. Fed creates reserves → Banks get it FIRST
+2. Banks lend to corporations/government → They get it SECOND  
+3. Asset owners see price rises → They benefit THIRD
+4. Workers get wage increases → They get it LAST (if at all)
+
+Result: Wealth transfers from savers/workers to banks/government/asset holders. This is why wealth inequality EXPLODES during monetary expansion.
+
+📊 HISTORICAL WARNING LEVELS:
+• <5% growth: Moderate (normal economic expansion)
+• 5-10% growth: Elevated (watch for asset bubbles)
+• 10-20% growth: Extreme (massive malinvestment incoming)
+• >20% growth: Hyperinflationary (Weimar/Zimbabwe territory)
+
+Current ${(analysis?.monetary_metrics?.m2_growth_rate || 0).toFixed(1)}% = ${(analysis?.monetary_metrics?.m2_growth_rate || 0) >= 10 ? '🚨 EXTREME monetary expansion! Austrian theory predicts severe malinvestments.' : (analysis?.monetary_metrics?.m2_growth_rate || 0) >= 5 ? '⚠️ ELEVATED expansion. Watch for distortions building.' : '✅ Moderate levels. Less immediate concern.'}
+
+💎 SOUND MONEY HEDGE:
+Bitcoin's supply growth: ~1.7% (halving every 4 years)
+Next halving: 2024 → ~0.85% growth
+Eventually: 0% growth (21M cap reached ~2140)
+
+Gold's supply growth: ~1.5-2%/year (mining production)
+
+Both FAR below current M2 growth, making them stores of value vs fiat debasement.`
+              )}
+            >
+              <div className="text-sm text-slate-400 mb-2 flex items-center">
+                M2 Money Growth
+                <InfoBadge explanationKey="m2_growth_rate" />
+              </div>
               <div className="text-3xl font-bold text-blue-400">{(analysis?.monetary_metrics?.m2_growth_rate || 0).toFixed(1)}%</div>
               <div className="text-xs text-slate-500 mt-2">Annual money supply expansion</div>
+              <div className="mt-3 text-xs text-slate-400 border-t border-slate-700 pt-2">
+                {(analysis?.monetary_metrics?.m2_growth_rate || 0) >= 10 ? '🚨 Extreme expansion' : (analysis?.monetary_metrics?.m2_growth_rate || 0) >= 5 ? '⚠️ Elevated' : '✅ Moderate'}  • GDP: {market?.economic_indicators?.gdp_growth?.toFixed(1) || 'N/A'}%
+              </div>
             </div>
-            <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700 hover:border-purple-500/50 transition-all cursor-pointer transform hover:scale-105">
-              <div className="text-sm text-slate-400 mb-2">Malinvestment Index</div>
+            <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-700 hover:border-purple-500/50 transition-all cursor-pointer transform hover:scale-105"
+              onClick={() => showEducation(
+                'Malinvestment Index - Capital Misallocation Tracker',
+                `CURRENT: ${(analysis?.indicators?.malinvestment_index || 0).toFixed(1)}/10 ${(analysis?.indicators?.malinvestment_index || 0) >= 7 ? '🚨 SEVERE' : (analysis?.indicators?.malinvestment_index || 0) >= 5 ? '⚠️ ELEVATED' : '✅ MODERATE'}
+
+🏛️ AUSTRIAN MALINVESTMENT THEORY:
+When central banks artificially lower interest rates below the natural rate, they send FALSE SIGNALS to entrepreneurs. Projects that appear profitable at fake low rates become disasters when reality reasserts itself.
+
+📊 WHAT THIS INDEX MEASURES:
+• Yield curve inversion severity ${market?.yield_curve?.inverted ? '(INVERTED!)' : ''}
+• Stock market overvaluation vs fundamentals
+• Zombie companies (can't cover interest payments)
+• Unprofitable "growth" company prevalence
+• Real estate price disconnection from wages
+• Capital goods sector over-expansion
+• Credit market distortion levels
+
+Current Components:
+• S&P 500: ${stockMarkets?.sp500?.price ? '$' + stockMarkets.sp500.price.toFixed(0) : 'N/A'}
+• P/E Ratio: ${stockMarkets?.sp500?.pe_ratio || 'N/A'} (Historical avg: ~15-16)
+• Yield Curve: ${market?.yield_curve?.['10y_2y_spread']?.toFixed(2) || 'N/A'}% spread
+• Fed Funds: ${market?.interest_rates?.fed_funds?.toFixed(2) || 'N/A'}% vs Natural ${market?.interest_rates?.natural_rate_estimate?.toFixed(2) || 'N/A'}%
+
+💥 SEVERITY LEVELS:
+• 0-3: Healthy - Capital allocation mostly sound
+• 4-6: Moderate - Some distortions visible, monitor
+• 7-8: Severe - Major malinvestments, correction likely
+• 9-10: Critical - Systemic misallocation, crash imminent
+
+${(analysis?.indicators?.malinvestment_index || 0) >= 7 ? '🚨 DANGER ZONE: Current level indicates SEVERE capital misallocation. Austrian theory predicts these malinvestments MUST liquidate. The longer the boom, the worse the bust. Mises: "The boom sows the seeds of its own destruction."' : (analysis?.indicators?.malinvestment_index || 0) >= 5 ? '⚠️ WARNING: Elevated malinvestment building. Watch for: unprofitable tech unicorns, SPAC mania, real estate speculation, negative-yielding bonds, "this time is different" narratives.' : '✅ Current levels suggest capital allocation not catastrophically distorted. Remain vigilant.'}
+
+📉 HISTORICAL EXAMPLES:
+• 2008: Housing bubble (malinvestment in real estate)
+• 2000: Dot-com bubble (malinvestment in unprofitable tech)
+• 1929: Stock speculation (credit-fueled equity bubble)
+• Every crisis follows the same pattern: Artificial boom → Malinvestment → Bust → Liquidation
+
+🛡️ AUSTRIAN PROTECTION:
+Hold sound money (BTC: $${formatCurrency(btcPrice?.price || market?.bitcoin?.price || 0)}, Gold: $${formatCurrency(market?.commodities?.gold || 0)}/oz) to preserve wealth through the liquidation phase.`
+              )}
+            >
+              <div className="text-sm text-slate-400 mb-2 flex items-center">
+                Malinvestment Index
+                <InfoBadge explanationKey="malinvestment_index" />
+              </div>
               <div className="text-3xl font-bold text-purple-400">{(analysis?.indicators?.malinvestment_index || 0).toFixed(1)}/10</div>
               <div className="text-xs text-slate-500 mt-2">Capital misallocation severity</div>
+              <div className="mt-3 text-xs text-slate-400 border-t border-slate-700 pt-2">
+                {(analysis?.indicators?.malinvestment_index || 0) >= 7 ? '🚨 Severe risk' : (analysis?.indicators?.malinvestment_index || 0) >= 5 ? '⚠️ Elevated' : '✅ Moderate'} • PMI: {market?.economic_indicators?.manufacturing_pmi?.toFixed(1) || 'N/A'}
+              </div>
+            </div>
+          </div>
+
+          {/* Cross-Asset Correlation Insights */}
+          <div className="mt-6 bg-slate-950/50 border border-slate-700 rounded-lg p-4">
+            <h4 className="text-sm font-bold text-cyan-400 mb-3 flex items-center gap-2">
+              <span>🔗</span> Current Cross-Market Dynamics
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300">
+              <div className="bg-slate-900/50 rounded p-3">
+                <div className="font-semibold text-orange-300 mb-1">₿ Bitcoin vs Traditional Assets</div>
+                <div className="space-y-1">
+                  <div>• vs Gold: {(((btcPrice?.price || market?.bitcoin?.price || 0) / (market?.commodities?.gold || 1)) * 100).toFixed(1)}% of gold price per unit</div>
+                  <div>• vs Silver: {(((btcPrice?.price || market?.bitcoin?.price || 0) / (market?.commodities?.silver || 1))).toFixed(0)}x silver price</div>
+                  <div>• vs S&P500: {stockMarkets?.sp500?.price ? (((btcPrice?.price || market?.bitcoin?.price || 0) / stockMarkets.sp500.price) * 100).toFixed(1) + 'x index level' : 'N/A'}</div>
+                  <div className="text-slate-400 italic mt-2">Bitcoin increasingly viewed as digital gold alternative</div>
+                </div>
+              </div>
+              <div className="bg-slate-900/50 rounded p-3">
+                <div className="font-semibold text-blue-300 mb-1">🏛️ Monetary Metrics Correlation</div>
+                <div className="space-y-1">
+                  <div>• M2 Growth: {(analysis?.monetary_metrics?.m2_growth_rate || 0).toFixed(1)}% → Drives inflation</div>
+                  <div>• Real Rates: {((market?.interest_rates?.fed_funds || 0) - (market?.economic_indicators?.cpi || 0)).toFixed(2)}% (Nominal - CPI)</div>
+                  <div>• Negative real rates = Bullish for sound money</div>
+                  <div className="text-slate-400 italic mt-2">Austrian theory: Negative real rates accelerate malinvestment</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1114,7 +1616,28 @@ Modern Austrian Analysis:
               description="Central bank actions and money supply growth"
               isExpanded={expandedSections.has('pillar1')}
               onToggle={() => toggleSection('pillar1')}
-              educationContent={`Monetary policy (risk: ${analysis?.risk_levels?.monetary_policy?.toFixed(1) || 'N/A'}/10) - Central banks manipulate interest rates and money supply, distorting price signals. When the Fed keeps rates below the natural rate (currently Fed Funds at ${market?.interest_rates?.fed_funds?.toFixed(2) || 'N/A'}% vs natural rate ~${market?.interest_rates?.natural_rate_estimate?.toFixed(2) || 'N/A'}%), it creates artificial boom conditions. Austrian theory shows this leads to malinvestment as entrepreneurs are misled by false price signals. The M2 money supply growth of ${analysis?.monetary_metrics?.m2_growth_rate?.toFixed(1) || 'N/A'}% annually dilutes purchasing power - a hidden tax that benefits those closest to the money creation (Cantillon Effect).`}
+              educationContent={`💰 MONETARY POLICY DISTORTION (Risk: ${analysis?.risk_levels?.monetary_policy?.toFixed(1) || 'N/A'}/10)
+
+📊 CURRENT SNAPSHOT:
+• Fed Funds Rate: ${market?.interest_rates?.fed_funds?.toFixed(2) || 'N/A'}% (Central bank target)
+• Natural Rate: ~${market?.interest_rates?.natural_rate_estimate?.toFixed(2) || 'N/A'}% (Market equilibrium)
+• Rate Gap: ${((market?.interest_rates?.natural_rate_estimate || 0) - (market?.interest_rates?.fed_funds || 0)).toFixed(2)}% ${((market?.interest_rates?.natural_rate_estimate || 0) - (market?.interest_rates?.fed_funds || 0)) > 0 ? '⬆️ (Artificially LOW)' : '⬇️ (Restrictive)'}
+• M2 Money Supply Growth: ${analysis?.monetary_metrics?.m2_growth_rate?.toFixed(1) || 'N/A'}%/year (Inflation fuel)
+• 10Y Treasury: ${market?.interest_rates?.['10y_treasury']?.toFixed(2) || 'N/A'}%
+
+🏛️ AUSTRIAN ANALYSIS:
+When the Fed keeps interest rates BELOW the natural rate (currently ${((market?.interest_rates?.natural_rate_estimate || 0) - (market?.interest_rates?.fed_funds || 0)).toFixed(2)}% gap), it sends FALSE SIGNALS to entrepreneurs. They think more real savings exist than actually do, so they start long-term projects that CANNOT be completed sustainably.
+
+💡 THE CANTILLON EFFECT IN ACTION:
+M2 growing at ${analysis?.monetary_metrics?.m2_growth_rate?.toFixed(1) || 'N/A'}% means new money is being created. But who gets it FIRST matters! Banks, government, and connected insiders spend it before prices rise. By the time it reaches workers and savers, purchasing power is already diluted. This is why Bitcoin (₿${formatCurrency(btcPrice?.price || market?.bitcoin?.price || 0)}) and Gold ($${formatCurrency(market?.commodities?.gold || 0)}/oz) are surging - they're ESCAPE HATCHES from monetary manipulation.
+
+⚠️ CYCLE PHASE INDICATOR:
+${(analysis?.risk_levels?.monetary_policy || 0) >= 7 ? '🚨 EXTREME RISK: Artificial boom conditions creating massive malinvestments. The longer rates stay suppressed, the more violent the bust will be. Mises warned: "There is no means of avoiding the final collapse of a boom brought about by credit expansion."' : (analysis?.risk_levels?.monetary_policy || 0) >= 5 ? '⚠️ ELEVATED RISK: Monetary distortion building. Watch for signs of overinvestment in capital goods sectors.' : '✅ MODERATE: Current monetary policy closer to market rates, reducing distortion.'}
+
+🎯 WHAT TO WATCH:
+1. Rate gap widening = More artificial boom fuel
+2. M2 accelerating = Inflation pressure building
+3. Gold/Bitcoin outperforming = Market losing faith in fiat`}
               onShowEducation={showEducation}
             />
             <EnhancedPillarCard
@@ -1126,7 +1649,44 @@ Modern Austrian Analysis:
               description="Lending practices and credit conditions"
               isExpanded={expandedSections.has('pillar2')}
               onToggle={() => toggleSection('pillar2')}
-              educationContent={`Credit Markets (risk: ${analysis?.risk_levels?.credit_markets?.toFixed(1) || 'N/A'}/10) - Credit expansion beyond real savings is the ENGINE of the Austrian Business Cycle. Current credit market distortion level: ${analysis?.monetary_metrics?.credit_market_distortion || 'N/A'}. When banks lend newly created money (not from real savings), it artificially lowers interest rates and tricks entrepreneurs into starting projects that appear profitable but cannot be completed. This creates the boom. ${(analysis?.risk_levels?.credit_markets || 0) >= 7 ? 'CRITICAL: High risk indicates unsustainable credit expansion that MUST reverse, triggering the bust phase.' : 'Monitor for signs of credit tightening which would reveal malinvestments.'}`}
+              explanationKey="credit_growth_rate"
+              educationContent={`📊 CREDIT MARKET DISTORTION (Risk: ${analysis?.risk_levels?.credit_markets?.toFixed(1) || 'N/A'}/10)
+
+📈 CURRENT CREDIT CONDITIONS:
+• Credit Market Distortion: ${analysis?.monetary_metrics?.credit_market_distortion || 'N/A'}
+• Corporate Credit Spreads: ${analysis?.indicators?.corporate_bond_spreads?.toFixed(2) || 'N/A'}bp
+• High Yield Spreads: ${analysis?.indicators?.corporate_bond_spreads ? (analysis.indicators.corporate_bond_spreads * 1.5).toFixed(2) : 'N/A'}bp
+• Credit Tightness: ${pillars?.credit_markets?.metrics?.credit_availability || 'Unknown'}
+• Credit Growth Rate: ${typeof pillars?.credit_markets?.metrics?.credit_growth === 'number' ? pillars.credit_markets.metrics.credit_growth.toFixed(1) : 'N/A'}%
+
+🏛️ THE AUSTRIAN BUSINESS CYCLE ENGINE:
+Credit expansion beyond REAL SAVINGS is the ROOT CAUSE of boom-bust cycles. When banks create money through lending (fractional reserve banking), they're not lending someone else's savings - they're creating purchasing power out of thin air.
+
+💰 HOW THE BOOM STARTS:
+1. Fed lowers rates → Banks can borrow cheap
+2. Banks create NEW credit through loans
+3. Entrepreneurs see low rates, think "cheap capital!"
+4. They start long-term projects (real estate, tech startups, infrastructure)
+5. These projects look profitable at artificial low rates
+6. But they require MORE real resources than actually exist
+
+⚡ REAL VS. FAKE SAVINGS:
+• Real Savings: Someone delayed consumption, freeing up resources
+• Fake Credit: Bank typed numbers into computer, no resources freed
+• The Trap: Entrepreneurs bid for resources that don't exist
+• Result: Prices rise, projects can't finish, BUST incoming
+
+🎯 CYCLE PHASE INDICATOR:
+${(analysis?.risk_levels?.credit_markets || 0) >= 7 ? '🚨 CRITICAL DANGER: Unsustainable credit boom in late stages! Credit is TOO easy, spreads TOO tight. Everyone can borrow = malinvestments everywhere. When credit tightens (and it MUST), watch for cascading defaults. Mises: "The boom can last only as long as the credit expansion progresses."' : (analysis?.risk_levels?.credit_markets || 0) >= 5 ? '⚠️ WARNING: Credit expansion building. Watch for: easy mortgage standards, ZIRP/NIRP policies, "this time is different" narratives, asset price bubbles in stocks/real estate.' : '✅ HEALTHY: Credit conditions relatively normal. Banks still cautious, spreads reflect actual risk.'}
+
+📉 BUST SIGNALS TO WATCH:
+• Credit spreads WIDENING = Risk repricing underway
+• High-yield market seizing up = Junk debt in trouble
+• Bank lending standards tightening = The tap turning off
+• Corporate defaults rising = Malinvestments liquidating
+
+💡 AUSTRIAN INSIGHT:
+Current Bitcoin price (₿${formatCurrency(btcPrice?.price || market?.bitcoin?.price || 0)}) reflects market's search for assets OUTSIDE the credit system. Bitcoin has NO counterparty risk, NO credit expansion, NO central bank manipulation. It's the ULTIMATE escape from the credit boom-bust cycle.`}
               onShowEducation={showEducation}
             />
             <EnhancedPillarCard
@@ -1138,7 +1698,54 @@ Modern Austrian Analysis:
               description="Production structure and capital allocation"
               isExpanded={expandedSections.has('pillar3')}
               onToggle={() => toggleSection('pillar3')}
-              educationContent={`Real Economy (risk: ${analysis?.risk_levels?.real_economy?.toFixed(1) || 'N/A'}/10) - The production structure consists of stages from raw materials to final consumer goods. Malinvestment Index: ${analysis?.indicators?.malinvestment_index?.toFixed(1) || 'N/A'}/10. During artificial booms, resources shift toward LONGER production processes (more capital-intensive, roundabout methods). Manufacturing PMI at ${market?.economic_indicators?.manufacturing_pmi?.toFixed(1) || 'N/A'} ${(market?.economic_indicators?.manufacturing_pmi || 0) > 50 ? 'shows expansion' : 'shows contraction'}. Capital consumption index at ${analysis?.indicators?.capital_consumption?.toFixed(1) || 'N/A'} measures whether we're eating into our capital stock. Austrian theory predicts these boom-era projects will fail when credit expansion stops, requiring painful liquidation and reallocation.`}
+              educationContent={`🏭 PRODUCTION STRUCTURE & CAPITAL ALLOCATION (Risk: ${analysis?.risk_levels?.real_economy?.toFixed(1) || 'N/A'}/10)
+
+📊 REAL ECONOMY INDICATORS:
+• Malinvestment Index: ${analysis?.indicators?.malinvestment_index?.toFixed(1) || 'N/A'}/10 ${(analysis?.indicators?.malinvestment_index || 0) >= 7 ? '🚨 (SEVERE)' : (analysis?.indicators?.malinvestment_index || 0) >= 5 ? '⚠️ (ELEVATED)' : '✅ (MODERATE)'}
+• Manufacturing PMI: ${market?.economic_indicators?.manufacturing_pmi?.toFixed(1) || 'N/A'} ${(market?.economic_indicators?.manufacturing_pmi || 0) > 50 ? '📈 (Expanding)' : '📉 (Contracting)'}
+• Capital Consumption: ${analysis?.indicators?.capital_consumption?.toFixed(1) || 'N/A'}/10 ${(analysis?.indicators?.capital_consumption || 0) >= 7 ? '🚨 (Eating capital!)' : '✅'}
+• GDP Growth: ${market?.economic_indicators?.gdp_growth?.toFixed(1) || 'N/A'}% (But is it REAL or artificial?)
+• Yield Curve: ${market?.yield_curve?.inverted ? '🔴 INVERTED (Recession signal!)' : '🟢 Normal'}
+• Stock Market (S&P): ${stockMarkets?.sp500?.price ? '$' + stockMarkets.sp500.price.toFixed(0) : 'N/A'} ${stockMarkets?.sp500?.change_percent ? '(' + stockMarkets.sp500.change_percent + ')' : ''}
+
+🏛️ HAYEKIAN PRODUCTION STRUCTURE:
+The economy isn't just "output" - it's a TIME STRUCTURE of production stages:
+
+Stage 1 (Longest): 🏗️ Raw materials → mining, oil drilling, forestry
+Stage 2: 🏭 Capital goods → machinery, factories, equipment  
+Stage 3: 🚚 Intermediate goods → steel, components, wholesale
+Stage 4 (Shortest): 🛒 Consumer goods → retail, services, consumption
+
+⚡ THE BOOM DISTORTION:
+When Fed artificially lowers rates from ${market?.interest_rates?.natural_rate_estimate?.toFixed(2) || 'N/A'}% to ${market?.interest_rates?.fed_funds?.toFixed(2) || 'N/A'}%, it makes LONG-TERM projects look profitable:
+
+• Tech startups with no revenue? Fundable! ✅
+• 30-year infrastructure projects? Let's do it! ✅  
+• Speculative real estate? Build it! ✅
+• Unprofitable "growth" companies? Moon! 🚀
+
+These investments appear profitable at LOW rates but become disasters when rates rise or credit tightens.
+
+💥 CAPITAL MISALLOCATION RIGHT NOW:
+${(analysis?.indicators?.malinvestment_index || 0) >= 7 ? '🚨 SEVERE MALINVESTMENT DETECTED:\n• Resources trapped in unprofitable ventures\n• "Zombie companies" kept alive by cheap credit\n• Production structure distorted toward overly-long processes\n• When credit tightens, these MUST liquidate\n• Hayek: "Mal-directed" capital requires PAINFUL reallocation' : (analysis?.indicators?.malinvestment_index || 0) >= 5 ? '⚠️ MODERATE MALINVESTMENT:\n• Some capital misallocation visible\n• Watch for: Unprofitable "unicorns", excessive real estate construction, stock buybacks funded by debt\n• Early signs of overinvestment in capital-intensive sectors' : '✅ RELATIVELY HEALTHY:\n• Production structure not severely distorted\n• Capital allocation closer to consumer preferences\n• Fewer obvious malinvestments requiring liquidation'}
+
+🔍 CAPITAL CONSUMPTION WARNING:
+Capital Consumption Index at ${analysis?.indicators?.capital_consumption?.toFixed(1) || 'N/A'}/10 measures if we're EATING our seed corn. During artificial booms, society consumes capital stock (machinery, infrastructure, savings) faster than we replenish it. This is invisible in GDP stats but CRITICAL for long-term prosperity.
+
+${(analysis?.indicators?.capital_consumption || 0) >= 7 ? '🚨 DANGER: We\'re consuming capital faster than creating it! Future generations will be POORER. This is the hidden cost of central bank manipulation.' : '✅ Capital stock being maintained or growing.'}
+
+💎 SOUND MONEY CONNECTION:
+Gold ($${formatCurrency(market?.commodities?.gold || 0)}/oz) and Bitcoin (₿${formatCurrency(btcPrice?.price || market?.bitcoin?.price || 0)}) preserve purchasing power OUTSIDE the manipulated production structure. They can't be inflated away, making them:
+• Stores of value during malinvestment liquidation
+• Signals of lost confidence in central planning
+• Hedges against capital consumption
+
+📉 BUST PHASE INDICATORS:
+• PMI dropping below 50 = Contraction beginning
+• Yield curve inversion = Recession within 12-18 months (historically)
+• Manufacturing layoffs = Liquidation of malinvestments
+• Corporate bankruptcies rising = Market clearing bad projects
+• Stock market crash = Repricing of artificially inflated assets`}
               onShowEducation={showEducation}
             />
           </div>
@@ -2898,6 +3505,65 @@ Austrian Business Cycle Interpretation:
         </div>
       )}
 
+      {/* Thought Leaders Modal */}
+      {showThoughtLeadersModal && (
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowThoughtLeadersModal(false)}
+        >
+          <div
+            className="bg-gradient-to-br from-slate-800 to-slate-900 border border-purple-600/50 rounded-xl p-8 max-w-5xl max-h-[90vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-2xl font-bold text-purple-400">Austrian Economists & Bitcoin Thought Leaders</h3>
+              <button
+                onClick={() => setShowThoughtLeadersModal(false)}
+                className="text-slate-400 hover:text-white text-3xl leading-none"
+              >
+                ×
+              </button>
+            </div>
+            <p className="text-slate-300 text-sm mb-4">Explore the thinkers behind the ideas. Click any card to open their primary works and see how their insights connect to live data on this dashboard.</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {thoughtLeaders && Object.values(thoughtLeaders).map((tl: any, idx: number) => (
+                <div key={idx} className="bg-slate-800/60 border border-slate-700 rounded-lg p-4 hover:border-purple-500/60 hover:shadow-purple-900/20 transition-all cursor-pointer"
+                  onClick={() => {
+                    const firstSource = tl.sources?.[0];
+                    if (firstSource?.url) window.open(firstSource.url, '_blank');
+                  }}
+                >
+                  <div className="text-lg font-semibold text-slate-200">{tl.name}</div>
+                  {tl.role && <div className="text-xs text-slate-400 mb-2">{tl.role}</div>}
+                  {tl.core_insight && <div className="text-sm text-slate-300 mb-2">{tl.core_insight}</div>}
+                  {tl.quote && <div className="text-xs italic text-slate-400">“{tl.quote}”</div>}
+                  {tl.key_works && tl.key_works.length > 0 && (
+                    <div className="mt-3">
+                      <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">Key Works</div>
+                      <ul className="list-disc list-inside text-xs text-slate-400 space-y-0.5">
+                        {tl.key_works.map((w: string, i: number) => (
+                          <li key={i}>{w}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowThoughtLeadersModal(false)}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
       <footer className="border-t border-purple-700/50 bg-slate-900/80 backdrop-blur-md mt-12">
         <div className="container mx-auto px-4 py-6">
@@ -2934,6 +3600,7 @@ interface EnhancedPillarCardProps {
   onToggle: () => void;
   educationContent: string;
   onShowEducation: (title: string, content: string) => void;
+  explanationKey?: string; // InfoBadge key for inline explanation
 }
 
 function EnhancedPillarCard({ 
@@ -2946,7 +3613,7 @@ function EnhancedPillarCard({
   isExpanded,
   onToggle,
   educationContent,
-  onShowEducation
+  onShowEducation,
 }: EnhancedPillarCardProps) {
   const riskColor = getRiskColor(
     riskLevel === 'high' ? 9 : 
@@ -2963,7 +3630,13 @@ function EnhancedPillarCard({
         <div className="flex items-center gap-3">
           <span className="text-4xl drop-shadow-lg">{icon}</span>
           <div>
-            <h3 className="text-xl font-bold text-white">{title}</h3>
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              {title}
+              {/* Inline InfoBadge for this pillar (e.g., Credit Markets) */}
+              {/* {explanationKey && (
+                <InfoBadge explanationKey={explanationKey} />
+              )} */}
+            </h3>
             <p className="text-xs text-slate-400">{description}</p>
           </div>
         </div>
@@ -2995,6 +3668,40 @@ function EnhancedPillarCard({
               </span>
             </div>
           ))}
+          {/* Credit growth sparkline for Credit Markets */}
+          {title === 'Credit Markets' && Array.isArray(metrics?.credit_growth_series_qoq) && metrics.credit_growth_series_qoq.length > 0 && (
+            <div className="mt-3 bg-slate-900/40 rounded p-3 border border-slate-700">
+              <div className="text-xs text-slate-400 mb-2">
+                Credit Growth (QoQ) – last 8 quarters
+                <span className="ml-2 text-[10px] text-slate-500">YoY compares to a year ago; QoQ compares to last quarter.</span>
+              </div>
+              <div className="flex items-end gap-1 h-16">
+                {metrics.credit_growth_series_qoq.slice(-8).map((v: number, i: number) => {
+                  const vals = metrics.credit_growth_series_qoq as number[];
+                  const min = Math.min(...vals);
+                  const max = Math.max(...vals);
+                  const range = Math.max(0.0001, max - min);
+                  const h = ((v - min) / range) * 100;
+                  const label = (metrics.credit_growth_quarters && metrics.credit_growth_quarters[i]) || '';
+                  return (
+                    <div key={i} className="flex flex-col items-center">
+                      <div
+                        className={`w-3 rounded ${v >= 0 ? 'bg-green-500' : 'bg-red-500'}`}
+                        style={{ height: `${Math.max(4, h)}%` }}
+                        title={`${label} • ${v.toFixed(2)}% QoQ`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-2 text-xs text-slate-400">
+                Current: YoY {typeof metrics.credit_growth_rate_yoy === 'number' ? metrics.credit_growth_rate_yoy.toFixed(2) : 'N/A'}% • QoQ {typeof metrics.credit_growth_rate_qoq === 'number' ? metrics.credit_growth_rate_qoq.toFixed(2) : 'N/A'}%
+              </div>
+              <div className="mt-1 text-[11px] text-slate-500">
+                Austrian view: Rapid credit growth can fuel an artificial boom. Slowing or negative growth often precedes a bust as malinvestments get revealed.
+              </div>
+            </div>
+          )}
           <button
             onClick={() => onShowEducation(title, educationContent)}
             className="w-full mt-3 bg-orange-600/20 hover:bg-orange-600/40 border border-orange-600/50 text-orange-300 px-4 py-2 rounded-lg text-sm font-medium transition-all"

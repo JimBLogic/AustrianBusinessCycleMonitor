@@ -122,7 +122,7 @@ class AustrianDashboard:
         # Load FRED API key from environment
         self.fred_api_key = os.getenv("FRED_API_KEY")
         if not self.fred_api_key:
-              print("WARNING: FRED_API_KEY not set, using demo mode")
+            print("WARNING: FRED_API_KEY not set, using demo mode")
 
     # --------------------------------------------------------------------- #
     # Internal helpers
@@ -353,6 +353,55 @@ class AustrianDashboard:
             self.metrics["analysis_runs"] += 1
             self.metrics["requests_2xx"] += 1
             return jsonify({"analysis": data, "generated_at": self._timestamp()})
+
+        @app.route("/api/explanations")
+        def api_explanations():
+            """Provide detailed explanations and primary sources for UI tooltips/popovers."""
+            try:
+                catalog = self.monitor.get_explanations()
+                self.metrics["requests_2xx"] += 1
+                return jsonify({
+                    "success": True,
+                    "explanations": catalog,
+                    "timestamp": self._timestamp(),
+                    "version": PROJECT_VERSION,
+                })
+            except Exception as e:
+                logger.error(f"Explanations API error: {e}")
+                return jsonify({"error": "Could not load explanations"}), 500
+
+        @app.route("/api/thought-leaders")
+        def api_thought_leaders():
+            """Provide comprehensive catalog of Austrian economists and Bitcoin thought leaders."""
+            try:
+                leaders = self.monitor.get_thought_leaders()
+                self.metrics["requests_2xx"] += 1
+                return jsonify({
+                    "success": True,
+                    "thought_leaders": leaders,
+                    "timestamp": self._timestamp(),
+                    "version": PROJECT_VERSION,
+                    "count": len(leaders),
+                })
+            except Exception as e:
+                logger.error(f"Thought leaders API error: {e}")
+                return jsonify({"error": "Could not load thought leaders"}), 500
+
+        @app.route("/api/data-manifest")
+        def api_data_manifest():
+            """Expose a concise manifest of API data schema and provenance availability for verifiability."""
+            self.metrics["requests_2xx"] += 1
+            return jsonify({
+                "version": PROJECT_VERSION,
+                "timestamp": self._timestamp(),
+                "endpoints": [
+                    {"path": "/api/analysis", "keys": ["timestamp","cycle_position","monetary_metrics","indicators","risk_levels","austrian_score","explanations","provenance"]},
+                    {"path": "/api/three-pillars", "keys": ["monetary_policy","credit_markets","real_economy","explanations","provenance"]},
+                    {"path": "/api/market-data", "keys": ["interest_rates","yield_curve","commodities","bitcoin","economic_indicators"]},
+                    {"path": "/api/explanations", "keys": ["explanations"]},
+                    {"path": "/api/thought-leaders", "keys": ["thought_leaders"]},
+                ],
+            })
 
         @app.route("/api/market-data")
         def api_market_data():
