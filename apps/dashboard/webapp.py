@@ -28,7 +28,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 from flask_socketio import SocketIO
 
@@ -38,6 +38,8 @@ from apps.utils.live_asset_tracker import AssetTracker
 from apps.utils.blockchain_tracker import get_blockchain_tracker
 from apps.utils.stock_tracker import get_stock_tracker
 from apps.utils.optimized_data_fetcher import register_optimized_routes
+from apps.utils.optimized_data_fetcher import get_dashboard_snapshot
+from apps.utils.dynamic_content_engine import get_content_engine
 
 # Configure logging for dashboard
 logging.basicConfig(
@@ -113,16 +115,34 @@ class AustrianDashboard:
         self._register_before_request()
         self._register_routes()
         self._register_error_handlers()
+        self._register_cache_headers()
         
         # Register optimized unified data fetching routes
         logger.info("Registering optimized data fetching routes...")
         register_optimized_routes(self.app)
-        logger.info("✅ Optimized routes registered: /api/dashboard-snapshot, /api/cache/stats")
 
         # Load FRED API key from environment
         self.fred_api_key = os.getenv("FRED_API_KEY")
         if not self.fred_api_key:
             print("WARNING: FRED_API_KEY not set, using demo mode")
+
+    def _register_cache_headers(self) -> None:
+        """Set sane cache headers: no-cache for HTML shell, long cache for hashed assets."""
+        @self.app.after_request
+        def add_cache_headers(response):  # type: ignore
+            try:
+                path = request.path or ""
+                # HTML shell should not be cached so new index.html is fetched
+                if path == "/" or path.endswith(".html"):
+                    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+                    response.headers["Pragma"] = "no-cache"
+                    response.headers["Expires"] = "0"
+                # Fingerprinted assets can be cached for a long time
+                elif path.startswith("/assets/"):
+                    response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+                return response
+            except Exception:
+                return response
 
     # --------------------------------------------------------------------- #
     # Internal helpers
@@ -200,12 +220,54 @@ class AustrianDashboard:
         def index():
             """
             Serve the React dashboard (index.html from frontend build).
+            Falls back to a working HTML template if the built frontend isn't present.
             """
             try:
+                # Try to serve the built React frontend
                 return render_template("index.html")
             except Exception as e:
-                logger.error(f"Dashboard rendering error: {e}")
-                return "<h1>Dashboard Error</h1><p>Could not load dashboard data.</p>", 500
+                logger.warning(f"Built frontend not found, falling back to working HTML template: {e}")
+                # Fallback: serve a working HTML template from templates/
+                try:
+                    fallback_template_folder = _REPO_ROOT / "templates"
+                    from flask import send_from_directory
+                    return send_from_directory(str(fallback_template_folder), "dashboard_working.html")
+                except Exception as fallback_error:
+                    logger.error(f"Fallback template also failed: {fallback_error}")
+                    return """
+                    <html>
+                    <head><title>Austrian Business Cycle Monitor</title></head>
+                    <body style="font-family: sans-serif; max-width: 800px; margin: 50px auto; padding: 20px;">
+                        <h1>🏛️ Austrian Business Cycle Monitor - API Server</h1>
+                        <p>Backend is running successfully!</p>
+                        <h2>Available API Endpoints:</h2>
+                        <ul>
+                            <li><a href="/api/status">/api/status</a> - System status</li>
+                            <li><a href="/api/health">/api/health</a> - Health check</li>
+                            <li><a href="/api/analysis">/api/analysis</a> - Austrian cycle analysis</li>
+                            <li><a href="/api/market-data">/api/market-data</a> - Market data</li>
+                            <li><a href="/api/three-pillars">/api/three-pillars</a> - Three Pillars analysis</li>
+                            <li><a href="/api/bitcoin-price">/api/bitcoin-price</a> - Bitcoin price</li>
+                            <li><a href="/api/blockchain-stats">/api/blockchain-stats</a> - Blockchain statistics</li>
+                            <li><a href="/api/stock-markets">/api/stock-markets</a> - Stock market data</li>
+                            <li><a href="/api/austrian-insights">/api/austrian-insights</a> - Austrian insights</li>
+                            <li><a href="/api/situation-overview">/api/situation-overview</a> - Situation overview</li>
+                            <li><a href="/api/explanations">/api/explanations</a> - Metric explanations</li>
+                            <li><a href="/api/thought-leaders">/api/thought-leaders</a> - Austrian economists</li>
+                            <li><a href="/metrics">/metrics</a> - Prometheus metrics</li>
+                        </ul>
+                        <h3>Frontend Options:</h3>
+                        <p>To use the full React dashboard:</p>
+                        <ol>
+                            <li>Build the frontend: <code>cd packages/frontend && npm run build</code></li>
+                            <li>Restart the server</li>
+                        </ol>
+                        <p>Or use the working HTML template at <code>templates/dashboard_working.html</code></p>
+                        <hr>
+                        <p><small>Version: """ + PROJECT_VERSION + """ | Mode: """ + ("Live" if self.fred_api_key else "Demo") + """</small></p>
+                    </body>
+                    </html>
+                    """, 200
 
         @app.route("/api/status")
         def api_status():
@@ -656,6 +718,107 @@ class AustrianDashboard:
             except Exception as e:
                 logger.error(f"Austrian insights API error: {e}", exc_info=True)
                 return jsonify({"error": "Could not generate Austrian insights"}), 500
+
+        # ===================================================================
+        # DYNAMIC CONTENT ENDPOINTS
+        # ===================================================================
+        
+        @app.route("/api/situation-overview")
+        def situation_overview():
+            """
+            Get comprehensive situation overview with AI-generated insights.
+            This is the main "What's happening now?" panel.
+            """
+            try:
+                # Gather all current metrics
+                # Use cached dashboard data
+                dashboard_data = get_dashboard_snapshot(use_cache=True, cache_ttl=60)
+                analysis_result = dashboard_data.get("austrian_analysis", {})
+                market = dashboard_data.get("market_data", {})
+                
+                # Combine into unified metrics dict
+                metrics = {
+                    "austrian_score": analysis_result.get("austrian_score", 5.0),
+                    "m2_growth_rate": analysis_result.get("monetary_metrics", {}).get("m2_growth_yoy", 5.0),
+                    "credit_growth": analysis_result.get("credit_metrics", {}).get("total_credit_growth_yoy", 5.0),
+                    "malinvestment_index": analysis_result.get("indicators", {}).get("malinvestment_index", 5.0),
+                    "vix": market.get("volatility", {}).get("vix", 15.0),
+                    "fed_funds_rate": market.get("interest_rates", {}).get("fed_funds", 5.0),
+                    "natural_rate_estimate": market.get("interest_rates", {}).get("natural_rate_estimate", 4.0),
+                    "yield_curve_spread": market.get("interest_rates", {}).get("yield_curve_10y2y", 1.0),
+                    "unemployment_rate": analysis_result.get("real_economy_metrics", {}).get("unemployment_rate", 5.0),
+                    "cpi_inflation": analysis_result.get("monetary_metrics", {}).get("cpi_yoy", 3.0),
+                }
+                
+                # Generate dynamic content
+                content_engine = get_content_engine()
+                overview = content_engine.generate_situation_overview(metrics)
+                
+                return jsonify(overview)
+            except Exception as e:
+                logger.error(f"Situation overview error: {e}", exc_info=True)
+                return jsonify({"error": "Could not generate situation overview"}), 500
+        
+        @app.route("/api/metric-tooltip/<metric_key>")
+        def metric_tooltip(metric_key: str):
+            """
+            Get rich tooltip content for any metric.
+            Returns: current value, interpretation, Austrian theory, related metrics, sources
+            """
+            try:
+                # Gather all current metrics
+                dashboard_data = get_dashboard_snapshot(use_cache=True, cache_ttl=60)
+                analysis_result = dashboard_data.get("austrian_analysis", {})
+                market = dashboard_data.get("market_data", {})
+                
+                # Get current value for requested metric
+                all_metrics = {
+                    "austrian_score": analysis_result.get("austrian_score", 5.0),
+                    "m2_growth_rate": analysis_result.get("monetary_metrics", {}).get("m2_growth_yoy", 5.0),
+                    "credit_growth": analysis_result.get("credit_metrics", {}).get("total_credit_growth_yoy", 5.0),
+                    "malinvestment_index": analysis_result.get("indicators", {}).get("malinvestment_index", 5.0),
+                    "vix": market.get("volatility", {}).get("vix", 15.0),
+                    "fed_funds_rate": market.get("interest_rates", {}).get("fed_funds", 5.0),
+                    "natural_rate_estimate": market.get("interest_rates", {}).get("natural_rate_estimate", 4.0),
+                    "yield_curve_spread": market.get("interest_rates", {}).get("yield_curve_10y2y", 1.0),
+                }
+                
+                current_value = all_metrics.get(metric_key, 0.0)
+                
+                # Generate tooltip content
+                content_engine = get_content_engine()
+                tooltip = content_engine.generate_metric_tooltip(metric_key, current_value, all_metrics)
+                
+                return jsonify(tooltip)
+            except Exception as e:
+                logger.error(f"Metric tooltip error for {metric_key}: {e}", exc_info=True)
+                return jsonify({"error": f"Could not generate tooltip for {metric_key}"}), 500
+        
+        @app.route("/api/chart-annotations/<chart_type>")
+        def chart_annotations(chart_type: str):
+            """
+            Get dynamic annotations for charts based on current data.
+            Chart types: credit_growth, malinvestment_radar, austrian_score, three_pillars, asset_correlation
+            """
+            try:
+                # Gather metrics
+                dashboard_data = get_dashboard_snapshot(use_cache=True, cache_ttl=60)
+                analysis_result = dashboard_data.get("austrian_analysis", {})
+                
+                all_metrics = {
+                    "austrian_score": analysis_result.get("austrian_score", 5.0),
+                    "credit_growth": analysis_result.get("credit_metrics", {}).get("total_credit_growth_yoy", 5.0),
+                    "malinvestment_index": analysis_result.get("indicators", {}).get("malinvestment_index", 5.0),
+                }
+                
+                # Generate annotations
+                content_engine = get_content_engine()
+                annotations = content_engine.generate_chart_annotations(chart_type, analysis_result, all_metrics)
+                
+                return jsonify({"annotations": annotations})
+            except Exception as e:
+                logger.error(f"Chart annotations error for {chart_type}: {e}", exc_info=True)
+                return jsonify({"error": f"Could not generate annotations for {chart_type}"}), 500
 
         @app.route("/metrics")
         def metrics():

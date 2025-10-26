@@ -1,0 +1,5 @@
+# Run this if frontend isn't working:
+cd C:\Users\JimBLogic\AustrianBusinessCycleMonitor-1\packages\frontend
+npm run dev
+
+# Then open: http://127.0.0.1:8080

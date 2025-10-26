@@ -1,0 +1,9 @@
+name: DEPRECATED (unused)
+
+on: {}
+
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Deprecated workflow; use 'Run Live Smoke (Manual)' instead."

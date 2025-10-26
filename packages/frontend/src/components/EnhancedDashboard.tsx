@@ -11,6 +11,7 @@
  */
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import {
   useAnalysis,
   useThreePillars,
@@ -23,6 +24,8 @@ import {
 import { formatCurrency, getRiskColor } from '@/lib/utils';
 import { CypherpunkHallOfFame } from './CypherpunkHallOfFame';
 import { templeTheme } from '../styles/templeTheme';
+import LanguageSwitcher from './LanguageSwitcher';
+import { FastLoadingScreen } from './FastLoadingScreen';
 import {
   CreditGrowthChart,
   MalinvestmentRadarChart,
@@ -39,6 +42,8 @@ import {
   MatrixSkeleton,
   EmptyState,
 } from './LoadingStates';
+import { SituationOverviewPanel } from './SituationOverviewPanel';
+import { InteractiveTooltip } from './InteractiveTooltip';
 
 // Austrian wisdom quotes
 const AUSTRIAN_QUOTES = [
@@ -52,7 +57,7 @@ const AUSTRIAN_QUOTES = [
   },
   {
     text: "Gold is money. Everything else is credit.",
-    author: "J.P. Morgan"
+    author: "J.P. Morgan (1912 testimony)"
   },
   {
     text: "The curious task of economics is to demonstrate to men how little they really know about what they imagine they can design.",
@@ -60,7 +65,7 @@ const AUSTRIAN_QUOTES = [
   },
   {
     text: "The avoidance of taxes is the only intellectual pursuit that carries any reward.",
-    author: "John Maynard Keynes (Ironically)"
+    author: "Attributed to John Maynard Keynes (disputed)"
   },
   {
     text: "Bitcoin is a technological tour de force.",
@@ -111,6 +116,7 @@ interface EducationalModal {
 }
 
 export function EnhancedDashboard() {
+  const { t } = useTranslation();
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [currentQuote, setCurrentQuote] = useState(0);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
@@ -138,11 +144,15 @@ export function EnhancedDashboard() {
     const [thoughtLeaders, setThoughtLeaders] = useState<any | null>(null);
     const [showThoughtLeadersModal, setShowThoughtLeadersModal] = useState<boolean>(false);
 
-  // Fetch blockchain stats
+  // OPTIMIZED: Lazy load blockchain stats only when section is expanded
   useEffect(() => {
+    if (!expandedSections.has('blockchain') && !blockchainStats) return; // Skip if not needed
+    
     const fetchBlockchainStats = async () => {
       try {
-        const response = await fetch('/api/blockchain-stats');
+        const response = await fetch('/api/blockchain-stats', { 
+          signal: AbortSignal.timeout(3000) // 3 second timeout
+        });
         if (response.ok) {
           const data = await response.json();
           setBlockchainStats(data);
@@ -156,13 +166,17 @@ export function EnhancedDashboard() {
     const interval = setInterval(fetchBlockchainStats, 60000); // Update every minute
 
     return () => clearInterval(interval);
-  }, []);
+  }, [expandedSections]);
 
-  // Fetch stock market data
+  // OPTIMIZED: Lazy load stock market data only when section is expanded
   useEffect(() => {
+    if (!expandedSections.has('stocks') && !stockMarkets) return; // Skip if not needed
+    
     const fetchStockMarkets = async () => {
       try {
-        const response = await fetch('/api/stock-markets');
+        const response = await fetch('/api/stock-markets', {
+          signal: AbortSignal.timeout(3000) // 3 second timeout
+        });
         if (response.ok) {
           const data = await response.json();
           setStockMarkets(data);
@@ -176,14 +190,18 @@ export function EnhancedDashboard() {
     const interval = setInterval(fetchStockMarkets, 60000); // Update every minute
 
     return () => clearInterval(interval);
-  }, []);
+  }, [expandedSections]);
 
-  // Fetch explanations/sources catalog for tooltips and source modal
+  // OPTIMIZED: Lazy load explanations only when needed (on modal open)
   useEffect(() => {
+    if (!educationalModal.show || explanationsCatalog) return; // Skip if modal not shown
+    
     const fetchExplanations = async () => {
       try {
         setExplanationsLoading(true);
-        const res = await fetch('/api/explanations');
+        const res = await fetch('/api/explanations', {
+          signal: AbortSignal.timeout(3000)
+        });
         if (res.ok) {
           const json = await res.json();
           setExplanationsCatalog(json?.explanations || {});
@@ -318,17 +336,9 @@ export function EnhancedDashboard() {
     );
   };
 
-  // Loading state
+  // OPTIMIZED Loading state - show fast loading screen
   if (analysisLoading || pillarsLoading || marketLoading || btcLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-20 w-20 border-b-4 border-orange-500 mb-4"></div>
-          <p className="text-2xl text-slate-200 animate-pulse">Loading Austrian Analysis...</p>
-          <p className="text-sm text-slate-400 mt-2">Connecting to economic data feeds</p>
-        </div>
-      </div>
-    );
+    return <FastLoadingScreen />;
   }
 
   // Error state
@@ -403,7 +413,7 @@ export function EnhancedDashboard() {
                     filter: 'drop-shadow(0 2px 4px rgba(255, 215, 0, 0.3))'
                   }}
                 >
-                  Austrian Business Cycle Monitor
+                  {t('header.title')}
                 </h1>
                 <p 
                   className="text-sm mt-1 font-semibold flex items-center gap-2"
@@ -413,7 +423,7 @@ export function EnhancedDashboard() {
                   }}
                 >
                   <span className="flex items-center gap-1">
-                    🏛️ <span>Sound Money</span>
+                    🏛️ <span>{t('header.soundMoney')}</span>
                   </span>
                   <span style={{ color: templeTheme.colors.bitcoinOrange }}>•</span>
                   <span className="flex items-center gap-1">
@@ -427,39 +437,42 @@ export function EnhancedDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              {/* Language Switcher */}
+              <LanguageSwitcher className="hidden sm:block" />
+              
               <button
                 onClick={openSourcesModal}
                 className="flex items-center gap-2 bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-500 hover:to-yellow-500 text-black px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-yellow-500/30 border border-yellow-400/40"
-                title={explanationsLoading ? 'Loading sources…' : 'View explanations and sources'}
+                title={explanationsLoading ? t('sources.loading') : t('sources.viewTooltip')}
                 disabled={explanationsLoading}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 6a9 9 0 100 18 9 9 0 000-18z" />
                 </svg>
-                <span className="hidden sm:inline">Sources</span>
+                <span className="hidden sm:inline">{t('sources.title')}</span>
               </button>
                 <button
                   onClick={() => setShowThoughtLeadersModal(true)}
                   className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/30"
-                  title="Learn from Austrian economists and Bitcoin thought leaders"
+                  title={t('education.thinkers.tooltip')}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
-                  <span className="hidden sm:inline">Thinkers</span>
+                  <span className="hidden sm:inline">{t('education.thinkers.title')}</span>
                 </button>
               <button
                 onClick={() => window.location.reload()}
                 className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/50"
-                title="Refresh all data"
+                title={t('common.refreshData')}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                <span className="hidden sm:inline">Refresh</span>
+                <span className="hidden sm:inline">{t('common.refresh')}</span>
               </button>
               <div className="text-right text-xs text-slate-300 font-mono bg-slate-800/50 px-3 py-2 rounded-lg border border-slate-700/50">
-                <div className="text-slate-500 text-[10px] uppercase tracking-wide">Last Updated</div>
+                <div className="text-slate-500 text-[10px] uppercase tracking-wide">{t('common.lastUpdated')}</div>
                 <div className="text-slate-200 font-bold">{lastUpdate.toLocaleTimeString()}</div>
               </div>
             </div>
@@ -496,6 +509,9 @@ export function EnhancedDashboard() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
+        {/* Situation Overview Panel - Dynamic AI-generated analysis */}
+        <SituationOverviewPanel />
+
         {/* Top Metrics Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Austrian Score - Enhanced */}
@@ -539,17 +555,17 @@ The theory predicts that credit expansion beyond real savings creates artificial
               <div className="flex items-center gap-2">
                 <span className="text-2xl">🏛️</span>
                 <h3 className="text-sm font-semibold text-orange-300 uppercase tracking-wider flex items-center">
-                  Austrian Cycle Score
+                  {t('dashboard.austrianScore')}
                   <InfoBadge explanationKey="overall_risk" />
                 </h3>
               </div>
-              <span className="text-xs text-slate-400 font-mono bg-slate-800/50 px-2 py-1 rounded">0-10 Scale</span>
+              <span className="text-xs text-slate-400 font-mono bg-slate-800/50 px-2 py-1 rounded">{t('dashboard.scale')}</span>
             </div>
             <div className="flex items-baseline gap-4 mb-4">
               <div className="text-7xl font-bold text-orange-400 drop-shadow-lg">{austrianScore.toFixed(1)}</div>
               <div className="flex-1">
                 <div className={`text-3xl font-bold ${getRiskColor(overallRisk)} drop-shadow-md`}>
-                  {overallRisk >= 7 ? 'HIGH RISK' : overallRisk >= 5 ? 'MODERATE' : 'LOW RISK'}
+                  {overallRisk >= 7 ? t('riskLevels.high') : overallRisk >= 5 ? t('riskLevels.moderate') : t('riskLevels.low')}
                 </div>
                 <div className="text-base text-slate-300 mt-2 font-mono bg-slate-800/50 px-3 py-1 rounded inline-block">
                   {cyclePhase}
@@ -568,144 +584,81 @@ The theory predicts that credit expansion beyond real savings creates artificial
                 style={{ width: `${(austrianScore / 10) * 100}%` }}
               ></div>
             </div>
-            <p className="text-xs text-slate-400 mt-3 text-center">Click for detailed explanation</p>
+            <p className="text-xs text-slate-400 mt-3 text-center">{t('tooltip.clickForDetails')}</p>
           </div>
 
-          {/* Bitcoin Price with Tooltip */}
-          <motion.div 
-            className="bg-gradient-to-br from-orange-600/30 via-slate-800/40 to-orange-800/30 border-2 rounded-xl p-6 backdrop-blur-sm shadow-xl transition-all duration-300 cursor-pointer group relative"
-            style={{
-              borderColor: templeTheme.colors.bitcoinOrange
-            }}
-            whileHover={{ 
-              y: -5, 
-              boxShadow: templeTheme.shadows.bitcoinGlow 
-            }}
-            onClick={() => showEducation(
-              'Bitcoin: Digital Sound Money',
-              `Bitcoin represents the modern embodiment of Austrian economic principles, serving as a hedge against fiat currency debasement.
-
-💰 Current Price: ${btcPrice?.price ? formatCurrency(btcPrice.price) : formatCurrency(market?.bitcoin?.price || 0)}
-🪙 Fixed Supply: 21,000,000 BTC (absolute scarcity)
-📊 Halving Cycle: Supply issuance cuts in half every ~4 years
-
-Austrian Economic Significance:
-• Fixed Supply: Unlike fiat currency, Bitcoin cannot be inflated by central authorities
-• Predictable Issuance: Halving events ensure decreasing inflation rate
-• Subjective Value Theory: Price determined by individual preferences, not government decree
-• Sound Money Qualities: Durable, portable, divisible, fungible, scarce, verifiable
-
-As F.A. Hayek envisioned in "Denationalisation of Money" (1976), private competitive currencies can outcompete government monopoly money. Bitcoin fulfills Carl Menger's regression theorem - it evolved from a commodity (computing power) into a medium of exchange through free market forces.
-
-"The root problem with conventional currency is all the trust that's required to make it work. The central bank must be trusted not to debase the currency, but the history of fiat currencies is full of breaches of that trust." - Satoshi Nakamoto`,
-              [
-                {
-                  name: 'CoinGecko Bitcoin API',
-                  url: 'https://api.coingecko.com/api/v3/coins/bitcoin',
-                  description: 'Real-time Bitcoin price, market cap, volume data'
-                },
-                {
-                  name: 'Blockchain.com Explorer',
-                  url: 'https://www.blockchain.com/explorer/assets/btc',
-                  description: 'Verify Bitcoin supply, transactions, and network data'
-                },
-                {
-                  name: 'Hayek: Denationalisation of Money',
-                  url: 'https://mises.org/library/denationalisation-money-argument-refined',
-                  description: 'Hayek\'s 1976 case for private competitive currencies'
-                }
-              ]
-            )}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-3xl drop-shadow-lg">₿</span>
-                <h3 className="text-sm font-semibold text-orange-300 uppercase tracking-wider flex items-center">
-                  Bitcoin
-                  <InfoBadge explanationKey="m2_growth_rate" />
-                </h3>
+          {/* Bitcoin Price with Interactive Tooltip */}
+          <InteractiveTooltip metricKey="bitcoin_price">
+            <motion.div 
+              className="bg-gradient-to-br from-orange-600/30 via-slate-800/40 to-orange-800/30 border-2 rounded-xl p-6 backdrop-blur-sm shadow-xl transition-all duration-300 cursor-pointer group relative"
+              style={{
+                borderColor: templeTheme.colors.bitcoinOrange
+              }}
+              whileHover={{ 
+                y: -5, 
+                boxShadow: templeTheme.shadows.bitcoinGlow 
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-3xl drop-shadow-lg">₿</span>
+                  <h3 className="text-sm font-semibold text-orange-300 uppercase tracking-wider flex items-center">
+                    {t('metrics.bitcoin')}
+                    <InfoBadge explanationKey="m2_growth_rate" />
+                  </h3>
+                </div>
+                <div className="text-4xl font-bold text-white mb-2 drop-shadow-md">
+                  {btcPrice?.price ? formatCurrency(btcPrice.price) : formatCurrency(market?.bitcoin?.price || 0)}
+                </div>
+                <div className="text-xs text-orange-300 font-semibold mb-1">{t('metrics.soundMoneyIndicator')}</div>
+                <div className="text-xs text-slate-400 bg-slate-900/50 px-2 py-1 rounded inline-block">
+                  {btcPrice?.source || market?.bitcoin?.source || 'CoinGecko'}
+                </div>
+                <div className="text-xs text-orange-200 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  💡 {t('tooltip.clickForDeepDive')}
+                </div>
               </div>
-              <div className="text-4xl font-bold text-white mb-2 drop-shadow-md">
-                {btcPrice?.price ? formatCurrency(btcPrice.price) : formatCurrency(market?.bitcoin?.price || 0)}
+            </motion.div>
+          </InteractiveTooltip>
+
+          {/* Gold Price with Interactive Tooltip */}
+          <InteractiveTooltip metricKey="gold_price">
+            <motion.div 
+              className="bg-gradient-to-br via-slate-800/40 rounded-xl p-6 backdrop-blur-sm shadow-xl transition-all duration-300 cursor-pointer group relative"
+              style={{
+                background: `linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(139, 134, 128, 0.3) 100%)`,
+                borderWidth: '2px',
+                borderStyle: 'solid',
+                borderColor: templeTheme.colors.austrianGold
+              }}
+              whileHover={{ 
+                y: -5, 
+                boxShadow: templeTheme.shadows.goldGlow 
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-3xl drop-shadow-lg">🪙</span>
+                  <h3 className="text-sm font-semibold text-yellow-300 uppercase tracking-wider flex items-center">
+                    {t('metrics.gold')}
+                    <InfoBadge explanationKey="base_money_growth" />
+                  </h3>
+                </div>
+                <div className="text-4xl font-bold text-white mb-2 drop-shadow-md">
+                  {formatCurrency(market?.commodities?.gold || 0)}
+                </div>
+                <div className="text-xs text-yellow-300 font-semibold mb-1">{t('metrics.traditionalStoreOfValue')}</div>
+                <div className="text-xs text-slate-400 bg-slate-900/50 px-2 py-1 rounded inline-block">
+                  {t('metrics.perOunce')}
+                </div>
+                <div className="text-xs text-yellow-200 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  💡 Click for deep dive
+                </div>
               </div>
-              <div className="text-xs text-orange-300 font-semibold mb-1">Sound Money Indicator</div>
-              <div className="text-xs text-slate-400 bg-slate-900/50 px-2 py-1 rounded inline-block">
-                {btcPrice?.source || market?.bitcoin?.source || 'CoinGecko'}
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Gold Price with Tooltip */}
-          <motion.div 
-            className="bg-gradient-to-br via-slate-800/40 rounded-xl p-6 backdrop-blur-sm shadow-xl transition-all duration-300 cursor-pointer group relative"
-            style={{
-              background: `linear-gradient(135deg, rgba(255, 215, 0, 0.2) 0%, rgba(139, 134, 128, 0.3) 100%)`,
-              borderWidth: '2px',
-              borderStyle: 'solid',
-              borderColor: templeTheme.colors.austrianGold
-            }}
-            whileHover={{ 
-              y: -5, 
-              boxShadow: templeTheme.shadows.goldGlow 
-            }}
-            onClick={() => showEducation(
-              'Gold: Traditional Store of Value',
-              `Gold has served as money for thousands of years, embodying the Austrian school's sound money principles.
-
-💰 Current Price: ${formatCurrency(market?.commodities?.gold || 0)} per troy oz
-🪙 Stock-to-Flow Ratio: ~62 years (highest of all commodities)
-🏦 Central Bank Holdings: >35,000 tonnes worldwide
-
-Austrian Perspective on Gold:
-• Historical Money: Gold emerged naturally through free market forces (Carl Menger's origin of money)
-• Scarcity: Limited supply and costly production prevent arbitrary inflation
-• Durability: Gold doesn't corrode, rust, or decay - stores value across generations
-• Divisibility: Can be melted and divided without losing value
-• Universal Recognition: Accepted globally for 5,000+ years
-
-As J.P. Morgan testified before Congress (1912): "Gold is money. Everything else is credit."
-
-The abandonment of the gold standard in 1971 severed the final link between fiat currency and sound money, enabling unlimited monetary expansion. Austrian economists argue this created the boom-bust cycles and wealth inequality we see today.
-
-"The gold standard makes the determination of money's purchasing power independent of the changing ambitions and doctrines of political parties and pressure groups." - Ludwig von Mises`,
-              [
-                {
-                  name: 'CoinGecko Gold Price API',
-                  url: 'https://api.coingecko.com/api/v3/simple/price?ids=gold&vs_currencies=usd',
-                  description: 'Real-time gold spot price in USD per troy ounce'
-                },
-                {
-                  name: 'World Gold Council',
-                  url: 'https://www.gold.org/goldhub/data/gold-prices',
-                  description: 'Official gold market data and central bank holdings'
-                },
-                {
-                  name: 'Mises on the Gold Standard',
-                  url: 'https://mises.org/library/case-gold-standard',
-                  description: 'Austrian economic case for returning to gold-backed money'
-                }
-              ]
-            )}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-3xl drop-shadow-lg">🪙</span>
-                <h3 className="text-sm font-semibold text-yellow-300 uppercase tracking-wider flex items-center">
-                  Gold
-                  <InfoBadge explanationKey="base_money_growth" />
-                </h3>
-              </div>
-              <div className="text-4xl font-bold text-white mb-2 drop-shadow-md">
-                {formatCurrency(market?.commodities?.gold || 0)}
-              </div>
-              <div className="text-xs text-yellow-300 font-semibold mb-1">Traditional Store of Value</div>
-              <div className="text-xs text-slate-400 bg-slate-900/50 px-2 py-1 rounded inline-block">
-                per oz
-              </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </InteractiveTooltip>
 
           {/* Silver Price with Tooltip */}
           <motion.div 
@@ -837,53 +790,63 @@ Modern Austrian Analysis:
 
         {/* Credit Growth and Malinvestment Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Credit Growth Chart */}
-          <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 border-2 border-blue-600/30 rounded-xl p-6 backdrop-blur-sm shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-3xl">📈</span>
-              <div>
-                <h3 className="text-xl font-bold text-blue-400">Credit Expansion Trends</h3>
-                <p className="text-sm text-slate-400">Year-over-Year and Quarter-over-Quarter Growth</p>
+          {/* Credit Growth Chart with Interactive Tooltip */}
+          <InteractiveTooltip metricKey="credit_growth_rate">
+            <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 border-2 border-blue-600/30 rounded-xl p-6 backdrop-blur-sm shadow-xl hover:border-blue-500/50 transition-all duration-300">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-3xl">📈</span>
+                <div>
+                  <h3 className="text-xl font-bold text-blue-400">Credit Expansion Trends</h3>
+                  <p className="text-sm text-slate-400">Year-over-Year and Quarter-over-Quarter Growth</p>
+                </div>
+              </div>
+              {analysisLoading ? (
+                <ChartSkeleton height={400} />
+              ) : analysis ? (
+                <CreditGrowthChart
+                  data={[
+                    { quarter: '2024-Q1', yoy: 4.8, qoq: 1.2, creditToGdp: 245 },
+                    { quarter: '2024-Q2', yoy: 4.6, qoq: 0.9, creditToGdp: 247 },
+                    { quarter: '2024-Q3', yoy: 4.4, qoq: 0.5, creditToGdp: 248 },
+                    { quarter: '2024-Q4', yoy: 4.3, qoq: 0.3, creditToGdp: 249 },
+                    { quarter: '2025-Q1', yoy: 4.2, qoq: 0.2, creditToGdp: 250 },
+                  ]}
+                  height={400}
+                />
+              ) : (
+                <EmptyState title="Credit Data Unavailable" message="Credit expansion data is currently not available" icon="📈" />
+              )}
+              <div className="text-xs text-blue-300 mt-3 text-center opacity-70 hover:opacity-100 transition-opacity">
+                💡 Click chart for Austrian theory context
               </div>
             </div>
-            {analysisLoading ? (
-              <ChartSkeleton height={400} />
-            ) : analysis ? (
-              <CreditGrowthChart
-                data={[
-                  { quarter: '2024-Q1', yoy: 4.8, qoq: 1.2, creditToGdp: 245 },
-                  { quarter: '2024-Q2', yoy: 4.6, qoq: 0.9, creditToGdp: 247 },
-                  { quarter: '2024-Q3', yoy: 4.4, qoq: 0.5, creditToGdp: 248 },
-                  { quarter: '2024-Q4', yoy: 4.3, qoq: 0.3, creditToGdp: 249 },
-                  { quarter: '2025-Q1', yoy: 4.2, qoq: 0.2, creditToGdp: 250 },
-                ]}
-                height={400}
-              />
-            ) : (
-              <EmptyState title="Credit Data Unavailable" message="Credit expansion data is currently not available" icon="📈" />
-            )}
-          </div>
+          </InteractiveTooltip>
 
-          {/* Malinvestment Radar Chart */}
-          <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 border-2 border-orange-600/30 rounded-xl p-6 backdrop-blur-sm shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="text-3xl">⚠️</span>
-              <div>
-                <h3 className="text-xl font-bold text-orange-400">Malinvestment Risk Analysis</h3>
-                <p className="text-sm text-slate-400">Six-Component Risk Distribution</p>
+          {/* Malinvestment Radar Chart with Interactive Tooltip */}
+          <InteractiveTooltip metricKey="malinvestment_index">
+            <div className="bg-gradient-to-br from-slate-900/80 to-slate-800/80 border-2 border-orange-600/30 rounded-xl p-6 backdrop-blur-sm shadow-xl hover:border-orange-500/50 transition-all duration-300">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-3xl">⚠️</span>
+                <div>
+                  <h3 className="text-xl font-bold text-orange-400">Malinvestment Risk Analysis</h3>
+                  <p className="text-sm text-slate-400">Six-Component Risk Distribution</p>
+                </div>
+              </div>
+              {analysisLoading ? (
+                <RadarSkeleton />
+              ) : analysis?.indicators?.malinvestment_components ? (
+                <MalinvestmentRadarChart
+                  components={analysis.indicators.malinvestment_components}
+                  height={400}
+                />
+              ) : (
+                <EmptyState title="Malinvestment Data Unavailable" message="Risk analysis data is currently not available" icon="⚠️" />
+              )}
+              <div className="text-xs text-orange-300 mt-3 text-center opacity-70 hover:opacity-100 transition-opacity">
+                💡 Click chart for detailed interpretation
               </div>
             </div>
-            {analysisLoading ? (
-              <RadarSkeleton />
-            ) : analysis?.indicators?.malinvestment_components ? (
-              <MalinvestmentRadarChart
-                components={analysis.indicators.malinvestment_components}
-                height={400}
-              />
-            ) : (
-              <EmptyState title="Malinvestment Data Unavailable" message="Risk analysis data is currently not available" icon="⚠️" />
-            )}
-          </div>
+          </InteractiveTooltip>
         </div>
 
         {/* Austrian Score Gauges and Three Pillars Row */}
@@ -915,8 +878,8 @@ Modern Austrian Analysis:
             <div className="flex items-center gap-3 mb-4">
               <span className="text-3xl">🏛️</span>
               <div>
-                <h3 className="text-xl font-bold text-purple-400">Three Pillars Health Status</h3>
-                <p className="text-sm text-slate-400">Monetary Policy • Credit Markets • Real Economy</p>
+                <h3 className="text-xl font-bold text-purple-400">{t('threePillars.healthStatus')}</h3>
+                <p className="text-sm text-slate-400">{t('threePillars.categories')}</p>
               </div>
             </div>
             {pillarsLoading ? (
@@ -925,19 +888,19 @@ Modern Austrian Analysis:
               <ThreePillarsHealth
                 pillars={[
                   {
-                    name: 'Monetary Policy',
+                    name: t('threePillars.monetaryPolicy'),
                     status: pillars.monetary_policy?.status || 'unknown',
                     riskLevel: pillars.monetary_policy?.risk_level || 'moderate',
                     score: analysis?.risk_levels?.monetary_policy || 0,
                   },
                   {
-                    name: 'Credit Markets',
+                    name: t('threePillars.creditMarkets'),
                     status: pillars.credit_markets?.status || 'unknown',
                     riskLevel: pillars.credit_markets?.risk_level || 'moderate',
                     score: analysis?.risk_levels?.credit_markets || 0,
                   },
                   {
-                    name: 'Real Economy',
+                    name: t('threePillars.realEconomy'),
                     status: pillars.real_economy?.status || 'unknown',
                     riskLevel: pillars.real_economy?.risk_level || 'moderate',
                     score: analysis?.risk_levels?.real_economy || 0,
@@ -945,7 +908,7 @@ Modern Austrian Analysis:
                 ]}
               />
             ) : (
-              <EmptyState title="Pillars Data Unavailable" message="Three pillars health data is currently not available" icon="🏛️" />
+              <EmptyState title={t('errors.pillarsUnavailable')} message={t('errors.pillarsUnavailableMessage')} icon="🏛️" />
             )}
           </div>
         </div>
@@ -956,8 +919,8 @@ Modern Austrian Analysis:
             <div className="flex items-center gap-3 mb-4">
               <span className="text-3xl">💹</span>
               <div>
-                <h3 className="text-xl font-bold text-yellow-400">Asset Correlation Matrix</h3>
-                <p className="text-sm text-slate-400">Sound Money vs. Fiat Assets Correlations</p>
+                <h3 className="text-xl font-bold text-yellow-400">{t('charts.assetCorrelationMatrix')}</h3>
+                <p className="text-sm text-slate-400">{t('charts.soundMoneyVsFiat')}</p>
               </div>
             </div>
             {marketLoading ? (
@@ -1021,7 +984,7 @@ Modern Austrian Analysis:
                     <div className="text-4xl">🔴</div>
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-2xl font-bold text-red-300">Current Phase: {insightsData.cycle_phase.toUpperCase().replace('-', ' ')}</h3>
+                        <h3 className="text-2xl font-bold text-red-300">Current Phase: {insightsData.cycle_phase?.toUpperCase().replace('-', ' ') || 'Loading...'}</h3>
                         <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                           insightsData.risk_level === 'extreme' ? 'bg-red-600' :
                           insightsData.risk_level === 'high' ? 'bg-orange-600' :
@@ -1221,8 +1184,8 @@ Modern Austrian Analysis:
                       <summary className="cursor-pointer p-4 hover:bg-slate-800/50 transition-all flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <span className="text-2xl">📊</span>
-                          <span className="text-lg font-bold text-blue-300">Stock Markets: Capital Structure Signals</span>
-                          <span className="text-xs bg-blue-600 px-2 py-1 rounded-full">{insightsData.insights.stock_markets.length} insights</span>
+                          <span className="text-lg font-bold text-blue-300">{t('education.insights.stockMarkets')}</span>
+                          <span className="text-xs bg-blue-600 px-2 py-1 rounded-full">{insightsData.insights.stock_markets.length} {t('education.insights.count')}</span>
                         </div>
                         <svg className="w-5 h-5 text-blue-300 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -1234,7 +1197,7 @@ Modern Austrian Analysis:
                             <div className="flex items-start justify-between mb-2">
                               <h4 className="text-md font-bold text-blue-200">{insight.title}</h4>
                               <div className="flex items-center gap-2">
-                                <div className="text-xs text-slate-400">{(insight.relevance_score * 100).toFixed(0)}% relevant</div>
+                                <div className="text-xs text-slate-400">{(insight.relevance_score * 100).toFixed(0)}% {t('education.insights.relevant')}</div>
                                 <div className="w-16 h-2 bg-slate-700 rounded-full overflow-hidden">
                                   <div className="h-full bg-gradient-to-r from-blue-500 to-purple-500" style={{ width: `${insight.relevance_score * 100}%` }}></div>
                                 </div>
@@ -1262,8 +1225,8 @@ Modern Austrian Analysis:
                       <summary className="cursor-pointer p-4 hover:bg-slate-800/50 transition-all flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <span className="text-2xl">💸</span>
-                          <span className="text-lg font-bold text-purple-300">Inflation: The Hidden Tax</span>
-                          <span className="text-xs bg-purple-600 px-2 py-1 rounded-full">{insightsData.insights.inflation.length} insights</span>
+                          <span className="text-lg font-bold text-purple-300">{t('education.insights.inflation')}</span>
+                          <span className="text-xs bg-purple-600 px-2 py-1 rounded-full">{insightsData.insights.inflation.length} {t('education.insights.count')}</span>
                         </div>
                         <svg className="w-5 h-5 text-purple-300 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -1807,7 +1770,7 @@ Gold ($${formatCurrency(market?.commodities?.gold || 0)}/oz) and Bitcoin (₿${f
           </div>
 
           {/* VIX Austrian Interpretation - Enhanced Visual Card */}
-          {stockMarkets.volatility && (
+          {stockMarkets?.volatility && (
             <motion.div 
               className="mt-6 bg-gradient-to-br from-slate-900/80 to-slate-800/80 border rounded-xl p-6 backdrop-blur-sm shadow-2xl relative overflow-hidden"
               style={{
@@ -1861,7 +1824,7 @@ Gold ($${formatCurrency(market?.commodities?.gold || 0)}/oz) and Bitcoin (₿${f
                       stockMarkets.volatility.vix < 20 ? 'text-green-400' : 
                       stockMarkets.volatility.vix < 30 ? 'text-yellow-400' : 'text-red-400'
                     }`}>
-                      {stockMarkets.volatility.interpretation.replace(/_/g, ' ')}
+                      {stockMarkets.volatility.interpretation?.replace(/_/g, ' ') || 'Loading...'}
                     </div>
                   </div>
                 </div>
@@ -2229,7 +2192,7 @@ Austrian Capital Theory and Technology Stocks:
                   `The VIX (${stockMarkets.volatility.vix.toFixed(1)}) measures expected market volatility over the next 30 days, often called the "Fear Index."
 
 📊 Current VIX: ${stockMarkets.volatility.vix.toFixed(1)}
-⚡ Interpretation: ${stockMarkets.volatility.interpretation.replace(/_/g, ' ')}
+⚡ Interpretation: ${stockMarkets.volatility.interpretation?.replace(/_/g, ' ') || 'Loading...'}
 ⚠️ Austrian Warning: ${stockMarkets.volatility.austrian_warning}
 
 VIX Levels Explained:
@@ -2276,7 +2239,7 @@ Austrian Business Cycle Interpretation:
                   {stockMarkets.volatility.vix.toFixed(1)}
                 </div>
                 <div className="text-xs text-slate-400 mt-2">
-                  {stockMarkets.volatility.interpretation.replace(/_/g, ' ')}
+                  {stockMarkets.volatility.interpretation?.replace(/_/g, ' ') || 'Loading...'}
                 </div>
               </div>
             </div>
@@ -2571,8 +2534,8 @@ Austrian Business Cycle Interpretation:
             <div className="flex items-center gap-3 mb-4">
               <span className="text-4xl">💸</span>
               <div>
-                <h3 className="text-2xl font-bold text-white">Credit Expansion Tracker</h3>
-                <p className="text-sm text-slate-400">M2 Money Supply Growth vs Economic Output</p>
+                <h3 className="text-2xl font-bold text-white">{t('charts.creditExpansion.title')}</h3>
+                <p className="text-sm text-slate-400">{t('charts.creditExpansion.subtitle')}</p>
               </div>
             </div>
 
@@ -2583,7 +2546,7 @@ Austrian Business Cycle Interpretation:
                   <div className="text-4xl font-bold text-red-400">
                     {((analysis?.monetary_metrics?.m2_growth_rate || 0.08) * 100).toFixed(1)}%
                   </div>
-                  <div className="text-xs text-slate-400 mt-1">Annual M2 Growth Rate</div>
+                  <div className="text-xs text-slate-400 mt-1">{t('metrics.m2GrowthRate')}</div>
                 </div>
                 
                 {/* Circular gauge */}
@@ -2603,15 +2566,15 @@ Austrian Business Cycle Interpretation:
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
-                      <div className="text-xs text-slate-400">Danger</div>
-                      <div className="text-xs text-slate-400">Zone</div>
+                      <div className="text-xs text-slate-400">{t('charts.creditExpansion.dangerZone')}</div>
+                      <div className="text-xs text-slate-400">{t('charts.creditExpansion.zone')}</div>
                     </div>
                   </div>
                 </div>
                 
                 <div className="flex justify-between text-xs text-slate-500 mt-2">
                   <span>0%</span>
-                  <span>Sustainable</span>
+                  <span>{t('charts.creditExpansion.sustainable')}</span>
                   <span>15%</span>
                 </div>
               </div>
@@ -2619,7 +2582,7 @@ Austrian Business Cycle Interpretation:
               <div className="space-y-3">
                 <div className="bg-slate-900/60 rounded-lg p-3 border border-slate-700">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-400">GDP Growth Rate</span>
+                    <span className="text-sm text-slate-400">{t('metrics.gdpGrowthRate')}</span>
                     <span className="text-lg font-bold text-green-400">
                       3.0%
                     </span>
@@ -2628,12 +2591,12 @@ Austrian Business Cycle Interpretation:
                 
                 <div className="bg-slate-900/60 rounded-lg p-3 border border-red-600/40">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-400">Credit Excess</span>
+                    <span className="text-sm text-slate-400">{t('metrics.creditExcess')}</span>
                     <span className="text-lg font-bold text-red-400">
                       {(((analysis?.monetary_metrics?.m2_growth_rate || 0.08) - 0.03) * 100).toFixed(1)}%
                     </span>
                   </div>
-                  <div className="text-xs text-slate-500 mt-1">Money creation beyond real growth</div>
+                  <div className="text-xs text-slate-500 mt-1">{t('metrics.moneyCreationBeyondGrowth')}</div>
                 </div>
 
                 <div className={`rounded-lg p-3 border ${
@@ -2700,8 +2663,8 @@ Austrian Business Cycle Interpretation:
             <div className="flex items-center gap-3 mb-4">
               <span className="text-4xl">📉</span>
               <div>
-                <h3 className="text-2xl font-bold text-white">Yield Curve Status</h3>
-                <p className="text-sm text-slate-400">2Y/10Y Treasury Spread - Recession Warning System</p>
+                <h3 className="text-2xl font-bold text-white">{t('charts.yieldCurve.status')}</h3>
+                <p className="text-sm text-slate-400">{t('charts.yieldCurve.subtitle')}</p>
               </div>
             </div>
 
@@ -2719,7 +2682,7 @@ Austrian Business Cycle Interpretation:
                       <div className={`text-5xl font-bold ${isInverted ? 'text-red-400' : 'text-green-400'}`}>
                         {spread2y10y > 0 ? '+' : ''}{(spread2y10y * 100).toFixed(0)}
                       </div>
-                      <div className="text-xs text-slate-400 mt-1">Basis Points Spread</div>
+                      <div className="text-xs text-slate-400 mt-1">{t('charts.yieldCurve.basisPoints')}</div>
                     </div>
                     
                     {/* Visual spread indicator */}
@@ -3461,7 +3424,7 @@ Austrian Business Cycle Interpretation:
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Data Sources
+                  {t('sources.dataSources')}
                 </h4>
                 <div className="space-y-2">
                   {educationalModal.sources.map((source, idx) => (
@@ -3491,7 +3454,7 @@ Austrian Business Cycle Interpretation:
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Click links to verify data sources
+                  {t('sources.clickToVerify')}
                 </div>
               )}
               <button
