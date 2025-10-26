@@ -1,0 +1,336 @@
+{
+  "common": {
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito",
+    "refresh": "Actualizar",
+    "refreshData": "Actualizar todos los datos",
+    "close": "Cerrar",
+    "learnMore": "Más Información",
+    "viewDetails": "Ver Detalles",
+    "clickForDeepDive": "💡 Clic para análisis profundo",
+    "clickForContext": "💡 Clic en el gráfico para contexto de teoría austríaca",
+    "lastUpdated": "Última Actualización",
+    "updated": "Actualizado",
+    "ago": "hace",
+    "minutesAgo": "hace {{count}} minutos",
+    "hoursAgo": "hace {{count}} horas",
+    "justNow": "Justo ahora"
+  },
+  "header": {
+    "title": "Monitor del Ciclo Económico Austríaco",
+    "subtitle": "Análisis Económico en Tiempo Real Basado en la Teoría de la Escuela Austríaca",
+    "soundMoney": "Dinero Sólido",
+    "freeMarkets": "Mercados Libres",
+    "language": "Idioma",
+    "switchLanguage": "Cambiar a Inglés",
+    "currentLanguage": "Español"
+  },
+  "nav": {
+    "dashboard": "Panel de Control",
+    "analysis": "Análisis",
+    "threePillars": "Tres Pilares",
+    "education": "Educación",
+    "sources": "Fuentes",
+    "about": "Acerca de"
+  },
+  "dashboard": {
+    "title": "Resumen del Panel",
+    "situationOverview": "Panorama de la Situación",
+    "riskMetrics": "Métricas de Riesgo",
+    "marketData": "Datos de Mercado",
+    "austrianAnalysis": "Análisis Austríaco",
+    "historicalCycles": "Ciclos Históricos",
+    "austrianScore": "Puntuación del Ciclo Austríaco",
+    "scale": "Escala 0-10"
+  },
+  "situationPanel": {
+    "title": "Situación Económica Actual",
+    "riskScore": "Puntuación de Riesgo",
+    "cyclePhase": "Fase del Ciclo",
+    "narrative": "Análisis",
+    "warnings": "Advertencias",
+    "actions": "Acciones Recomendadas",
+    "opportunities": "Oportunidades",
+    "correlations": "Correlaciones Clave",
+    "timeline": "Contexto Temporal",
+    "expandAll": "Expandir Todo",
+    "collapseAll": "Contraer Todo",
+    "manualRefresh": "Actualizar Análisis",
+    "autoRefresh": "Actualización automática cada 5 minutos",
+    "severity": {
+      "extreme": "Extremo",
+      "high": "Alto",
+      "elevated": "Elevado",
+      "moderate": "Moderado",
+      "low": "Bajo"
+    },
+    "priority": {
+      "immediate": "Inmediato",
+      "high": "Alto",
+      "normal": "Normal"
+    }
+  },
+  "metrics": {
+    "bitcoin": "Bitcoin",
+    "gold": "Oro",
+    "soundMoneyIndicator": "Indicador de Dinero Sólido",
+    "traditionalStoreOfValue": "Reserva de Valor Tradicional",
+    "perOunce": "por onza",
+    "austrianScore": "Puntuación Austríaca",
+    "austrianScoreDesc": "Salud general del ciclo económico (0-10)",
+    "m2Growth": "Crecimiento de M2",
+    "m2GrowthRate": "Tasa Anual de Crecimiento M2",
+    "m2GrowthDesc": "Tasa de expansión monetaria amplia",
+    "creditGrowth": "Crecimiento del Crédito",
+    "creditGrowthDesc": "Expansión total del mercado crediticio",
+    "creditExcess": "Exceso de Crédito",
+    "moneyCreationBeyondGrowth": "Creación monetaria más allá del crecimiento real",
+    "gdpGrowthRate": "Tasa de Crecimiento del PIB",
+    "interestSpread": "Diferencial de Tasas",
+    "interestSpreadDesc": "Curva de rendimiento 10A-2A",
+    "malinvestmentIndex": "Índice de Malinversión",
+    "malinvestmentIndexDesc": "Indicador de inversión insostenible",
+    "yieldCurve": "Curva de Rendimiento",
+    "yieldCurveDesc": "Forma de la curva de bonos del tesoro",
+    "bitcoinPrice": "Precio de Bitcoin",
+    "bitcoinPriceDesc": "Indicador de dinero sólido digital",
+    "goldPrice": "Precio del Oro",
+    "goldPriceDesc": "Reserva de valor tradicional",
+    "silverPrice": "Precio de la Plata",
+    "silverPriceDesc": "Metal precioso industrial",
+    "goldBitcoinRatio": "Ratio Oro/Bitcoin",
+    "goldBitcoinRatioDesc": "Métrica de valoración relativa",
+    "cyclePhase": "Fase del Ciclo",
+    "trend": "Tendencia",
+    "threshold": "Umbral",
+    "status": "Estado"
+  },
+  "riskLevels": {
+    "low": "RIESGO BAJO",
+    "moderate": "MODERADO",
+    "elevated": "Riesgo Elevado",
+    "high": "RIESGO ALTO",
+    "critical": "Riesgo Crítico",
+    "healthy": "Saludable",
+    "warning": "Advertencia",
+    "danger": "Peligro"
+  },
+  "cyclePhases": {
+    "expansion": "Expansión",
+    "peak": "Pico",
+    "contraction": "Contracción",
+    "trough": "Valle",
+    "earlyExpansion": "Expansión Temprana",
+    "lateExpansion": "Expansión Tardía",
+    "recession": "Recesión",
+    "recovery": "Recuperación"
+  },
+  "charts": {
+    "creditGrowth": "Gráfico de Crecimiento Crediticio",
+    "creditGrowthTitle": "Expansión del Mercado de Crédito",
+    "creditExpansion": {
+      "title": "Seguimiento de Expansión Crediticia",
+      "subtitle": "Crecimiento de Oferta Monetaria M2 vs Producción Económica",
+      "dangerZone": "Zona de",
+      "zone": "Peligro",
+      "sustainable": "Sostenible"
+    },
+    "yieldCurve": {
+      "status": "Estado de Curva de Rendimiento",
+      "subtitle": "Diferencial Bonos 2A/10A - Sistema de Alerta de Recesión",
+      "basisPoints": "Puntos Básicos de Diferencial",
+      "inverted": "INVERTIDA",
+      "normal": "Normal",
+      "recessionSignal": "¡Señal de recesión!"
+    },
+    "assetCorrelationMatrix": "Matriz de Correlación de Activos",
+    "soundMoneyVsFiat": "Dinero Sólido vs Correlaciones de Activos Fiat",
+    "yoyGrowth": "Crecimiento Interanual",
+    "qoqGrowth": "Crecimiento Trimestral",
+    "creditToGdp": "Ratio Crédito/PIB",
+    "malinvestmentRadar": "Radar de Riesgo de Malinversión",
+    "radarComponents": "Componentes de Riesgo",
+    "yieldCurveInversion": "Inversión de Curva de Rendimiento",
+    "stockOvervaluation": "Sobrevaloración Bursátil",
+    "zombieCompanies": "Empresas Zombi",
+    "realEstateDisconnect": "Desconexión Inmobiliaria",
+    "capitalGoodsOverexpansion": "Sobreexpansión de Bienes de Capital",
+    "creditDistortion": "Distorsión Crediticia",
+    "austrianScoreGauge": "Puntuación del Ciclo Económico Austríaco",
+    "cycleTimeline": "Línea de Tiempo del Ciclo Económico",
+    "threePillarsHealth": "Salud de los Tres Pilares"
+  },
+  "threePillars": {
+    "title": "Los Tres Pilares del Análisis Austríaco",
+    "healthStatus": "Estado de Salud de los Tres Pilares",
+    "categories": "Política Monetaria • Mercados de Crédito • Economía Real",
+    "monetaryPolicy": "Política Monetaria",
+    "monetaryPolicyDesc": "Acciones del banco central y oferta monetaria",
+    "creditMarkets": "Mercados de Crédito",
+    "creditMarketsDesc": "Expansión crediticia y distorsiones del mercado",
+    "realEconomy": "Economía Real",
+    "realEconomyDesc": "Producción, empleo y estructura de capital",
+    "healthScore": "Puntuación de Salud",
+    "expand": "Expandir",
+    "collapse": "Contraer",
+    "details": "Detalles"
+  },
+  "tooltip": {
+    "title": "Análisis Profundo de Métrica",
+    "clickForDetails": "Haz clic para explicación detallada",
+    "clickForDeepDive": "Haz clic para análisis profundo",
+    "currentInterpretation": "Interpretación Actual",
+    "austrianTheory": "Contexto de Teoría Austríaca",
+    "coreConcept": "Concepto Central",
+    "austrianView": "Perspectiva Austríaca",
+    "keyThinkers": "Pensadores Clave",
+    "implications": "Implicaciones Económicas",
+    "relatedMetrics": "Métricas Relacionadas",
+    "historicalContext": "Contexto Histórico",
+    "historicalAverage": "Promedio Histórico",
+    "currentPercentile": "Percentil Actual",
+    "recentExtremes": "Extremos Recientes",
+    "dataSources": "Fuentes de Datos",
+    "loading": "Cargando análisis detallado...",
+    "error": "Error al cargar detalles",
+    "retry": "Reintentar"
+  },
+  "education": {
+    "title": "Educación en Economía Austríaca",
+    "whatIsAustrian": "¿Qué es la Economía Austríaca?",
+    "businessCycleTheory": "Teoría del Ciclo Económico",
+    "soundMoney": "Principios del Dinero Sólido",
+    "malinvestment": "Malinversión Explicada",
+    "creditExpansion": "Efectos de la Expansión Crediticia",
+    "keyFigures": "Economistas Austríacos Clave",
+    "readingList": "Lectura Recomendada",
+    "mises": "Ludwig von Mises",
+    "hayek": "Friedrich Hayek",
+    "rothbard": "Murray Rothbard",
+    "thinkers": {
+      "title": "Pensadores",
+      "tooltip": "Aprende de economistas austríacos y líderes de pensamiento Bitcoin"
+    },
+    "insights": {
+      "stockMarkets": "Mercados Bursátiles: Señales de Estructura de Capital",
+      "inflation": "Inflación: El Impuesto Oculto",
+      "count": "perspectivas",
+      "relevant": "relevante"
+    }
+  },
+  "sources": {
+    "title": "Fuentes",
+    "loading": "Cargando fuentes…",
+    "viewTooltip": "Ver explicaciones y fuentes",
+    "dataSources": "Fuentes de Datos",
+    "clickToVerify": "Haz clic en los enlaces para verificar las fuentes de datos",
+    "fred": "Datos Económicos de la Reserva Federal",
+    "coinGecko": "API de CoinGecko",
+    "blockchain": "Blockchain.com",
+    "bis": "Banco de Pagos Internacionales",
+    "misesInstitute": "Instituto Mises",
+    "viewSource": "Ver Fuente",
+    "verifyData": "Verificar Datos",
+    "transparency": "Aviso de Transparencia",
+    "transparencyText": "Todas las métricas incluyen registros de procedencia vinculados a fuentes primarias. Haga clic en cualquier métrica para obtener detalles completos de la fuente.",
+    "lastDataUpdate": "Última actualización de datos"
+  },
+  "explanations": {
+    "overallRisk": {
+      "label": "Puntuación de Riesgo General",
+      "explanation": "Medida compuesta de indicadores del ciclo económico austríaco que incluye expansión crediticia, inversión de curva de rendimiento y patrones de malinversión.",
+      "sources": [
+        {
+          "title": "Instituto Mises: Teoría Austríaca del Ciclo Económico",
+          "url": "https://mises.org/library/austrian-theory-trade-cycle-and-other-essays",
+          "year": 1978
+        }
+      ]
+    },
+    "m2GrowthRate": {
+      "label": "Crecimiento de Oferta Monetaria M2",
+      "explanation": "Cambio interanual en dinero amplio (M2). El crecimiento rápido puede señalar expansión crediticia e inflación de precios potencial en la teoría austríaca.",
+      "sources": [
+        {
+          "title": "FRED: Oferta Monetaria M2 (M2SL)",
+          "url": "https://fred.stlouisfed.org/series/M2SL",
+          "year": 2025
+        },
+        {
+          "title": "Instituto Mises: Teoría Austríaca del Ciclo Comercial",
+          "url": "https://mises.org/library/austrian-theory-trade-cycle-and-other-essays",
+          "year": 1978
+        }
+      ]
+    },
+    "creditGrowthRate": {
+      "label": "Tasa de Crecimiento del Crédito",
+      "explanation": "Tasa de expansión de la deuda total del mercado de crédito. La teoría austríaca advierte que la expansión crediticia artificial crea auges insostenibles.",
+      "sources": [
+        {
+          "title": "FRED: Deuda Total del Mercado de Crédito (TCMDO)",
+          "url": "https://fred.stlouisfed.org/series/TCMDO",
+          "year": 2025
+        }
+      ]
+    },
+    "interestRateSpread": {
+      "label": "Diferencial de Tasas de Interés",
+      "explanation": "Rendimiento del Tesoro a 10 años menos el de 2 años. La inversión (diferencial negativo) a menudo precede las recesiones e indica preferencias temporales distorsionadas.",
+      "sources": [
+        {
+          "title": "FRED: Tesoro a 10 Años (DGS10)",
+          "url": "https://fred.stlouisfed.org/series/DGS10",
+          "year": 2025
+        },
+        {
+          "title": "FRED: Tesoro a 2 Años (DGS2)",
+          "url": "https://fred.stlouisfed.org/series/DGS2",
+          "year": 2025
+        }
+      ]
+    },
+    "malinvestmentIndex": {
+      "label": "Índice de Malinversión",
+      "explanation": "Medida compuesta de inversiones insostenibles que incluye empresas zombi, acciones sobrevaluadas y precios inmobiliarios desconectados.",
+      "sources": [
+        {
+          "title": "Mises: La Acción Humana - Capítulo de Malinversión",
+          "url": "https://mises.org/library/human-action",
+          "year": 1949
+        }
+      ]
+    }
+  },
+  "alerts": {
+    "highRisk": "⚠️ Alerta de Alto Riesgo",
+    "extremeRisk": "🚨 Alerta de Riesgo Extremo",
+    "yieldCurveInverted": "Curva de rendimiento invertida - Indicador histórico de recesión",
+    "creditExpanding": "Crédito expandiéndose más rápido que el crecimiento del PIB",
+    "malinvestmentRising": "Niveles de malinversión elevados en múltiples sectores"
+  },
+  "actions": {
+    "startMonitoring": "Iniciar Monitoreo en Tiempo Real",
+    "stopMonitoring": "Detener Monitoreo",
+    "downloadReport": "Descargar Informe PDF",
+    "viewFullAnalysis": "Ver Análisis Completo",
+    "shareInsights": "Compartir Perspectivas",
+    "exportData": "Exportar Datos"
+  },
+  "footer": {
+    "disclaimer": "Solo para fines educativos. No es asesoramiento financiero.",
+    "copyright": "© 2025 Monitor del Ciclo Económico Austríaco",
+    "builtWith": "Construido con ❤️ para la economía de la Escuela Austríaca",
+    "version": "Versión {{version}}"
+  },
+  "errors": {
+    "loadingFailed": "Error al cargar datos",
+    "connectionError": "Error de conexión - Verifique el servidor backend",
+    "apiError": "Solicitud de API falló",
+    "retryAction": "Reintentar",
+    "backToDashboard": "Volver al Panel",
+    "pillarsUnavailable": "Datos de Pilares No Disponibles",
+    "pillarsUnavailableMessage": "Los datos de salud de los tres pilares no están disponibles actualmente"
+  }
+}

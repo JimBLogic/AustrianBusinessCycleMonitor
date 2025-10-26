@@ -682,7 +682,7 @@ class AustrianCycleMonitor:
                     "Policy rates held below the natural rate can trigger unsustainable investment booms (ABCT)."
                 ),
                 "sources": [
-                    {"title": "Mises: Human Action (Interest and Money)", "url": "https://mises.org/library/human-action-0/html/p/848", "year": 1949},
+                    {"title": "Mises: Human Action (Interest and Money)", "url": "https://mises.org/library/human-action", "year": 1949},
                 ],
             },
             # Pillars metrics
@@ -757,7 +757,7 @@ class AustrianCycleMonitor:
                 "label": "Capital Consumption",
                 "explanation": "Erosion of real capital base due to misallocation and inflationary policy.",
                 "sources": [
-                    {"title": "Mises: The 'Consumption' of Capital", "url": "https://mises.org/mises-daily/consumption-capital", "year": 2009},
+                    {"title": "Mises: Human Action (Capital Consumption)", "url": "https://mises.org/library/human-action", "year": 1949},
                 ],
             },
             # Risk levels
@@ -886,7 +886,7 @@ class AustrianCycleMonitor:
                     "core_insight": "Technology is deflationary, fiat requires inflation. Bitcoin aligns money with tech deflation.",
                     "austrian_connection": "Fiat inflation fights natural price deflation from productivity",
                     "quote": "Debt and inflation system incompatible with exponential technology driving prices down.",
-                    "sources": [{"title": "The Price of Tomorrow", "url": "https://www.theprice.co/", "year": 2020}]
+                    "sources": [{"title": "The Price of Tomorrow", "url": "https://www.jeffbooth.com/the-price-of-tomorrow", "year": 2020}]
                 },
                 "parker_lewis": {
                     "name": "Parker Lewis",

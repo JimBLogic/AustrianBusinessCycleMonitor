@@ -1,0 +1,23 @@
+# Speed up Docker builds by excluding local-only and large folders
+# Development environments and caches
+.venv/
+*.pyc
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+node_modules/
+packages/frontend/node_modules/
+packages/frontend/.vite/
+
+# SCM and editor
+.git/
+.gitignore
+.vscode/
+
+# Build artifacts and static outputs
+**/dist/
+packages/frontend/dist/
+logs/
+data/
+*.log
+.DS_Store

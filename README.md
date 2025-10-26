@@ -3,23 +3,24 @@
 A comprehensive real-time economic monitoring system built on Austrian School economic theory principles.
 
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/fastapi-0.109+-green.svg)](https://fastapi.tiangolo.com/)
+[![Flask](https://img.shields.io/badge/flask-2.0+-green.svg)](https://flask.palletsprojects.com/)
 [![React](https://img.shields.io/badge/react-19-blue.svg)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/typescript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![Production Ready](https://img.shields.io/badge/status-modernizing-yellow.svg)]()
+[![Production Ready](https://img.shields.io/badge/status-production--ready-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-19%20passing-success.svg)]()
 [![Austrian Economics](https://img.shields.io/badge/economics-Austrian%20School-gold.svg)](https://mises.org)
 [![Real-time](https://img.shields.io/badge/data-real--time-red.svg)](https://fred.stlouisfed.org/)
 
-## ✨ What's New - Modernization in Progress!
+## ✨ What's New - Production Ready!
 
-**We're transforming this project into a modern, production-ready monorepo!**
+**The Austrian Business Cycle Monitor is now fully operational with modern React + TypeScript frontend!**
 
-- ✅ **Phase 1 Complete**: FastAPI backend with JWT auth
-- 🚧 **Phase 2**: React + TypeScript frontend (coming soon)
-- 📚 **Better Docs**: Comprehensive guides and API documentation
-- 🏗️ **Monorepo**: Organized, scalable architecture
+- ✅ **Professional Dashboard**: 6 chart types, 8 real-time KPI cards, interactive tooltips
+- ✅ **Immersive Features**: AI situation analysis, Austrian theory integration, source verification
+- ✅ **Production Stack**: Flask backend + React 19 frontend, fully tested
+- ✅ **Comprehensive Docs**: Complete guides, Austrian economics education, API reference
 
-**👉 [See Modernization Plan](./MODERNIZATION_PLAN.md) | [Quick Start Guide](./QUICK_START.md)**
+**👉 [Quick Start](./QUICK_START.md) | [Project History](./PROJECT_HISTORY.md) | [Documentation Index](./docs/INDEX.md)**
 
 ## 🚀 Quick Start
 
@@ -205,6 +206,26 @@ This monitor implements core Austrian School economic principles:
 - **Sound Money**: Gold and Bitcoin as alternatives to fiat currency
 - **Free Market Capitalism**: Voluntary exchange and minimal government intervention
 
+### 📚 Learning Resources
+
+- **[Austrian Economics: 0 to Hero Guide](./docs/AUSTRIAN_ECONOMICS_0_TO_HERO_GUIDE.md)** - Complete learning path from beginner to expert
+- **[Austrian Quick Reference](./docs/AUSTRIAN_QUICK_REFERENCE.md)** - Quick lookup for key concepts
+- **[Web Dashboard Guide](./docs/WEB_DASHBOARD_GUIDE.md)** - Dashboard features and usage
+
+## 📋 Documentation
+
+### Essential Docs
+- **[Quick Start Guide](./QUICK_START.md)** - Get up and running in 5 minutes
+- **[Project History](./PROJECT_HISTORY.md)** - Complete feature timeline and achievements
+- **[Documentation Index](./docs/INDEX.md)** - Full documentation catalog
+
+### Technical Docs
+- **[Frontend README](./packages/frontend/README.md)** - React + TypeScript architecture
+- **[Features Guide](./docs/FEATURES.md)** - Component library and visual design system
+- **[Data Fetching Strategy](./docs/DATA_FETCHING_STRATEGY.md)** - API integration patterns
+- **[Verifiability Layer](./docs/VERIFIABILITY_LAYER.md)** - Provenance and source tracking
+- **[Security Guidelines](./SECURITY.md)** - Secrets management and best practices
+
 ## 🔧 Technical Architecture
 
 ### Backend
@@ -242,6 +263,34 @@ This monitor implements core Austrian School economic principles:
 - **Educational insights** explaining current economic conditions
 
 ## 🛠️ Development
+
+### Developer Setup (VS Code + Windows)
+
+Set up a local virtual environment and install both runtime and development dependencies. The repo includes a `.vscode/settings.json` that points VS Code to this venv and enables pytest.
+
+1) Create and select the workspace venv
+
+```powershell
+python -m venv .venv ; .\.venv\Scripts\python.exe -m pip install --upgrade pip
+```
+
+2) Install dependencies (runtime + dev tools)
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt ; \
+.\.venv\Scripts\python.exe -m pip install -r dev-requirements.txt
+```
+
+3) Run tests
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+Notes:
+- VS Code should auto-detect `.venv` via the workspace settings. If not, use the interpreter picker and select `.venv`.
+- Dev tools include `pytest`, `black`, and `ruff` aligned with `pyproject.toml`.
+- If you use PowerShell profiles, you can add an alias to shorten `.venv` commands.
 
 ### Project Structure
 ```

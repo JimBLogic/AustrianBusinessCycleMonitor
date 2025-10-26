@@ -9,7 +9,7 @@ interface ApiError {
   status?: number;
 }
 
-// Generic API hook with retry logic
+// Generic API hook with retry logic - OPTIMIZED for fast loading
 export function useApi<T>(
   endpoint: string,
   options?: Omit<UseQueryOptions<T, ApiError>, 'queryKey' | 'queryFn'>
@@ -20,10 +20,11 @@ export function useApi<T>(
       const response = await api.get(endpoint);
       return response.data;
     },
-    retry: 3,
-    retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    staleTime: 30000, // 30 seconds
-    refetchOnWindowFocus: true,
+    retry: 1, // Reduced from 3 to 1 for faster initial load
+    retryDelay: 1000, // Simplified delay
+    staleTime: 5 * 60 * 1000, // 5 minutes - increased cache time
+    gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
+    refetchOnWindowFocus: false, // Disabled to prevent unnecessary refetches
     refetchOnReconnect: true,
     ...options,
   });

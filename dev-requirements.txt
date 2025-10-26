@@ -1,0 +1,10 @@
+# Development-only dependencies for Austrian Business Cycle Monitor
+# Install alongside main requirements when developing locally
+#   pip install -r requirements.txt -r dev-requirements.txt
+
+# Testing
+pytest>=8.4.2
+
+# Code style & linting (aligns with pyproject.toml config)
+black>=24.10.0
+ruff>=0.7.3

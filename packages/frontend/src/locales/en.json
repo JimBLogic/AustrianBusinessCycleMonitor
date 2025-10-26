@@ -1,0 +1,336 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "refresh": "Refresh",
+    "refreshData": "Refresh all data",
+    "close": "Close",
+    "learnMore": "Learn More",
+    "viewDetails": "View Details",
+    "clickForDeepDive": "💡 Click for deep dive",
+    "clickForContext": "💡 Click chart for Austrian theory context",
+    "lastUpdated": "Last Updated",
+    "updated": "Updated",
+    "ago": "ago",
+    "minutesAgo": "{{count}} minutes ago",
+    "hoursAgo": "{{count}} hours ago",
+    "justNow": "Just now"
+  },
+  "header": {
+    "title": "Austrian Business Cycle Monitor",
+    "subtitle": "Real-Time Economic Analysis Based on Austrian School Theory",
+    "soundMoney": "Sound Money",
+    "freeMarkets": "Free Markets",
+    "language": "Language",
+    "switchLanguage": "Switch to Spanish",
+    "currentLanguage": "English"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "analysis": "Analysis",
+    "threePillars": "Three Pillars",
+    "education": "Education",
+    "sources": "Sources",
+    "about": "About"
+  },
+  "dashboard": {
+    "title": "Dashboard Overview",
+    "situationOverview": "Situation Overview",
+    "riskMetrics": "Risk Metrics",
+    "marketData": "Market Data",
+    "austrianAnalysis": "Austrian Analysis",
+    "historicalCycles": "Historical Cycles",
+    "austrianScore": "Austrian Cycle Score",
+    "scale": "0-10 Scale"
+  },
+  "situationPanel": {
+    "title": "Current Economic Situation",
+    "riskScore": "Risk Score",
+    "cyclePhase": "Cycle Phase",
+    "narrative": "Analysis",
+    "warnings": "Warnings",
+    "actions": "Recommended Actions",
+    "opportunities": "Opportunities",
+    "correlations": "Key Correlations",
+    "timeline": "Timeline Context",
+    "expandAll": "Expand All",
+    "collapseAll": "Collapse All",
+    "manualRefresh": "Refresh Analysis",
+    "autoRefresh": "Auto-refreshing every 5 minutes",
+    "severity": {
+      "extreme": "Extreme",
+      "high": "High",
+      "elevated": "Elevated",
+      "moderate": "Moderate",
+      "low": "Low"
+    },
+    "priority": {
+      "immediate": "Immediate",
+      "high": "High",
+      "normal": "Normal"
+    }
+  },
+  "metrics": {
+    "bitcoin": "Bitcoin",
+    "gold": "Gold",
+    "soundMoneyIndicator": "Sound Money Indicator",
+    "traditionalStoreOfValue": "Traditional Store of Value",
+    "perOunce": "per oz",
+    "austrianScore": "Austrian Score",
+    "austrianScoreDesc": "Overall business cycle health (0-10)",
+    "m2Growth": "M2 Money Growth",
+    "m2GrowthRate": "Annual M2 Growth Rate",
+    "m2GrowthDesc": "Broad money supply expansion rate",
+    "creditGrowth": "Credit Growth",
+    "creditGrowthDesc": "Total credit market expansion",
+    "creditExcess": "Credit Excess",
+    "moneyCreationBeyondGrowth": "Money creation beyond real growth",
+    "gdpGrowthRate": "GDP Growth Rate",
+    "interestSpread": "Interest Rate Spread",
+    "interestSpreadDesc": "10Y-2Y Treasury yield curve",
+    "malinvestmentIndex": "Malinvestment Index",
+    "malinvestmentIndexDesc": "Unsustainable investment indicator",
+    "yieldCurve": "Yield Curve",
+    "yieldCurveDesc": "Treasury yield curve shape",
+    "bitcoinPrice": "Bitcoin Price",
+    "bitcoinPriceDesc": "Digital sound money indicator",
+    "goldPrice": "Gold Price",
+    "goldPriceDesc": "Traditional store of value",
+    "silverPrice": "Silver Price",
+    "silverPriceDesc": "Industrial precious metal",
+    "goldBitcoinRatio": "Gold/Bitcoin Ratio",
+    "goldBitcoinRatioDesc": "Relative valuation metric",
+    "cyclePhase": "Cycle Phase",
+    "trend": "Trend",
+    "threshold": "Threshold",
+    "status": "Status"
+  },
+  "riskLevels": {
+    "low": "Low Risk",
+    "moderate": "Moderate Risk",
+    "elevated": "Elevated Risk",
+    "high": "High Risk",
+    "critical": "Critical Risk",
+    "healthy": "Healthy",
+    "warning": "Warning",
+    "danger": "Danger"
+  },
+  "cyclePhases": {
+    "expansion": "Expansion",
+    "peak": "Peak",
+    "contraction": "Contraction",
+    "trough": "Trough",
+    "earlyExpansion": "Early Expansion",
+    "lateExpansion": "Late Expansion",
+    "recession": "Recession",
+    "recovery": "Recovery"
+  },
+  "charts": {
+    "creditGrowth": "Credit Growth Chart",
+    "creditGrowthTitle": "Credit Market Expansion",
+    "creditExpansion": {
+      "title": "Credit Expansion Tracker",
+      "subtitle": "M2 Money Supply Growth vs Economic Output",
+      "dangerZone": "Danger",
+      "zone": "Zone",
+      "sustainable": "Sustainable"
+    },
+    "yieldCurve": {
+      "status": "Yield Curve Status",
+      "subtitle": "2Y/10Y Treasury Spread - Recession Warning System",
+      "basisPoints": "Basis Points Spread",
+      "inverted": "INVERTED",
+      "normal": "Normal",
+      "recessionSignal": "Recession signal!"
+    },
+    "assetCorrelationMatrix": "Asset Correlation Matrix",
+    "soundMoneyVsFiat": "Sound Money vs. Fiat Assets Correlations",
+    "yoyGrowth": "YoY Growth",
+    "qoqGrowth": "QoQ Growth",
+    "creditToGdp": "Credit-to-GDP Ratio",
+    "malinvestmentRadar": "Malinvestment Risk Radar",
+    "radarComponents": "Risk Components",
+    "yieldCurveInversion": "Yield Curve Inversion",
+    "stockOvervaluation": "Stock Overvaluation",
+    "zombieCompanies": "Zombie Companies",
+    "realEstateDisconnect": "Real Estate Disconnect",
+    "capitalGoodsOverexpansion": "Capital Goods Overexpansion",
+    "creditDistortion": "Credit Distortion",
+    "austrianScoreGauge": "Austrian Business Cycle Score",
+    "cycleTimeline": "Business Cycle Timeline",
+    "threePillarsHealth": "Three Pillars Health"
+  },
+  "threePillars": {
+    "title": "Three Pillars of Austrian Analysis",
+    "healthStatus": "Three Pillars Health Status",
+    "categories": "Monetary Policy • Credit Markets • Real Economy",
+    "monetaryPolicy": "Monetary Policy",
+    "monetaryPolicyDesc": "Central bank actions and money supply",
+    "creditMarkets": "Credit Markets",
+    "creditMarketsDesc": "Credit expansion and market distortions",
+    "realEconomy": "Real Economy",
+    "realEconomyDesc": "Production, employment, and capital structure",
+    "healthScore": "Health Score",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "details": "Details"
+  },
+  "tooltip": {
+    "title": "Metric Deep Dive",
+    "clickForDetails": "Click for detailed explanation",
+    "clickForDeepDive": "Click for deep dive",
+    "currentInterpretation": "Current Interpretation",
+    "austrianTheory": "Austrian Theory Context",
+    "coreConcept": "Core Concept",
+    "austrianView": "Austrian Perspective",
+    "keyThinkers": "Key Thinkers",
+    "implications": "Economic Implications",
+    "relatedMetrics": "Related Metrics",
+    "historicalContext": "Historical Context",
+    "historicalAverage": "Historical Average",
+    "currentPercentile": "Current Percentile",
+    "recentExtremes": "Recent Extremes",
+    "dataSources": "Data Sources",
+    "loading": "Loading detailed analysis...",
+    "error": "Failed to load details",
+    "retry": "Retry"
+  },
+  "education": {
+    "title": "Austrian Economics Education",
+    "whatIsAustrian": "What is Austrian Economics?",
+    "businessCycleTheory": "Business Cycle Theory",
+    "soundMoney": "Sound Money Principles",
+    "malinvestment": "Malinvestment Explained",
+    "creditExpansion": "Credit Expansion Effects",
+    "keyFigures": "Key Austrian Economists",
+    "readingList": "Recommended Reading",
+    "mises": "Ludwig von Mises",
+    "hayek": "Friedrich Hayek",
+    "rothbard": "Murray Rothbard",
+    "thinkers": {
+      "title": "Thinkers",
+      "tooltip": "Learn from Austrian economists and Bitcoin thought leaders"
+    },
+    "insights": {
+      "stockMarkets": "Stock Markets: Capital Structure Signals",
+      "inflation": "Inflation: The Hidden Tax",
+      "count": "insights",
+      "relevant": "relevant"
+    }
+  },
+  "sources": {
+    "title": "Sources",
+    "loading": "Loading sources…",
+    "viewTooltip": "View explanations and sources",
+    "dataSources": "Data Sources",
+    "clickToVerify": "Click links to verify data sources",
+    "fred": "Federal Reserve Economic Data",
+    "coinGecko": "CoinGecko API",
+    "blockchain": "Blockchain.com",
+    "bis": "Bank for International Settlements",
+    "misesInstitute": "Mises Institute",
+    "viewSource": "View Source",
+    "verifyData": "Verify Data",
+    "transparency": "Transparency Notice",
+    "transparencyText": "All metrics include provenance records linking to primary sources. Click any metric for full source details.",
+    "lastDataUpdate": "Last data update"
+  },
+  "explanations": {
+    "overallRisk": {
+      "label": "Overall Risk Score",
+      "explanation": "Composite measure of Austrian business cycle indicators including credit expansion, yield curve inversion, and malinvestment patterns.",
+      "sources": [
+        {
+          "title": "Mises Institute: Austrian Business Cycle Theory",
+          "url": "https://mises.org/library/austrian-theory-trade-cycle-and-other-essays",
+          "year": 1978
+        }
+      ]
+    },
+    "m2GrowthRate": {
+      "label": "M2 Money Supply Growth",
+      "explanation": "Year-over-year change in broad money (M2). Rapid growth can signal credit expansion and potential price inflation in Austrian theory.",
+      "sources": [
+        {
+          "title": "FRED: M2 Money Stock (M2SL)",
+          "url": "https://fred.stlouisfed.org/series/M2SL",
+          "year": 2025
+        },
+        {
+          "title": "Mises Institute: Austrian Theory of the Trade Cycle",
+          "url": "https://mises.org/library/austrian-theory-trade-cycle-and-other-essays",
+          "year": 1978
+        }
+      ]
+    },
+    "creditGrowthRate": {
+      "label": "Credit Growth Rate",
+      "explanation": "Rate of expansion in total credit market debt. Austrian theory warns that artificial credit expansion creates unsustainable booms.",
+      "sources": [
+        {
+          "title": "FRED: Total Credit Market Debt Outstanding (TCMDO)",
+          "url": "https://fred.stlouisfed.org/series/TCMDO",
+          "year": 2025
+        }
+      ]
+    },
+    "interestRateSpread": {
+      "label": "Interest Rate Spread",
+      "explanation": "10-year minus 2-year Treasury yield. Inversion (negative spread) often precedes recessions and indicates distorted time preferences.",
+      "sources": [
+        {
+          "title": "FRED: 10-Year Treasury (DGS10)",
+          "url": "https://fred.stlouisfed.org/series/DGS10",
+          "year": 2025
+        },
+        {
+          "title": "FRED: 2-Year Treasury (DGS2)",
+          "url": "https://fred.stlouisfed.org/series/DGS2",
+          "year": 2025
+        }
+      ]
+    },
+    "malinvestmentIndex": {
+      "label": "Malinvestment Index",
+      "explanation": "Composite measure of unsustainable investments including zombie companies, overvalued stocks, and disconnected real estate prices.",
+      "sources": [
+        {
+          "title": "Mises: Human Action - Malinvestment Chapter",
+          "url": "https://mises.org/library/human-action",
+          "year": 1949
+        }
+      ]
+    }
+  },
+  "alerts": {
+    "highRisk": "⚠️ High Risk Alert",
+    "extremeRisk": "🚨 Extreme Risk Alert",
+    "yieldCurveInverted": "Yield curve inverted - Historical recession indicator",
+    "creditExpanding": "Credit expanding faster than GDP growth",
+    "malinvestmentRising": "Malinvestment levels elevated across multiple sectors"
+  },
+  "actions": {
+    "startMonitoring": "Start Real-Time Monitoring",
+    "stopMonitoring": "Stop Monitoring",
+    "downloadReport": "Download PDF Report",
+    "viewFullAnalysis": "View Full Analysis",
+    "shareInsights": "Share Insights",
+    "exportData": "Export Data"
+  },
+  "footer": {
+    "disclaimer": "Educational purposes only. Not financial advice.",
+    "copyright": "© 2025 Austrian Business Cycle Monitor",
+    "builtWith": "Built with ❤️ for Austrian School economics",
+    "version": "Version {{version}}"
+  },
+  "errors": {
+    "loadingFailed": "Failed to load data",
+    "connectionError": "Connection error - Please check backend server",
+    "apiError": "API request failed",
+    "retryAction": "Retry",
+    "backToDashboard": "Back to Dashboard",
+    "pillarsUnavailable": "Pillars Data Unavailable",
+    "pillarsUnavailableMessage": "Three pillars health data is currently not available"
+  }
+}
