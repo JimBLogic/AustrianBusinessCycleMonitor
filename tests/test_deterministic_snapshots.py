@@ -1,4 +1,5 @@
 """Regression tests for deterministic, vintage-aware trusted snapshots."""
+
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
@@ -16,7 +17,6 @@ from apps.data.contracts import (
 from apps.data.observation_reader import SQLiteObservationReader
 from apps.data.snapshot_repository import SQLiteSnapshotRepository
 from apps.data.sqlite_repository import SQLiteObservationRepository
-
 
 RETRIEVED_AT = datetime(2025, 2, 1, 12, 0, tzinfo=UTC)
 AS_OF = date(2025, 2, 1)
@@ -65,10 +65,7 @@ def _observation(
         realtime_end=date(9999, 12, 31),
         retrieved_at=RETRIEVED_AT,
         source_url=definition.source_url,
-        source_payload_hash=(
-            f"hash-{definition.internal_code}-{observation_date}-"
-            f"{vintage_date}{hash_suffix}"
-        ),
+        source_payload_hash=f"hash-{definition.internal_code}-{observation_date}-{vintage_date}{hash_suffix}",
     )
 
 
