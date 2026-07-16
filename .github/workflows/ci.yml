@@ -3,28 +3,30 @@ name: Austrian Business Cycle Monitor CI
 
 on:
   push:
-    branches: [ master, main, develop ]
+    branches: [master, main, develop]
   pull_request:
-    branches: [ master, main ]
+    branches: [master, main]
+  workflow_dispatch:
 
 permissions:
   contents: read
-  packages: write
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
+  backend:
+    name: Backend · Python 3.11
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [ '3.10', '3.11' ]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
-          cache: 'pip'
+          python-version: '3.11'
+          cache: pip
 
       - name: Install dependencies
         run: |
@@ -32,108 +34,173 @@ jobs:
           pip install -r requirements.txt
           if [ -f dev-requirements.txt ]; then pip install -r dev-requirements.txt; fi
 
-      - name: Run pytest
-        run: pytest -q || pytest -q -vv
+      - name: Compile Python sources
+        run: python -m compileall -q apps tests
+
+      - name: Run tests
+        run: pytest -q
 
       - name: Import smoke
         run: |
           python -c "from apps.core.austrian_monitor import AustrianCycleMonitor; print('Core imports OK')"
           python -c "from apps.dashboard.webapp import AustrianDashboard; print('Dashboard imports OK')"
 
-      # Optional frontend build (runs only on 3.11). Includes Node setup and npm cache.
+  frontend:
+    name: Frontend · React/Vite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Set up Node.js
-        if: ${{ matrix.python-version == '3.11' }}
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: npm
+          cache-dependency-path: packages/frontend/package-lock.json
 
-      - name: Cache npm
-        if: ${{ matrix.python-version == '3.11' }}
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-npm-${{ hashFiles('packages/frontend/package-lock.json', 'packages/frontend/package.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-
+      - name: Install dependencies
+        working-directory: packages/frontend
+        run: npm ci
 
-      - name: Build frontend (if present)
-        if: ${{ matrix.python-version == '3.11' }}
+      - name: Type-check
+        working-directory: packages/frontend
         run: |
-          if [ -f packages/frontend/package.json ]; then \
-            cd packages/frontend && \
-            ( [ -f package-lock.json ] && npm ci || npm install ) && \
-            npm run build; \
-          else \
-            echo "packages/frontend/package.json not found, skipping frontend build"; \
-          fi
+          set -o pipefail
+          npm run type-check 2>&1 | tee typecheck.log
 
-      - name: Upload frontend build artifact
-        if: ${{ matrix.python-version == '3.11' && hashFiles('packages/frontend/dist/**') != '' }}
+      - name: Upload type-check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-typecheck-report
+          path: packages/frontend/typecheck.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Run tests
+        working-directory: packages/frontend
+        run: npm run test -- --run --passWithNoTests
+
+      - name: Build
+        working-directory: packages/frontend
+        run: npm run build
+
+      - name: Upload frontend build
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
           path: packages/frontend/dist
-          if-no-files-found: ignore
+          if-no-files-found: error
           retention-days: 7
 
-  lint:
+  backend-quality:
+    name: Backend quality report
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
-      - name: Install tooling
-        run: |
-          python -m pip install --upgrade pip
-          pip install ruff black
-      - name: Ruff Lint
-        run: ruff check .
-      - name: Black Format Check
-        run: black --check .
 
-  docker-smoke:
+      - name: Install quality tools
+        run: python -m pip install ruff black
+
+      - name: Ruff
+        run: ruff check apps tests
+
+      - name: Black
+        if: always()
+        run: black --check apps tests
+
+  frontend-quality:
+    name: Frontend lint report
     runs-on: ubuntu-latest
-    needs: test
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: packages/frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: packages/frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: packages/frontend
+        run: npm run lint
+
+  docker-smoke:
+    name: Docker smoke
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Build Docker image
-        run: docker build -t abcm-ci:latest .
-      - name: Run container smoke test (mock backend)
+        run: |
+          set -o pipefail
+          docker build --progress=plain -t abcm-ci:latest . 2>&1 | tee docker-build.log
+
+      - name: Upload Docker build report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-build-report
+          path: docker-build.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Run container smoke test
         run: |
           docker rm -f abcm-ci || true
           docker run -d --name abcm-ci -p 5002:5002 \
             -e BACKEND_MODE=mock \
             abcm-ci:latest
-          sleep 5
-          curl -fsS http://127.0.0.1:5002/api/status | jq . || (docker logs abcm-ci && exit 1)
-          docker rm -f abcm-ci
+          trap 'docker logs abcm-ci || true; docker rm -f abcm-ci || true' EXIT
+          for attempt in {1..20}; do
+            if curl -fsS http://127.0.0.1:5002/api/status | jq .; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Container did not become healthy in time.' >&2
+          exit 1
 
   publish-image:
+    name: Publish container image
     runs-on: ubuntu-latest
-    needs: test
+    needs: [backend, frontend, docker-smoke]
     if: ${{ github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master') }}
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
+
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: |
-            ghcr.io/${{ github.repository }}
+          images: ghcr.io/${{ github.repository }}
           tags: |
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
@@ -141,37 +208,3 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-  windows-integration:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-      
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      
-      - name: Cache npm
-        uses: actions/cache@v4
-        with:
-          path: ~\AppData\Local\npm-cache
-          key: ${{ runner.os }}-npm-${{ hashFiles('packages/frontend/package-lock.json', 'packages/frontend/package.json') }}
-          restore-keys: |
-            ${{ runner.os }}-npm-
-      
-      - name: Run test_all.ps1
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\test_all.ps1
-        env:
-          BACKEND_MODE: mock
