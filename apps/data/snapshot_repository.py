@@ -1,4 +1,5 @@
 """Persistence for deterministic analytical snapshots."""
+
 from __future__ import annotations
 
 import json
@@ -26,8 +27,7 @@ class SQLiteSnapshotRepository:
 
     def _initialize_schema(self) -> None:
         with self._connect() as connection:
-            connection.executescript(
-                """
+            connection.executescript("""
                 CREATE TABLE IF NOT EXISTS analysis_snapshots (
                     snapshot_id TEXT PRIMARY KEY,
                     as_of_date TEXT NOT NULL,
@@ -46,8 +46,7 @@ class SQLiteSnapshotRepository:
 
                 CREATE INDEX IF NOT EXISTS idx_analysis_snapshots_as_of
                     ON analysis_snapshots(as_of_date DESC, generated_at DESC);
-                """
-            )
+                """)
 
     def save(self, snapshot: DeterministicSnapshot) -> bool:
         """Persist once; return ``True`` only when a new row is inserted."""
@@ -96,14 +95,12 @@ class SQLiteSnapshotRepository:
 
     def latest(self) -> Optional[Mapping[str, object]]:
         with self._connect() as connection:
-            row = connection.execute(
-                """
+            row = connection.execute("""
                 SELECT payload_json
                 FROM analysis_snapshots
                 ORDER BY as_of_date DESC, generated_at DESC
                 LIMIT 1
-                """
-            ).fetchone()
+                """).fetchone()
         return json.loads(row["payload_json"]) if row else None
 
     def count(self) -> int:
