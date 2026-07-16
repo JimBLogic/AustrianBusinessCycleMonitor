@@ -1,4 +1,5 @@
 """Build a deterministic snapshot from trusted FRED observations."""
+
 from __future__ import annotations
 
 import argparse
@@ -12,7 +13,6 @@ from apps.analysis.registry import MetricRegistry, MetricRegistryError
 from apps.analysis.snapshot_builder import SnapshotBuilder
 from apps.data.observation_reader import ObservationStoreError, SQLiteObservationReader
 from apps.data.snapshot_repository import SQLiteSnapshotRepository
-
 
 DEFAULT_DATABASE = Path(
     os.environ.get("ECONOMIC_DATA_DB", "data/economic_data.sqlite3")
