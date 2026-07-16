@@ -1,4 +1,5 @@
 """Build reproducible macroeconomic snapshots from trusted source observations."""
+
 from __future__ import annotations
 
 import calendar
@@ -167,8 +168,7 @@ class SnapshotBuilder:
             return self._unavailable(
                 metric,
                 reason=(
-                    "Missing enabled series metadata: "
-                    + ", ".join(missing_definitions)
+                    "Missing enabled series metadata: " + ", ".join(missing_definitions)
                 ),
             )
 
@@ -201,7 +201,8 @@ class SnapshotBuilder:
         if calculation.value is None:
             return self._unavailable(
                 metric,
-                reason=calculation.reason or "Required aligned observations are missing",
+                reason=calculation.reason
+                or "Required aligned observations are missing",
                 formula=calculation.formula,
                 lineage=calculation.lineage,
             )
@@ -292,9 +293,7 @@ class SnapshotBuilder:
                 return _Calculation(
                     value=None,
                     observation_date=None,
-                    formula=(
-                        f"(({code}[t] / {code}[t-{lag_months}m]) - 1) * 100"
-                    ),
+                    formula=(f"(({code}[t] / {code}[t-{lag_months}m]) - 1) * 100"),
                     reason=f"Lagged denominator is zero at {lag_date.isoformat()}",
                     lineage=(previous, current),
                     freshness_points=(current,),
@@ -303,9 +302,7 @@ class SnapshotBuilder:
             return _Calculation(
                 value=value,
                 observation_date=current.observation_date,
-                formula=(
-                    f"(({code}[t] / {code}[t-{lag_months}m]) - 1) * 100"
-                ),
+                formula=(f"(({code}[t] / {code}[t-{lag_months}m]) - 1) * 100"),
                 reason=None,
                 lineage=(previous, current),
                 freshness_points=(current,),
