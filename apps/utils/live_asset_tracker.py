@@ -1,221 +1,154 @@
-"""
-Real-time Asset Tracker with Live API Integration
-Supports: CoinGecko (Bitcoin, Gold), FRED (Economics)
+"""Live asset prices with explicit provider and freshness metadata.
+
+The tracker never fabricates market prices. When CoinGecko is unavailable it
+preserves a previously validated observation as stale, or reports the asset as
+unavailable when no valid observation has been collected yet.
 """
 from __future__ import annotations
 
-import json
 import logging
-import os
 import time
-from datetime import datetime
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
+
 import requests
 
 logger = logging.getLogger(__name__)
 
 
 class LiveAssetTracker:
-    """
-    Real-time asset price tracker with live API integration.
-    
-    Supported APIs:
-    - CoinGecko (free, no API key) - Bitcoin, Ethereum, Gold
-    - FRED API (free, requires key) - Economic data
-    - Fallback to demo data if APIs unavailable
-    """
-    
-    def __init__(self) -> None:
-        """Initialize with API configurations."""
-        self.last_update_time = 0  # Force refresh on first call
-        self.update_interval = 30  # Refresh every 30 seconds
-        self._price_cache = {}
-        
-        # API configurations
+    """Track selected assets through CoinGecko with a short in-memory cache."""
+
+    _COINGECKO_IDS = {
+        "bitcoin": ("bitcoin", "CoinGecko", "crypto_spot_reference"),
+        "ethereum": ("ethereum", "CoinGecko", "crypto_spot_reference"),
+        "gold": ("tether-gold", "CoinGecko (Tether Gold/XAUT)", "token_proxy"),
+        "silver": ("silver-token", "CoinGecko (Silver Token/SLVT)", "token_proxy"),
+    }
+
+    def __init__(self, session: Optional[requests.Session] = None) -> None:
+        self.last_update_time = 0.0
+        self.update_interval = 30
         self.coingecko_base_url = "https://api.coingecko.com/api/v3"
-        
-        # Initialize cache
+        self.session = session or requests.Session()
+        self._price_cache: Dict[str, Dict[str, Any]] = {}
         self._init_cache()
-    
+
     def _init_cache(self) -> None:
-        """Initialize cache with default values."""
+        """Initialize every asset as unavailable rather than with a fake quote."""
         self._price_cache = {
-            "bitcoin": {
+            asset: {
                 "price": 0.0,
                 "change_24h": 0.0,
-                "source": "Demo",
-                "updated_at": 0,
-            },
-            "ethereum": {
-                "price": 0.0,
-                "change_24h": 0.0,
-                "source": "Demo",
-                "updated_at": 0,
-            },
-            "gold": {
-                "price": 0.0,
-                "change_24h": 0.0,
-                "source": "Demo",
-                "updated_at": 0,
-            },
-            "silver": {
-                "price": 0.0,
-                "change_24h": 0.0,
-                "source": "Demo",
-                "updated_at": 0,
-            },
+                "source": source,
+                "instrument_type": instrument_type,
+                "status": "unavailable",
+                "updated_at": None,
+                "last_attempt_at": None,
+                "is_last_known_good": False,
+                "error": None,
+            }
+            for asset, (_, source, instrument_type) in self._COINGECKO_IDS.items()
         }
-    
-    def get_latest_prices(self, assets: Optional[List[str]] = None) -> Dict[str, Dict[str, Any]]:
-        """
-        Get latest prices, fetching from APIs if cache is stale.
-        
-        Args:
-            assets: Optional list of specific assets
-            
-        Returns:
-            Dict of asset prices
-        """
+
+    def get_latest_prices(
+        self, assets: Optional[List[str]] = None
+    ) -> Dict[str, Dict[str, Any]]:
+        """Return cached prices, refreshing them when the cache is stale."""
         now = time.time()
-        
-        # Refresh if cache is stale
         if now - self.last_update_time > self.update_interval:
             self._refresh_all_prices()
             self.last_update_time = now
-        
-        # Filter for requested assets
+
+        selected = self._price_cache
         if assets:
-            return {k: v for k, v in self._price_cache.items() if k in assets}
-        
-        return self._price_cache
-    
+            selected = {key: value for key, value in selected.items() if key in assets}
+
+        # Do not expose mutable internal cache dictionaries to callers.
+        return {key: dict(value) for key, value in selected.items()}
+
     def _refresh_all_prices(self) -> None:
-        """Refresh all asset prices from APIs."""
-        # Fetch all prices from CoinGecko (free, no API key needed)
         self._fetch_coingecko_prices()
-    
+
     def _fetch_coingecko_prices(self) -> None:
-        """
-        Fetch Bitcoin, Ethereum, Gold, and Silver prices from CoinGecko (FREE, no API key needed).
-        
-        API Docs: https://www.coingecko.com/en/api/documentation
-        """
+        """Fetch all configured instruments in one documented CoinGecko call."""
+        attempted_at = time.time()
+        url = f"{self.coingecko_base_url}/simple/price"
+        params = {
+            "ids": ",".join(item[0] for item in self._COINGECKO_IDS.values()),
+            "vs_currencies": "usd",
+            "include_24hr_change": "true",
+            "include_last_updated_at": "true",
+        }
+
         try:
-            # CoinGecko free API - no authentication required
-            # Using "tether-gold" (XAUT) - most accurate spot gold price tracker
-            # Using "silver-token" (SLVT) - silver-backed token for spot price
-            url = f"{self.coingecko_base_url}/simple/price"
-            params = {
-                "ids": "bitcoin,ethereum,tether-gold,silver-token",
-                "vs_currencies": "usd",
-                "include_24hr_change": "true"
-            }
-            
-            response = requests.get(url, params=params, timeout=10)
+            response = self.session.get(url, params=params, timeout=10)
             response.raise_for_status()
-            data = response.json()
-            
-            # Update Bitcoin
-            if "bitcoin" in data:
-                self._price_cache["bitcoin"] = {
-                    "price": round(data["bitcoin"]["usd"], 2),
-                    "change_24h": round(data["bitcoin"].get("usd_24h_change", 0), 2),
-                    "source": "CoinGecko",
-                    "updated_at": time.time(),
+            payload = response.json()
+            if not isinstance(payload, dict):
+                raise ValueError("CoinGecko returned a non-object response")
+
+            for asset, (provider_id, source, instrument_type) in self._COINGECKO_IDS.items():
+                provider_payload = payload.get(provider_id)
+                price = provider_payload.get("usd") if isinstance(provider_payload, dict) else None
+
+                if not isinstance(price, (int, float)) or price <= 0:
+                    self._mark_asset_unavailable(
+                        asset,
+                        attempted_at,
+                        f"CoinGecko response did not contain a valid {provider_id} USD price",
+                    )
+                    continue
+
+                change = provider_payload.get("usd_24h_change", 0.0)
+                if not isinstance(change, (int, float)):
+                    change = 0.0
+
+                provider_updated_at = provider_payload.get("last_updated_at", attempted_at)
+                if not isinstance(provider_updated_at, (int, float)):
+                    provider_updated_at = attempted_at
+
+                self._price_cache[asset] = {
+                    "price": round(float(price), 2),
+                    "change_24h": round(float(change), 2),
+                    "source": source,
+                    "instrument_type": instrument_type,
+                    "status": "live",
+                    "updated_at": float(provider_updated_at),
+                    "last_attempt_at": attempted_at,
+                    "is_last_known_good": False,
+                    "error": None,
                 }
-                logger.info(f"✅ Bitcoin price updated: ${data['bitcoin']['usd']:,.2f}")
-            
-            # Update Ethereum
-            if "ethereum" in data:
-                self._price_cache["ethereum"] = {
-                    "price": round(data["ethereum"]["usd"], 2),
-                    "change_24h": round(data["ethereum"].get("usd_24h_change", 0), 2),
-                    "source": "CoinGecko",
-                    "updated_at": time.time(),
-                }
-                logger.info(f"✅ Ethereum price updated: ${data['ethereum']['usd']:,.2f}")
-            
-            # Update Gold (Tether Gold XAUT - 1 token = 1 troy oz of gold)
-            if "tether-gold" in data:
-                self._price_cache["gold"] = {
-                    "price": round(data["tether-gold"]["usd"], 2),
-                    "change_24h": round(data["tether-gold"].get("usd_24h_change", 0), 2),
-                    "source": "CoinGecko",
-                    "updated_at": time.time(),
-                }
-                logger.info(f"✅ Gold price updated: ${data['tether-gold']['usd']:,.2f}/oz")
-            
-            # Update Silver (Silver Token SLVT - silver-backed token for spot price)
-            if "silver-token" in data:
-                self._price_cache["silver"] = {
-                    "price": round(data["silver-token"]["usd"], 2),
-                    "change_24h": round(data["silver-token"].get("usd_24h_change", 0), 2),
-                    "source": "CoinGecko",
-                    "updated_at": time.time(),
-                }
-                logger.info(f"✅ Silver price updated: ${data['silver-token']['usd']:,.2f}/oz")
-                
-        except Exception as e:
-            logger.error(f"❌ CoinGecko API error: {e}")
-            self._fallback_prices()
-    
-    def _fallback_prices(self) -> None:
-        """Fallback to reasonable default prices if API fails."""
-        import random
-        
-        # Use last known price or reasonable defaults
-        if self._price_cache["bitcoin"]["price"] == 0:
-            self._price_cache["bitcoin"] = {
-                "price": 68000.0 + random.uniform(-2000, 2000),
-                "change_24h": random.uniform(-3, 3),
-                "source": "Demo (API Failed)",
-                "updated_at": time.time(),
-            }
-        
-        if self._price_cache["ethereum"]["price"] == 0:
-            self._price_cache["ethereum"] = {
-                "price": 3400.0 + random.uniform(-100, 100),
-                "change_24h": random.uniform(-3, 3),
-                "source": "Demo (API Failed)",
-                "updated_at": time.time(),
-            }
-        
-        if self._price_cache["gold"]["price"] == 0:
-            self._price_cache["gold"] = {
-                "price": 2050.0 + random.uniform(-20, 20),
-                "change_24h": random.uniform(-0.5, 0.5),
-                "source": "Demo (API Failed)",
-                "updated_at": time.time(),
-            }
-        
-        if self._price_cache["silver"]["price"] == 0:
-            self._price_cache["silver"] = {
-                "price": 32.0 + random.uniform(-1, 1),
-                "change_24h": random.uniform(-1, 1),
-                "source": "Demo (API Failed)",
-                "updated_at": time.time(),
-            }
-    
-    # Compatibility methods
+
+            logger.info("CoinGecko asset refresh completed")
+        except (requests.RequestException, ValueError, TypeError) as exc:
+            logger.warning("CoinGecko asset refresh failed: %s", exc)
+            self._mark_all_assets_unavailable(attempted_at, str(exc))
+
+    def _mark_asset_unavailable(
+        self, asset: str, attempted_at: float, error: str
+    ) -> None:
+        current = self._price_cache[asset]
+        has_known_good = bool(current.get("price", 0) and current.get("updated_at"))
+        current["status"] = "stale" if has_known_good else "unavailable"
+        current["last_attempt_at"] = attempted_at
+        current["is_last_known_good"] = has_known_good
+        current["error"] = error
+
+    def _mark_all_assets_unavailable(self, attempted_at: float, error: str) -> None:
+        for asset in self._price_cache:
+            self._mark_asset_unavailable(asset, attempted_at, error)
+
     def get_bitcoin_price(self) -> Dict[str, Any]:
-        """Get Bitcoin price."""
-        prices = self.get_latest_prices(assets=["bitcoin"])
-        return prices.get("bitcoin", {})
-    
+        return self.get_latest_prices(assets=["bitcoin"]).get("bitcoin", {})
+
     def get_gold_price(self) -> Dict[str, Any]:
-        """Get Gold price."""
-        prices = self.get_latest_prices(assets=["gold"])
-        return prices.get("gold", {})
-    
+        return self.get_latest_prices(assets=["gold"]).get("gold", {})
+
     def get_silver_price(self) -> Dict[str, Any]:
-        """Get Silver price."""
-        prices = self.get_latest_prices(assets=["silver"])
-        return prices.get("silver", {})
-    
+        return self.get_latest_prices(assets=["silver"]).get("silver", {})
+
     def get_all_asset_prices(self) -> Dict[str, Dict[str, Any]]:
-        """Get all asset prices."""
         return self.get_latest_prices()
 
 
-# For backward compatibility, make this the default
 AssetTracker = LiveAssetTracker
