@@ -1,4 +1,5 @@
 """Vintage-aware read model over the trusted SQLite observation store."""
+
 from __future__ import annotations
 
 import sqlite3
