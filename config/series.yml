@@ -1,0 +1,124 @@
+version: 1
+
+# Initial trusted U.S. macroeconomic series. Provider identifiers, units and
+# frequencies are declared here rather than scattered through application code.
+series:
+  us_m2:
+    provider: fred
+    provider_series_code: M2SL
+    name: M2 Money Stock
+    category: monetary
+    geography: US
+    frequency: monthly
+    unit: Billions of U.S. Dollars
+    seasonal_adjustment: seasonally_adjusted
+    transformation: raw
+    freshness_sla_days: 45
+    source_url: https://fred.stlouisfed.org/series/M2SL
+    enabled: true
+    notes: Official monthly M2 level; growth rates must be derived separately.
+
+  us_fed_funds_effective:
+    provider: fred
+    provider_series_code: FEDFUNDS
+    name: Federal Funds Effective Rate
+    category: monetary
+    geography: US
+    frequency: monthly
+    unit: Percent
+    seasonal_adjustment: not_seasonally_adjusted
+    transformation: raw
+    freshness_sla_days: 40
+    source_url: https://fred.stlouisfed.org/series/FEDFUNDS
+    enabled: true
+    notes: Monthly average of daily effective federal funds rate observations.
+
+  us_cpi_all_urban:
+    provider: fred
+    provider_series_code: CPIAUCSL
+    name: Consumer Price Index for All Urban Consumers
+    category: prices
+    geography: US
+    frequency: monthly
+    unit: Index 1982-1984=100
+    seasonal_adjustment: seasonally_adjusted
+    transformation: raw
+    freshness_sla_days: 45
+    source_url: https://fred.stlouisfed.org/series/CPIAUCSL
+    enabled: true
+    notes: Inflation rates must be calculated from the index, not inferred from its level.
+
+  us_treasury_10y:
+    provider: fred
+    provider_series_code: GS10
+    name: 10-Year Treasury Constant Maturity Rate
+    category: yield_curve
+    geography: US
+    frequency: monthly
+    unit: Percent
+    seasonal_adjustment: not_seasonally_adjusted
+    transformation: raw
+    freshness_sla_days: 40
+    source_url: https://fred.stlouisfed.org/series/GS10
+    enabled: true
+    notes: Monthly average of business-day constant-maturity yields.
+
+  us_treasury_2y:
+    provider: fred
+    provider_series_code: GS2
+    name: 2-Year Treasury Constant Maturity Rate
+    category: yield_curve
+    geography: US
+    frequency: monthly
+    unit: Percent
+    seasonal_adjustment: not_seasonally_adjusted
+    transformation: raw
+    freshness_sla_days: 40
+    source_url: https://fred.stlouisfed.org/series/GS2
+    enabled: true
+    notes: Pair with GS10 only after aligning observation frequency and dates.
+
+  us_total_debt:
+    provider: fred
+    provider_series_code: TCMDO
+    name: All Sectors Debt Securities and Loans Liability Level
+    category: credit
+    geography: US
+    frequency: quarterly
+    unit: Millions of U.S. Dollars
+    seasonal_adjustment: not_seasonally_adjusted
+    transformation: raw
+    freshness_sla_days: 120
+    source_url: https://fred.stlouisfed.org/series/TCMDO
+    enabled: true
+    notes: End-of-period series subject to major historical and structural revisions.
+
+  us_industrial_production:
+    provider: fred
+    provider_series_code: INDPRO
+    name: Industrial Production Total Index
+    category: real_economy
+    geography: US
+    frequency: monthly
+    unit: Index 2017=100
+    seasonal_adjustment: seasonally_adjusted
+    transformation: raw
+    freshness_sla_days: 45
+    source_url: https://fred.stlouisfed.org/series/INDPRO
+    enabled: true
+    notes: Measures real output in manufacturing, mining and utilities.
+
+  us_capacity_utilization:
+    provider: fred
+    provider_series_code: TCU
+    name: Capacity Utilization Total Index
+    category: real_economy
+    geography: US
+    frequency: monthly
+    unit: Percent
+    seasonal_adjustment: seasonally_adjusted
+    transformation: raw
+    freshness_sla_days: 45
+    source_url: https://fred.stlouisfed.org/series/TCU
+    enabled: true
+    notes: Output divided by estimated sustainable maximum capacity.
