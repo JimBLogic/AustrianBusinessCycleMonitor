@@ -1,23 +1,19 @@
 /**
  * Custom hooks for robust API calls with automatic retry and error handling
  */
-import { useQuery, UseQueryOptions } from '@tanstack/react-query';
-import api from '@/lib/api';
-
-interface ApiError {
-  message: string;
-  status?: number;
-}
+import { useQuery } from '@tanstack/react-query';
+import type { UseQueryOptions } from '@tanstack/react-query';
+import api, { ApiClientError } from '@/lib/api';
 
 // Generic API hook with retry logic - OPTIMIZED for fast loading
 export function useApi<T>(
   endpoint: string,
-  options?: Omit<UseQueryOptions<T, ApiError>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<T, ApiClientError>, 'queryKey' | 'queryFn'>
 ) {
-  return useQuery<T, ApiError>({
+  return useQuery<T, ApiClientError>({
     queryKey: [endpoint],
-    queryFn: async () => {
-      const response = await api.get(endpoint);
+    queryFn: async ({ signal }) => {
+      const response = await api.get<T>(endpoint, { signal });
       return response.data;
     },
     retry: 1, // Reduced from 3 to 1 for faster initial load
