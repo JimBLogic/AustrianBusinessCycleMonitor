@@ -1,4 +1,5 @@
 """Versioned registry for deterministic metric definitions."""
+
 from __future__ import annotations
 
 import hashlib
@@ -49,7 +50,9 @@ class MetricRegistry:
 
         raw_metrics = payload.get("metrics")
         if not isinstance(raw_metrics, dict) or not raw_metrics:
-            raise MetricRegistryError("Metric registry must declare at least one metric")
+            raise MetricRegistryError(
+                "Metric registry must declare at least one metric"
+            )
 
         metrics: Dict[str, MetricDefinition] = {}
         for code, item in raw_metrics.items():
