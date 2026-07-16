@@ -1,189 +1,227 @@
-"""
-Real-time Bitcoin Blockchain Tracker
-Fetches live network metrics from mempool.space and other APIs
+"""Bitcoin network statistics with honest failure and freshness semantics.
+
+No network value is synthesized. Missing provider responses are reported as
+unavailable, while previously validated observations may be retained as stale.
 """
 from __future__ import annotations
 
+import copy
 import logging
 import time
-from datetime import datetime
-from typing import Dict, Any
+from datetime import UTC, datetime
+from typing import Any, Dict, Optional
+
 import requests
 
 logger = logging.getLogger(__name__)
 
 
 class BlockchainTracker:
-    """
-    Real-time Bitcoin blockchain statistics tracker.
-    
-    Data sources:
-    - mempool.space API (block height, hashrate, fees)
-    - blockchain.info (additional network stats)
-    """
-    
-    def __init__(self) -> None:
-        """Initialize with API endpoints."""
+    """Fetch Bitcoin network metrics from the documented mempool.space API."""
+
+    def __init__(self, session: Optional[requests.Session] = None) -> None:
         self.mempool_base = "https://mempool.space/api"
-        self.blockchain_base = "https://blockchain.info"
-        self.last_update = 0
-        self.cache_duration = 60  # 1 minute cache
-        self._stats_cache = {}
-        
+        self.last_update = 0.0
+        self.cache_duration = 60
+        self._stats_cache: Dict[str, Any] = {}
+        self.session = session or requests.Session()
+
     def get_blockchain_stats(self) -> Dict[str, Any]:
-        """
-        Get comprehensive blockchain statistics.
-        
-        Returns:
-            Dict with block_height, hashrate, difficulty, mempool stats, etc.
-        """
         now = time.time()
-        
-        # Return cached data if still valid
         if now - self.last_update < self.cache_duration and self._stats_cache:
-            return self._stats_cache
-        
-        try:
-            stats = {
-                "block_height": self._get_block_height(),
-                "hashrate": self._get_hashrate(),
-                "difficulty": self._get_difficulty(),
-                "mempool": self._get_mempool_stats(),
-                "fees": self._get_fee_estimates(),
-                "network_health": self._calculate_network_health(),
-                "timestamp": datetime.utcnow().isoformat(),
-                "source": "mempool.space",
-                "status": "live"
-            }
-            
-            self._stats_cache = stats
-            self.last_update = now
-            logger.info(f"✅ Blockchain stats updated: Block {stats.get('block_height', 'N/A')}")
-            
-            return stats
-            
-        except Exception as e:
-            logger.error(f"❌ Blockchain stats error: {e}")
-            return self._get_fallback_stats()
-    
-    def _get_block_height(self) -> int:
-        """Get current block height."""
-        try:
-            response = requests.get(f"{self.mempool_base}/blocks/tip/height", timeout=5)
-            if response.status_code == 200:
-                return int(response.text)
-        except Exception as e:
-            logger.warning(f"Block height fetch failed: {e}")
+            return copy.deepcopy(self._stats_cache)
+
+        block_height = self._get_block_height()
+        difficulty = self._get_difficulty()
+        hashrate = self._calculate_hashrate(difficulty)
+        mempool = self._get_mempool_stats()
+        fees = self._get_fee_estimates()
+
+        fresh_values: Dict[str, Any] = {
+            "block_height": block_height,
+            "hashrate": hashrate,
+            "difficulty": difficulty,
+            "mempool": mempool,
+            "fees": fees,
+        }
+        resolved_values: Dict[str, Any] = {}
+        field_status: Dict[str, str] = {}
+        warnings = []
+
+        previous_availability = self._stats_cache.get("availability", {})
+        for field, value in fresh_values.items():
+            if value is not None:
+                resolved_values[field] = value
+                field_status[field] = "live"
+                continue
+
+            if self._stats_cache and previous_availability.get(field):
+                resolved_values[field] = copy.deepcopy(self._stats_cache.get(field))
+                field_status[field] = "stale"
+                warnings.append(f"{field} retained from the last known good snapshot")
+            else:
+                resolved_values[field] = self._empty_value(field)
+                field_status[field] = "unavailable"
+                warnings.append(f"{field} unavailable from mempool.space")
+
+        live_count = sum(status == "live" for status in field_status.values())
+        stale_count = sum(status == "stale" for status in field_status.values())
+        if live_count == len(field_status):
+            overall_status = "live"
+        elif live_count or stale_count:
+            overall_status = "degraded"
+        else:
+            overall_status = "unavailable"
+
+        stats = {
+            **resolved_values,
+            "network_health": self._network_health_not_scored(),
+            "timestamp": datetime.now(UTC).isoformat(),
+            "retrieved_at": now,
+            "source": "mempool.space",
+            "status": overall_status,
+            "availability": {
+                field: status in {"live", "stale"}
+                for field, status in field_status.items()
+            },
+            "field_status": field_status,
+            "is_last_known_good": stale_count > 0,
+            "warnings": warnings,
+        }
+
+        self._stats_cache = stats
+        self.last_update = now
+        logger.info(
+            "Bitcoin network refresh completed with status=%s block=%s",
+            overall_status,
+            stats["block_height"] or "unavailable",
+        )
+        return copy.deepcopy(stats)
+
+    @staticmethod
+    def _empty_value(field: str) -> Any:
+        if field == "mempool":
+            return {"count": 0, "vsize": 0, "total_fee": 0}
+        if field == "fees":
+            return {"fastestFee": 0, "halfHourFee": 0, "hourFee": 0}
         return 0
-    
-    def _get_hashrate(self) -> float:
-        """Get network hashrate in H/s."""
+
+    def _get_block_height(self) -> Optional[int]:
         try:
-            # Get difficulty first
-            difficulty = self._get_difficulty()
-            if difficulty > 0:
-                # Estimate hashrate from difficulty (simplified)
-                # Hashrate ≈ difficulty * 2^32 / 600 (10 minute blocks)
-                hashrate = (difficulty * (2 ** 32)) / 600
-                return hashrate
-        except Exception as e:
-            logger.warning(f"Hashrate calculation failed: {e}")
-        return 0
-    
-    def _get_difficulty(self) -> float:
-        """Get current mining difficulty."""
+            response = self.session.get(
+                f"{self.mempool_base}/blocks/tip/height", timeout=5
+            )
+            response.raise_for_status()
+            height = int(response.text)
+            return height if height > 0 else None
+        except (requests.RequestException, TypeError, ValueError) as exc:
+            logger.warning("Block height fetch failed: %s", exc)
+            return None
+
+    def _get_difficulty(self) -> Optional[float]:
         try:
-            response = requests.get(f"{self.mempool_base}/v1/difficulty-adjustment", timeout=5)
-            if response.status_code == 200:
-                data = response.json()
-                return data.get("currentDifficulty", 0)
-        except Exception as e:
-            logger.warning(f"Difficulty fetch failed: {e}")
-        return 0
-    
-    def _get_mempool_stats(self) -> Dict[str, Any]:
-        """Get mempool statistics."""
+            response = self.session.get(
+                f"{self.mempool_base}/v1/difficulty-adjustment", timeout=5
+            )
+            response.raise_for_status()
+            payload = response.json()
+            difficulty = payload.get("currentDifficulty") if isinstance(payload, dict) else None
+            if isinstance(difficulty, (int, float)) and difficulty > 0:
+                return float(difficulty)
+        except (requests.RequestException, TypeError, ValueError) as exc:
+            logger.warning("Difficulty fetch failed: %s", exc)
+        return None
+
+    @staticmethod
+    def _calculate_hashrate(difficulty: Optional[float]) -> Optional[float]:
+        if difficulty is None or difficulty <= 0:
+            return None
+        return (difficulty * (2**32)) / 600
+
+    def _get_mempool_stats(self) -> Optional[Dict[str, Any]]:
         try:
-            response = requests.get(f"{self.mempool_base}/mempool", timeout=5)
-            if response.status_code == 200:
-                data = response.json()
+            response = self.session.get(f"{self.mempool_base}/mempool", timeout=5)
+            response.raise_for_status()
+            payload = response.json()
+            if isinstance(payload, dict):
                 return {
-                    "count": data.get("count", 0),
-                    "vsize": data.get("vsize", 0),
-                    "total_fee": data.get("total_fee", 0),
+                    "count": int(payload.get("count", 0)),
+                    "vsize": int(payload.get("vsize", 0)),
+                    "total_fee": float(payload.get("total_fee", 0)),
                 }
-        except Exception as e:
-            logger.warning(f"Mempool stats fetch failed: {e}")
-        return {"count": 0, "vsize": 0, "total_fee": 0}
-    
-    def _get_fee_estimates(self) -> Dict[str, Any]:
-        """Get fee estimates for different confirmation targets."""
+        except (requests.RequestException, TypeError, ValueError) as exc:
+            logger.warning("Mempool stats fetch failed: %s", exc)
+        return None
+
+    def _get_fee_estimates(self) -> Optional[Dict[str, Any]]:
         try:
-            response = requests.get(f"{self.mempool_base}/v1/fees/recommended", timeout=5)
-            if response.status_code == 200:
-                return response.json()
-        except Exception as e:
-            logger.warning(f"Fee estimates fetch failed: {e}")
-        return {"fastestFee": 0, "halfHourFee": 0, "hourFee": 0}
-    
-    def _calculate_network_health(self) -> Dict[str, Any]:
-        """Calculate network health score based on metrics."""
+            response = self.session.get(
+                f"{self.mempool_base}/v1/fees/recommended", timeout=5
+            )
+            response.raise_for_status()
+            payload = response.json()
+            if isinstance(payload, dict):
+                return {
+                    "fastestFee": int(payload.get("fastestFee", 0)),
+                    "halfHourFee": int(payload.get("halfHourFee", 0)),
+                    "hourFee": int(payload.get("hourFee", 0)),
+                }
+        except (requests.RequestException, TypeError, ValueError) as exc:
+            logger.warning("Fee estimates fetch failed: %s", exc)
+        return None
+
+    @staticmethod
+    def _network_health_not_scored() -> Dict[str, Any]:
         return {
-            "security_score": 95,  # Based on hashrate
-            "decentralization_score": 90,  # Based on node count estimate
-            "status": "healthy"
+            "security_score": None,
+            "decentralization_score": None,
+            "status": "not_scored",
+            "methodology": (
+                "Composite network-health scoring is disabled until auditable "
+                "hashrate, node-count and decentralization inputs are defined."
+            ),
         }
-    
-    def _get_fallback_stats(self) -> Dict[str, Any]:
-        """Return fallback/demo stats if API fails."""
-        import random
-        return {
-            "block_height": 870000 + random.randint(1, 100),
-            "hashrate": 500e18 + random.uniform(-50e18, 50e18),  # ~500 EH/s
-            "difficulty": 70e12 + random.uniform(-5e12, 5e12),
-            "mempool": {
-                "count": random.randint(5000, 50000),
-                "vsize": random.randint(50000000, 500000000),
-                "total_fee": random.uniform(0.5, 5.0)
-            },
-            "fees": {
-                "fastestFee": random.randint(20, 100),
-                "halfHourFee": random.randint(15, 80),
-                "hourFee": random.randint(10, 60)
-            },
-            "network_health": {
-                "security_score": 95,
-                "decentralization_score": 90,
-                "status": "healthy"
-            },
-            "timestamp": datetime.utcnow().isoformat(),
-            "source": "demo",
-            "status": "fallback"
-        }
-    
+
     def get_difficulty_adjustment_info(self) -> Dict[str, Any]:
-        """Get difficulty adjustment information."""
+        attempted_at = time.time()
         try:
-            response = requests.get(f"{self.mempool_base}/v1/difficulty-adjustment", timeout=5)
-            if response.status_code == 200:
-                data = response.json()
-                return {
-                    "progress_percent": data.get("progressPercent", 0),
-                    "difficulty_change": data.get("difficultyChange", 0),
-                    "estimated_retarget_date": data.get("estimatedRetargetDate", 0),
-                    "remaining_blocks": data.get("remainingBlocks", 0),
-                    "remaining_time": data.get("remainingTime", 0)
-                }
-        except Exception as e:
-            logger.warning(f"Difficulty adjustment info failed: {e}")
-        return {}
+            response = self.session.get(
+                f"{self.mempool_base}/v1/difficulty-adjustment", timeout=5
+            )
+            response.raise_for_status()
+            payload = response.json()
+            if not isinstance(payload, dict):
+                raise ValueError("mempool.space returned a non-object response")
+            return {
+                "progress_percent": payload.get("progressPercent"),
+                "difficulty_change": payload.get("difficultyChange"),
+                "estimated_retarget_date": payload.get("estimatedRetargetDate"),
+                "remaining_blocks": payload.get("remainingBlocks"),
+                "remaining_time": payload.get("remainingTime"),
+                "source": "mempool.space",
+                "status": "live",
+                "retrieved_at": attempted_at,
+                "error": None,
+            }
+        except (requests.RequestException, TypeError, ValueError) as exc:
+            logger.warning("Difficulty adjustment fetch failed: %s", exc)
+            return {
+                "progress_percent": None,
+                "difficulty_change": None,
+                "estimated_retarget_date": None,
+                "remaining_blocks": None,
+                "remaining_time": None,
+                "source": "mempool.space",
+                "status": "unavailable",
+                "retrieved_at": attempted_at,
+                "error": str(exc),
+            }
 
 
-# Singleton instance
-_tracker_instance = None
+_tracker_instance: Optional[BlockchainTracker] = None
+
 
 def get_blockchain_tracker() -> BlockchainTracker:
-    """Get or create the singleton BlockchainTracker instance."""
     global _tracker_instance
     if _tracker_instance is None:
         _tracker_instance = BlockchainTracker()
