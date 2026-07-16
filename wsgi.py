@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-"""
-WSGI entrypoint for Austrian Business Cycle Monitor.
-This exposes the Flask application object as `app` for WSGI servers.
-"""
-from apps.dashboard.webapp import create_app
+"""WSGI entrypoint for Austrian Business Cycle Monitor."""
 
-# WSGI application
+from apps.dashboard.factory import create_app
+
+# WSGI application composed from the legacy dashboard and trusted read APIs.
 app = create_app()
