@@ -10,6 +10,7 @@ export class ApiClientError extends Error {
   readonly status?: number;
   readonly code?: string;
   readonly details?: unknown;
+  readonly cause?: unknown;
 
   constructor(
     message: string,
@@ -20,11 +21,12 @@ export class ApiClientError extends Error {
       cause?: unknown;
     } = {}
   ) {
-    super(message, { cause: options.cause });
+    super(message);
     this.name = 'ApiClientError';
     this.status = options.status;
     this.code = options.code;
     this.details = options.details;
+    this.cause = options.cause;
   }
 }
 
