@@ -145,7 +145,18 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build Docker image
-        run: docker build -t abcm-ci:latest .
+        run: |
+          set -o pipefail
+          docker build --progress=plain -t abcm-ci:latest . 2>&1 | tee docker-build.log
+
+      - name: Upload Docker build report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-build-report
+          path: docker-build.log
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Run container smoke test
         run: |
