@@ -1,4 +1,5 @@
 """Contracts for deterministic, vintage-aware economic snapshots."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
