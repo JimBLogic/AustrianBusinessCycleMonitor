@@ -34,10 +34,20 @@ function normalizeBaseUrl(value: string | undefined): string {
   return value?.trim().replace(/\/+$/, '') ?? '';
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 function extractMessage(error: AxiosError<ApiErrorPayload>): string {
   const payload = error.response?.data;
+  const structuredError = isRecord(payload?.error) ? payload.error : undefined;
 
-  for (const candidate of [payload?.message, payload?.error, payload?.detail]) {
+  for (const candidate of [
+    payload?.message,
+    structuredError?.message,
+    payload?.error,
+    payload?.detail,
+  ]) {
     if (typeof candidate === 'string' && candidate.trim()) {
       return candidate;
     }
@@ -48,6 +58,15 @@ function extractMessage(error: AxiosError<ApiErrorPayload>): string {
   }
 
   return error.message || `API request failed with status ${error.response.status}.`;
+}
+
+function extractCode(error: AxiosError<ApiErrorPayload>): string | undefined {
+  const structuredError = isRecord(error.response?.data?.error)
+    ? error.response?.data?.error
+    : undefined;
+  const apiCode = structuredError?.code;
+
+  return typeof apiCode === 'string' && apiCode.trim() ? apiCode : error.code;
 }
 
 const api = axios.create({
@@ -65,7 +84,7 @@ api.interceptors.response.use(
       return Promise.reject(
         new ApiClientError(extractMessage(error), {
           status: error.response?.status,
-          code: error.code,
+          code: extractCode(error),
           details: error.response?.data,
           cause: error,
         })
