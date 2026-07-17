@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiClientError } from '@/lib/api';
@@ -81,10 +81,11 @@ describe('TrustedSnapshotPanel', () => {
     render(<TrustedSnapshotPanel />);
 
     expect(screen.getByRole('heading', { name: 'Trusted economic snapshot' })).not.toBeNull();
-    expect(screen.getByText('100%')).not.toBeNull();
+    expect(screen.getByText(/100%/)).not.toBeNull();
     expect(screen.getByText('4.25%')).not.toBeNull();
     expect(screen.getByText('Read-only · deterministic')).not.toBeNull();
 
+    fireEvent.click(screen.getByText('Formula and provenance'));
     const source = screen.getByRole('link', { name: /Source/ });
     expect(source.getAttribute('href')).toBe('https://fred.stlouisfed.org/series/M2SL');
   });
