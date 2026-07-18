@@ -31,7 +31,8 @@ const snapshotStatusStyles: Record<TrustedSnapshotStatus, string> = {
 };
 
 function formatDate(value: string, includeTime = false): string {
-  const date = new Date(value);
+  const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(value);
+  const date = new Date(isDateOnly ? `${value}T00:00:00Z` : value);
   if (Number.isNaN(date.getTime())) {
     return value;
   }
@@ -40,6 +41,7 @@ function formatDate(value: string, includeTime = false): string {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
+    ...(isDateOnly ? { timeZone: 'UTC' } : {}),
     ...(includeTime ? { hour: '2-digit', minute: '2-digit' } : {}),
   }).format(date);
 }
