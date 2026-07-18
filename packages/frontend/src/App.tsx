@@ -2,14 +2,18 @@
 import { EnhancedDashboard } from './components/EnhancedDashboard';
 import { Toaster } from 'sonner';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { TrustedSnapshotPanel } from './components/TrustedSnapshotPanel';
 
 function App() {
   return (
     <ErrorBoundary>
-      <EnhancedDashboard />
-      <Toaster 
-        position="top-right" 
-        richColors 
+      <div className="min-h-screen bg-slate-950">
+        <TrustedSnapshotPanel />
+        <EnhancedDashboard />
+      </div>
+      <Toaster
+        position="top-right"
+        richColors
         closeButton
         theme="system"
         toastOptions={{
@@ -25,4 +29,4 @@ function App() {
   );
 }
 
-export default App
+export default App;
