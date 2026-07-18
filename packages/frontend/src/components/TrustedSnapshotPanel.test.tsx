@@ -90,6 +90,27 @@ describe('TrustedSnapshotPanel', () => {
     expect(source.getAttribute('href')).toBe('https://fred.stlouisfed.org/series/M2SL');
   });
 
+  it('preserves date-only fields in time zones west of UTC', () => {
+    const originalTimeZone = process.env.TZ;
+    process.env.TZ = 'America/Los_Angeles';
+
+    try {
+      mockedUseTrustedSnapshot.mockReturnValue(queryResult({ data: envelope }));
+
+      render(<TrustedSnapshotPanel />);
+
+      expect(screen.getByText('01 Feb 2025')).not.toBeNull();
+      expect(screen.getByText('01 Jan 2025')).not.toBeNull();
+      expect(screen.getByText(/us_m2 · vintage 20 Jan 2025/)).not.toBeNull();
+    } finally {
+      if (originalTimeZone === undefined) {
+        delete process.env.TZ;
+      } else {
+        process.env.TZ = originalTimeZone;
+      }
+    }
+  });
+
   it('shows an explicit unavailable state without fabricated replacement values', () => {
     mockedUseTrustedSnapshot.mockReturnValue(
       queryResult({
