@@ -29,17 +29,17 @@ Edit `.env.production` and set:
 - `FRED_API_KEY` to the real provider credential;
 - `SECRET_KEY` to a long random value.
 
-Start the stack:
+Start the stack. The explicit `--env-file` is required because Compose must resolve `DOMAIN` before it starts Caddy:
 
 ```bash
-docker compose -f compose.production.yml up -d --build
+docker compose --env-file .env.production -f compose.production.yml up -d --build
 ```
 
 Inspect its state:
 
 ```bash
-docker compose -f compose.production.yml ps
-docker compose -f compose.production.yml logs -f app updater caddy
+docker compose --env-file .env.production -f compose.production.yml ps
+docker compose --env-file .env.production -f compose.production.yml logs -f app updater caddy
 ```
 
 Caddy requests and renews the TLS certificate automatically after DNS resolves to the server.
@@ -58,13 +58,14 @@ The updater runs immediately and then sleeps for `DATA_REFRESH_SECONDS`. The fir
 
 ```bash
 git pull
-docker compose -f compose.production.yml up -d --build
+docker compose --env-file .env.production -f compose.production.yml up -d --build
 docker image prune -f
 ```
 
 The `trusted-data` volume is preserved. Create an external backup before major host changes:
 
 ```bash
+mkdir -p backups
 docker run --rm \
   -v austrian-cycle-monitor_trusted-data:/data:ro \
   -v "$PWD/backups:/backup" \
