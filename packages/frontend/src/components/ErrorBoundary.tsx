@@ -1,5 +1,7 @@
 import React from 'react';
 
+import i18n from '@/i18n';
+
 interface ErrorBoundaryState {
   hasError: boolean;
   error?: Error;
@@ -16,44 +18,49 @@ export class ErrorBoundary extends React.Component<React.PropsWithChildren, Erro
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
-    // Optionally report to monitoring here
     console.error('ErrorBoundary caught an error:', error, info);
   }
 
   render(): React.ReactNode {
     if (this.state.hasError) {
       return (
-        <div style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'linear-gradient(135deg, #0f172a 0%, #111827 100%)',
-          color: '#e5e7eb',
-          padding: '2rem',
-          fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif'
-        }}>
-          <div style={{maxWidth: 700}}>
-            <div style={{fontSize: 48, marginBottom: 8}}>⚠️</div>
-            <h2 style={{fontSize: 24, marginBottom: 8}}>Something went wrong</h2>
-            <p style={{opacity: 0.8, marginBottom: 16}}>
-              The dashboard hit an unexpected error while rendering.
+        <div
+          style={{
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, #0f172a 0%, #111827 100%)',
+            color: '#e5e7eb',
+            padding: '2rem',
+            fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif',
+          }}
+        >
+          <div style={{ maxWidth: 700 }}>
+            <div style={{ fontSize: 48, marginBottom: 8 }} aria-hidden="true">⚠️</div>
+            <h2 style={{ fontSize: 24, marginBottom: 8 }}>
+              {i18n.t('production.errorBoundary.title')}
+            </h2>
+            <p style={{ opacity: 0.8, marginBottom: 16 }}>
+              {i18n.t('production.errorBoundary.description')}
             </p>
-            <div style={{
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace',
-              background: '#0b1220',
-              border: '1px solid #1f2937',
-              padding: '12px 14px',
-              borderRadius: 8,
-              whiteSpace: 'pre-wrap',
-              color: '#fca5a5',
-              marginBottom: 16
-            }}>
+            <div
+              style={{
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace',
+                background: '#0b1220',
+                border: '1px solid #1f2937',
+                padding: '12px 14px',
+                borderRadius: 8,
+                whiteSpace: 'pre-wrap',
+                color: '#fca5a5',
+                marginBottom: 16,
+              }}
+            >
               {this.state.error?.message}
             </div>
-            <div style={{fontSize: 14, opacity: 0.8}}>
-              Try a hard refresh (Ctrl+F5). If it persists, open the browser console (F12) and share the error details.
-            </div>
+            <p style={{ fontSize: 14, opacity: 0.8 }}>
+              {i18n.t('production.errorBoundary.action')}
+            </p>
           </div>
         </div>
       );
