@@ -64,6 +64,11 @@
       "yield_curve_10y_2y_spread_pp": {"name": "Diferencial del Tesoro 10A–2A", "context": "Diferencia entre las rentabilidades del Tesoro a 10 y 2 años alineadas por fecha."},
       "real_fed_funds_proxy_pp": {"name": "Proxy ex post del tipo real de los fondos federales", "context": "Tipo efectivo menos la inflación interanual contemporánea del IPC. No es una estimación del tipo natural."}
     },
+    "errorBoundary": {
+      "title": "No se ha podido mostrar el panel",
+      "description": "Un error inesperado del navegador ha interrumpido la vista de datos verificados.",
+      "action": "Recarga la página. Si el problema continúa, guarda el mensaje inferior y la versión del navegador."
+    },
     "footer": {
       "scope": "Proyecto educativo y analítico. No constituye asesoramiento financiero.",
       "privacy": "No requiere cuenta, perfil de seguimiento ni datos financieros personales.",
