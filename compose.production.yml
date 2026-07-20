@@ -1,0 +1,71 @@
+name: austrian-cycle-monitor
+
+services:
+  app:
+    image: ${ABCM_IMAGE:-ghcr.io/jimblogic/austrianbusinesscyclemonitor:latest}
+    build:
+      context: .
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      BACKEND_MODE: webapp
+      HOST: 0.0.0.0
+      PORT: 5002
+      ECONOMIC_DATA_DB: /app/data/economic_data.sqlite3
+    volumes:
+      - trusted-data:/app/data
+    expose:
+      - "5002"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5002/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+
+  updater:
+    image: ${ABCM_IMAGE:-ghcr.io/jimblogic/austrianbusinesscyclemonitor:latest}
+    build:
+      context: .
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      ECONOMIC_DATA_DB: /app/data/economic_data.sqlite3
+    volumes:
+      - trusted-data:/app/data
+    entrypoint: ["/bin/sh", "-c"]
+    command: >-
+      while true; do
+        python -m apps.jobs.ingest_fred --database /app/data/economic_data.sqlite3 &&
+        python -m apps.jobs.build_trusted_snapshot --database /app/data/economic_data.sqlite3;
+        sleep "$${DATA_REFRESH_SECONDS:-21600}";
+      done
+    security_opt:
+      - no-new-privileges:true
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  trusted-data:
+  caddy-data:
+  caddy-config:
