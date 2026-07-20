@@ -73,6 +73,11 @@
       "yield_curve_10y_2y_spread_pp": {"name": "10Y–2Y Treasury spread", "context": "Difference between aligned 10-year and 2-year Treasury yields."},
       "real_fed_funds_proxy_pp": {"name": "Ex-post real federal funds proxy", "context": "Effective federal funds rate minus contemporaneous annual CPI inflation. This is not an estimate of the natural rate."}
     },
+    "errorBoundary": {
+      "title": "The dashboard could not be rendered",
+      "description": "An unexpected browser error interrupted the verified-data view.",
+      "action": "Reload the page. If the problem persists, record the message below and the browser version."
+    },
     "footer": {
       "scope": "Educational and analytical project. Not financial advice.",
       "privacy": "No account, tracking profile, or personal financial data is required.",
