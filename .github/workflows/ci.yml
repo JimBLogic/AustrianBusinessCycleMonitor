@@ -83,6 +83,15 @@ jobs:
         working-directory: packages/frontend
         run: npm run build
 
+      - name: Verify public bundle
+        working-directory: packages/frontend
+        run: |
+          grep -R -q "Evidence-first economic monitoring" dist/assets
+          if grep -R -q "In Satoshi We Trust" dist/assets; then
+            echo "Legacy dashboard copy leaked into the production bundle."
+            exit 1
+          fi
+
       - name: Upload frontend build
         uses: actions/upload-artifact@v4
         with:
@@ -136,7 +145,8 @@ jobs:
       - name: Validate production Compose configuration
         run: |
           cp .env.production.example .env.production
-          docker compose -f compose.production.yml config --quiet
+          docker compose --env-file .env.production -f compose.production.yml config > compose.resolved.yml
+          grep -q "economy.example.com" compose.resolved.yml
 
       - name: Build Docker image
         run: |
