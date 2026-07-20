@@ -99,7 +99,7 @@ describe('ProductionDashboard', () => {
 
     expect(screen.getByRole('heading', { name: 'Datos económicos de confianza' })).not.toBeNull();
     expect(screen.getByText('Inflación interanual del IPC')).not.toBeNull();
-    expect(screen.getByText(/No es una estimación del tipo natural/)).not.toBeNull();
+    expect(screen.getByText('Variación interanual del índice de precios de consumo.')).not.toBeNull();
   });
 
   it('explains a missing snapshot without displaying substitute figures', () => {
