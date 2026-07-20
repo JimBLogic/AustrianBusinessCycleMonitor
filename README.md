@@ -82,7 +82,7 @@ The supported small-project deployment uses Docker Compose, a persistent SQLite 
 ```bash
 cp .env.production.example .env.production
 # Edit DOMAIN, FRED_API_KEY, and SECRET_KEY
-docker compose -f compose.production.yml up -d --build
+docker compose --env-file .env.production -f compose.production.yml up -d --build
 ```
 
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for DNS, verification, updates, and backups.
