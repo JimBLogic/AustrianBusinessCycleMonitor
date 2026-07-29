@@ -24,6 +24,7 @@ Use `README.md`, `docs/INDEX.md`, and the nearest package README before changing
 - Deterministic snapshots: `apps/jobs/build_trusted_snapshot.py`
 - Read-only snapshot API: `apps/api/`
 - Production Flask composition: `apps/dashboard/factory.py`, `wsgi.py`, and `entrypoint.py`
+- Tested Python compatibility facade: `abcm/`
 - Public React entrypoint: `packages/frontend/src/main.tsx` and `PublicApp`
 - Production deployment: `Dockerfile`, `compose.production.yml`, and `Caddyfile`
 - Sites reference: `sites-v25/`

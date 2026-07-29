@@ -6,7 +6,7 @@ Archived on 2026-07-29 after comparing the repository with the trusted Flask/Rea
 
 - `docs/` — old quick starts, completion reports, visual-design notes, demo-data strategies, and superseded dashboard guides.
 - `launchers/` — overlapping Windows start/test scripts and the interactive API-key setup helper.
-- `runtime/` — the unused `abcm` prototype and random-value mock Flask backend.
+- `runtime/` — the retired random-value mock Flask backend.
 - `monorepo/` — root npm workspace metadata that referenced the absent `packages/backend` FastAPI/Poetry project.
 - `deployment/` — retired Firebase hosting configuration.
 - `cleanup/` — an incomplete historical destructive-cleanup script fragment, retained for audit only. Do not run it.
