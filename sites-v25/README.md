@@ -96,6 +96,14 @@ The local Docker path is for reproducibility and development. The public Sites
 deployment remains the production reference until a separate hosting migration
 is tested and approved.
 
+## Repository hygiene
+
+Starter examples, unused template artwork, generated TypeScript build metadata,
+and unreferenced helpers are intentionally excluded. The content-integrity
+tests guard against their accidental return. Product routes, D1/R2 bindings,
+migration history, and reproducible build assets remain maintained even when
+they are not linked from public navigation.
+
 ## Architecture
 
 ```text
