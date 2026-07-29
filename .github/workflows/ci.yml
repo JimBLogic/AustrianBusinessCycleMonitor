@@ -40,10 +40,8 @@ jobs:
       - name: Run tests
         run: pytest -q
 
-      - name: Import smoke
-        run: |
-          python -c "from apps.core.austrian_monitor import AustrianCycleMonitor; print('Core imports OK')"
-          python -c "from apps.dashboard.webapp import AustrianDashboard; print('Dashboard imports OK')"
+      - name: Import production factory
+        run: python -c "from apps.dashboard.factory import create_app; app = create_app(); print(app.url_map)"
 
   frontend:
     name: Frontend · React/Vite
@@ -85,6 +83,15 @@ jobs:
         working-directory: packages/frontend
         run: npm run build
 
+      - name: Verify public bundle
+        working-directory: packages/frontend
+        run: |
+          grep -R -q "Evidence-first economic monitoring" dist/assets
+          if grep -R -q "In Satoshi We Trust" dist/assets; then
+            echo "Legacy dashboard copy leaked into the production bundle."
+            exit 1
+          fi
+
       - name: Upload frontend build
         uses: actions/upload-artifact@v4
         with:
@@ -99,18 +106,13 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Install quality tools
         run: python -m pip install ruff black
-
       - name: Ruff
         run: ruff check apps tests
-
       - name: Black
         if: always()
         run: black --check apps tests
@@ -121,28 +123,30 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
           cache-dependency-path: packages/frontend/package-lock.json
-
       - name: Install dependencies
         working-directory: packages/frontend
         run: npm ci
-
       - name: Lint
         working-directory: packages/frontend
         run: npm run lint
 
   docker-smoke:
-    name: Docker smoke
+    name: Production Docker smoke
     runs-on: ubuntu-latest
     needs: [backend, frontend]
     steps:
       - uses: actions/checkout@v4
+
+      - name: Validate production Compose configuration
+        run: |
+          cp .env.production.example .env.production
+          docker compose --env-file .env.production -f compose.production.yml config > compose.resolved.yml
+          grep -q "economy.example.com" compose.resolved.yml
 
       - name: Build Docker image
         run: |
@@ -158,21 +162,29 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Run container smoke test
+      - name: Run production container smoke test
         run: |
           docker rm -f abcm-ci || true
           docker run -d --name abcm-ci -p 5002:5002 \
-            -e BACKEND_MODE=mock \
+            -e BACKEND_MODE=webapp \
+            -e ECONOMIC_DATA_DB=/app/data/economic_data.sqlite3 \
             abcm-ci:latest
           trap 'docker logs abcm-ci || true; docker rm -f abcm-ci || true' EXIT
-          for attempt in {1..20}; do
-            if curl -fsS http://127.0.0.1:5002/api/status | jq .; then
-              exit 0
+
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:5002/api/health | jq -e '.ok == true'; then
+              break
             fi
             sleep 2
           done
-          echo 'Container did not become healthy in time.' >&2
-          exit 1
+
+          curl -fsS http://127.0.0.1:5002/ > index.html
+          grep -q '<div id="root"></div>' index.html
+
+          status_code=$(curl -sS -o trusted-error.json -w '%{http_code}' \
+            http://127.0.0.1:5002/api/trusted-snapshots/latest)
+          test "$status_code" = "503"
+          jq -e '.error.code == "snapshot_store_unavailable"' trusted-error.json
 
   publish-image:
     name: Publish container image
@@ -184,14 +196,12 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -200,7 +210,6 @@ jobs:
           tags: |
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
-
       - name: Build and push
         uses: docker/build-push-action@v6
         with:

@@ -1,0 +1,78 @@
+{
+  "production": {
+    "brand": {
+      "title": "Monitor del Ciclo Económico Austríaco",
+      "subtitle": "Indicadores macroeconómicos auditables con datos oficiales y fórmulas versionadas",
+      "badge": "Seguimiento económico basado en evidencia"
+    },
+    "status": {
+      "complete": "Completo",
+      "degraded": "Cobertura parcial",
+      "unavailable": "No disponible",
+      "available": "Vigente",
+      "stale": "Desactualizado",
+      "loading": "Cargando datos verificados",
+      "storeUnavailable": "El almacén de datos verificados no está disponible",
+      "firstSnapshot": "Pendiente del primer snapshot verificado",
+      "invalidContract": "No se ha podido validar la respuesta de datos verificados"
+    },
+    "actions": {
+      "retry": "Reintentar",
+      "revalidate": "Volver a validar",
+      "showAll": "Mostrar los {{count}} indicadores",
+      "showLess": "Mostrar menos indicadores",
+      "source": "Fuente primaria"
+    },
+    "snapshot": {
+      "eyebrow": "Snapshot macroeconómico verificado",
+      "title": "Datos económicos de confianza",
+      "description": "Las cifras proceden de un snapshot persistido y determinista. Abrir la página no consulta FRED, no recalcula indicadores ni activa el motor heredado.",
+      "coverage": "Cobertura",
+      "asOf": "Fecha de conocimiento",
+      "generated": "Generado",
+      "methodology": "Metodología",
+      "observation": "Fecha de observación",
+      "freshness": "Antigüedad",
+      "days": "{{count}} días",
+      "notAvailable": "No disponible",
+      "formula": "Fórmula y trazabilidad",
+      "noSource": "No hay una observación de origen disponible para este indicador.",
+      "technicalReason": "Motivo técnico",
+      "snapshotId": "Snapshot",
+      "registry": "Registro metodológico",
+      "inputs": "Entradas",
+      "emptyMessage": "La aplicación está operativa, pero aún no existe un snapshot determinista persistido.",
+      "storeMessage": "No se puede abrir el almacén SQLite en modo de solo lectura. No se muestran cifras simuladas ni sustitutivas.",
+      "contractMessage": "La API ha devuelto datos que no cumplen el contrato versionado. El panel los ha rechazado para no mostrar cifras inciertas."
+    },
+    "methodology": {
+      "title": "Cómo interpretar este monitor",
+      "intro": "Esta web es una capa de evidencia. Separa los datos observados, las transformaciones deterministas y la interpretación económica.",
+      "official": {"title": "Observaciones oficiales", "body": "Las series se obtienen de FRED y se guardan con fecha de observación, vintage, fecha de consulta, URL de origen y hash de la respuesta."},
+      "deterministic": {"title": "Cálculos versionados", "body": "Las variaciones interanuales y los diferenciales usan fórmulas explícitas y alineación exacta de fechas. Los datos ausentes no se interpolan."},
+      "interpretation": {"title": "Límite interpretativo", "body": "El monitor no afirma estimar el tipo natural, predecir recesiones con certeza ni ofrecer recomendaciones personalizadas."}
+    },
+    "metrics": {
+      "fed_funds_effective_pct": {"name": "Tipo efectivo de los fondos federales", "context": "Tipo observado en el mercado de fondos federales."},
+      "treasury_10y_pct": {"name": "Rentabilidad del Tesoro a 10 años", "context": "Referencia de largo plazo de la deuda pública estadounidense."},
+      "treasury_2y_pct": {"name": "Rentabilidad del Tesoro a 2 años", "context": "Referencia de corto plazo de la deuda pública estadounidense."},
+      "capacity_utilization_pct": {"name": "Utilización de la capacidad productiva", "context": "Porcentaje de la capacidad industrial disponible que está en uso."},
+      "m2_yoy_pct": {"name": "Crecimiento interanual de M2", "context": "Variación interanual del agregado monetario amplio M2."},
+      "cpi_yoy_pct": {"name": "Inflación interanual del IPC", "context": "Variación interanual del índice de precios de consumo."},
+      "industrial_production_yoy_pct": {"name": "Crecimiento interanual de la producción industrial", "context": "Variación interanual del índice de producción industrial."},
+      "total_debt_yoy_pct": {"name": "Crecimiento interanual de la deuda total", "context": "Variación interanual de los títulos de deuda y préstamos totales."},
+      "yield_curve_10y_2y_spread_pp": {"name": "Diferencial del Tesoro 10A–2A", "context": "Diferencia entre las rentabilidades del Tesoro a 10 y 2 años alineadas por fecha."},
+      "real_fed_funds_proxy_pp": {"name": "Proxy ex post del tipo real de los fondos federales", "context": "Tipo efectivo menos la inflación interanual contemporánea del IPC. No es una estimación del tipo natural."}
+    },
+    "errorBoundary": {
+      "title": "No se ha podido mostrar el panel",
+      "description": "Un error inesperado del navegador ha interrumpido la vista de datos verificados.",
+      "action": "Recarga la página. Si el problema continúa, guarda el mensaje inferior y la versión del navegador."
+    },
+    "footer": {
+      "scope": "Proyecto educativo y analítico. No constituye asesoramiento financiero.",
+      "privacy": "No requiere cuenta, perfil de seguimiento ni datos financieros personales.",
+      "source": "Implementación open source con trazabilidad hasta las fuentes primarias."
+    }
+  }
+}

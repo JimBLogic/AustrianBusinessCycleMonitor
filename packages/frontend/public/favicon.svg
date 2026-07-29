@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Austrian Business Cycle Monitor">
+  <rect width="64" height="64" rx="14" fill="#020617"/>
+  <path d="M12 25h40L32 10 12 25Zm5 4h6v18h-6V29Zm12 0h6v18h-6V29Zm12 0h6v18h-6V29ZM12 51h40v5H12v-5Z" fill="#f59e0b"/>
+  <circle cx="49" cy="17" r="8" fill="#0f172a" stroke="#fbbf24" stroke-width="2"/>
+  <path d="M49 12v10m-3-7h5.5a2 2 0 0 1 0 4H46" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"/>
+</svg>

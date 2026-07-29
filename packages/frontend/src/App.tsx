@@ -1,14 +1,14 @@
-// Austrian Economics Dashboard - Cypherpunk/Bitcoiner Design
-import { EnhancedDashboard } from './components/EnhancedDashboard';
 import { Toaster } from 'sonner';
+
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { TrustedSnapshotPanel } from './components/TrustedSnapshotPanel';
+import { EnhancedDashboard } from './components/EnhancedDashboard';
+import { ProductionDashboard } from './components/ProductionDashboard';
 
 function App() {
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-slate-950">
-        <TrustedSnapshotPanel />
+      <ProductionDashboard />
+      <div hidden aria-hidden="true">
         <EnhancedDashboard />
       </div>
       <Toaster
