@@ -4,6 +4,16 @@ An evidence-first macroeconomic monitor built with Flask, React, TypeScript, FRE
 
 The public application displays deterministic snapshots derived from official observations. Each indicator includes its observation date, freshness, formula, and primary-source lineage. Missing or stale inputs remain explicit; the application does not manufacture plausible replacement values.
 
+## Sites v25 reference interface
+
+The complete source of the solid ChatGPT Sites version is preserved in [`sites-v25/`](sites-v25/README.md). It contains the bilingual monitor, shared refresh cache, local personal briefing, learning routes, workspace/export APIs, integrity tests, and a one-command Docker path.
+
+- Live application: <https://austrian-business-cycle-monitor.jimblogic.chatgpt.site/>
+- Local Docker: `cd sites-v25 && docker compose up --build`
+- Native validation: `cd sites-v25 && npm run install:ci && npm test`
+
+The Sites implementation coexists with the trusted Flask/React/FRED pipeline below. It does not delete the deterministic data foundation or rewrite its history.
+
 ## Current production path
 
 ```text
