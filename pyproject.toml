@@ -8,6 +8,7 @@ line-length = 120
 target-version = "py311"
 exclude = [
   "data",
+  "archive",
   "archives",
   "logs",
   "production_audit_backup_20251024",

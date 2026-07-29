@@ -1,41 +1,40 @@
-# Secrets & Environment Variables
+# Secrets and environment variables
 
-This project uses environment variables for credentials and configuration (for example `FRED_API_KEY`).
+The maintained Flask/FRED pipeline uses environment variables for credentials and deployment configuration. Never commit real keys.
 
 ## Local development
 
-- Copy `.env.example` to `.env` and fill in your values.
-- Python apps load `.env` automatically via `python-dotenv` (entrypoint loads it). Alternatively, export variables in your shell.
-
-```powershell
-# PowerShell example
-$env:FRED_API_KEY="your_fred_key"
-$env:LOG_LEVEL="INFO"
-```
-
-## Docker
-
-- Do NOT bake secrets into images.
-- Pass them at runtime with `-e`:
+Set the FRED key in the shell that runs ingestion:
 
 ```bash
-docker run --rm -p 5002:5002 \
-  -e BACKEND_MODE=webapp \
-  -e FRED_API_KEY="$FRED_API_KEY" \
-  abcm:latest
+export FRED_API_KEY="your-real-key"
+python -m apps.jobs.ingest_fred
+python -m apps.jobs.build_trusted_snapshot
 ```
 
-## GitHub Actions (CI)
+PowerShell equivalent:
 
-- Primary pipeline: runs a Docker smoke test in mock mode and does not require `FRED_API_KEY`.
-- Optional live smoke: use the manual workflow to pass a secret just-in-time when you need live FRED verification.
-  - Add `FRED_API_KEY` in repo Settings → Secrets and variables → Actions → New repository secret.
-  - Trigger "Run Live Smoke (Manual)" and optionally provide the `fred_api_key` input; if omitted, it uses the repo secret.
-  - The pipeline never bakes secrets into images; they are provided only at runtime when starting containers.
+```powershell
+$env:FRED_API_KEY = "your-real-key"
+python -m apps.jobs.ingest_fred
+python -m apps.jobs.build_trusted_snapshot
+```
 
-## Security policy
+The web process reads persisted snapshots and does not fetch or calculate provider data during an HTTP request.
 
-- Never commit real keys to the repo.
-- Use `.env.example` as a template.
-- Rotate secrets if compromised.
-- Avoid logging secrets or placing them in telemetry.
+## Production
+
+Copy the tracked template and edit only the untracked file:
+
+```bash
+cp .env.production.example .env.production
+docker compose --env-file .env.production -f compose.production.yml up -d --build
+```
+
+Keep `.env.production`, `FRED_API_KEY`, `SECRET_KEY`, and provider credentials out of logs, screenshots, issues, and pull requests.
+
+## GitHub Actions
+
+Normal CI validates code, frontend output, Compose, and the production image without exposing a provider key. The manual live-smoke workflow may use the repository secret `FRED_API_KEY`; prefer the encrypted repository secret over pasting a key into a workflow input.
+
+If a credential may have been exposed, revoke it at the provider, create a replacement, and update the secret store before running the application again.
