@@ -14,6 +14,16 @@ The complete source of the solid ChatGPT Sites version is preserved in [`sites-v
 
 The Sites implementation coexists with the trusted Flask/React/FRED pipeline below. It does not delete the deterministic data foundation or rewrite its history.
 
+## Repository map
+
+- `apps/` — Flask API, trusted FRED ingestion, SQLite repositories, and deterministic snapshots.
+- `packages/frontend/` — current public React interface for the trusted Flask pipeline.
+- `sites-v25/` — reproducible source of the published Sites v25 reference.
+- `docs/` — maintained technical, operational, and educational documentation.
+- `archive/` — preserved Copilot-era experiments, launchers, reports, and superseded deployment material. Nothing in this directory is part of the supported runtime.
+
+See [the documentation index](docs/INDEX.md) for maintained guidance and [the archive guide](archive/README.md) before reusing historical code.
+
 ## Current production path
 
 ```text
@@ -32,7 +42,7 @@ read-only Flask API
 validated bilingual React dashboard
 ```
 
-The public React entrypoint intentionally does not mount the experimental legacy dashboard. Legacy components remain in the repository while their useful parts are migrated or retired.
+The public React entrypoint intentionally does not mount the experimental legacy dashboard. Superseded Copilot-era material is preserved under `archive/` for reference and is excluded from the supported runtime.
 
 ## What the public dashboard shows
 

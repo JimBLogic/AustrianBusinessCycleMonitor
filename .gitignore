@@ -53,7 +53,7 @@ backups/
 *.log
 
 # Local and generated project artifacts
-archive/
+# Historical source under archive/ is intentionally tracked.
 temp/
 tmp/
 *.pdf
