@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 const files = await Promise.all([
@@ -35,5 +35,22 @@ test("does not reintroduce retired or access-blocked public links", () => {
     "/api/data?refresh=1",
   ]) {
     assert.equal(source.includes(retired), false, `retired destination returned: ${retired}`);
+  }
+});
+
+test("does not reintroduce removed starter or generated artifacts", async () => {
+  for (const path of [
+    "db/index.ts",
+    "examples/d1/app/api/notes/route.ts",
+    "examples/d1/db/schema.ts",
+    "public/file.svg",
+    "public/globe.svg",
+    "public/window.svg",
+    "tsconfig.tsbuildinfo",
+  ]) {
+    await assert.rejects(
+      access(new URL(`../${path}`, import.meta.url)),
+      `retired artifact returned: ${path}`,
+    );
   }
 });
