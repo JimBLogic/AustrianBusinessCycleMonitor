@@ -1,5 +1,4 @@
 .academy-nav{background:#07100c;color:#c7ff18;padding:10px 14px}
-.workspace-nav{border:1px solid #2f3b34;padding:9px 12px}
 .refresh-notice{margin-top:14px;display:inline-block;padding:9px 12px;border-left:3px solid #c7ff18;background:rgba(199,255,24,.13);font:700 10px/1.5 monospace}
 .refresh-notice.error{border-color:#ff6417;background:rgba(255,100,23,.12)}
 .engine-section{padding:110px 5vw;background:#101914;color:#f3f0e5}
