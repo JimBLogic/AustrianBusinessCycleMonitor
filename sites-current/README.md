@@ -1,11 +1,11 @@
-# Austrian Business Cycle Monitor — Sites v27
+# Austrian Business Cycle Monitor — Sites v29
 
 Maintained source for the public Austrian Business Cycle Monitor:
 [austrian-business-cycle-monitor.jimblogic.chatgpt.site](https://austrian-business-cycle-monitor.jimblogic.chatgpt.site).
 
-This checkout is the canonical source prepared for Sites release **27**. It
-starts from the verified public v26 baseline and adds the maintained
-source-resilience work in this release. Its public GitHub
+This checkout is the canonical source prepared for Sites release **29**. It
+consolidates the audited loading-state, Bitcoin-source and provider-resilience
+work in the current public release. Its public GitHub
 mirror lives in
 [`sites-current/`](https://github.com/JimBLogic/AustrianBusinessCycleMonitor/tree/master/sites-current);
 `sites-v25/` is a frozen historical reference and is not the current code path.
@@ -21,6 +21,7 @@ markets, and the real economy.
 - `/learn/austrian-economics` — Austrian economics course
 - `/learn/bitcoin-sovereignty` — Bitcoin and monetary sovereignty course
 - `/api/data` — normalized indicator snapshot
+- `/api/bitcoin` — independently confirmed 60-second Bitcoin price pulse
 - `/api/data-manifest` — indicator provenance and metadata
 - `/api/health` — runtime health
 

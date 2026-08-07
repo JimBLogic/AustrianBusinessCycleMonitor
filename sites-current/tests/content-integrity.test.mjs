@@ -29,7 +29,7 @@ test("retains complete Spanish and English navigation paths", () => {
 });
 
 test("identifies the next immutable Sites release and its canonical repository mirror", () => {
-  assert.match(source, /SITE_RELEASE = 28/);
+  assert.match(source, /SITE_RELEASE = 29/);
   assert.match(source, /DATA_SCHEMA_VERSION = "1\.2\.0"/);
   assert.match(source, /sites-current/);
   assert.equal(source.includes("Manual refresh uses no-store"), false);
@@ -42,7 +42,7 @@ test("documents resilient Bitcoin sourcing and truthful initial UI states", () =
     "per-provider circuit breaker",
     "PENDIENTE DE LA PRIMERA CARGA",
     "Cambiar idioma a inglés",
-    "SITES V28",
+    "SITES V29",
   ]) assert.ok(source.includes(expected), `missing audited behavior: ${expected}`);
   assert.equal(source.includes("new Date(0)"), false);
 });

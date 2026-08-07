@@ -1,6 +1,6 @@
 # Inspiration and source boundaries
 
-ABCM v28 studied [World Monitor](https://github.com/koala73/worldmonitor) and its [Finance Monitor](https://finance.worldmonitor.app/) as product and systems-design references.
+ABCM v29 studied [World Monitor](https://github.com/koala73/worldmonitor) and its [Finance Monitor](https://finance.worldmonitor.app/) as product and systems-design references.
 
 ## Ideas adopted
 

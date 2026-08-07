@@ -1300,7 +1300,7 @@ export default function Monitor() {
           ].map(([name,desc,url])=><a key={name} href={url} target="_blank" rel="noreferrer"><span><b>{name}</b><small>{desc}</small></span><em>↗</em></a>)}
         </div>
       </section>
-      <footer><span>{lang === "es" ? "ABCM · CONTEXTO HOY. MEJORES DECISIONES MAÑANA." : "ABCM · CONTEXT TODAY. BETTER DECISIONS TOMORROW."}</span><span>SITES V28 · DATA 1.2 · <a href={`/learn?lang=${lang}`} target="_blank" rel="noreferrer">{lang === "es" ? "Aprende ↗" : "Learn ↗"}</a> · JimBLogic · 2026 · <a href="https://github.com/JimBLogic/AustrianBusinessCycleMonitor">GitHub ↗</a></span></footer>
+      <footer><span>{lang === "es" ? "ABCM · CONTEXTO HOY. MEJORES DECISIONES MAÑANA." : "ABCM · CONTEXT TODAY. BETTER DECISIONS TOMORROW."}</span><span>SITES V29 · DATA 1.2 · <a href={`/learn?lang=${lang}`} target="_blank" rel="noreferrer">{lang === "es" ? "Aprende ↗" : "Learn ↗"}</a> · JimBLogic · 2026 · <a href="https://github.com/JimBLogic/AustrianBusinessCycleMonitor">GitHub ↗</a></span></footer>
       {detail&&<div className="detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetail(null); }}>
         <article className="detail-dialog" role="dialog" aria-modal="true" aria-labelledby="detail-title">
           <button className="detail-close" type="button" onClick={() => setDetail(null)} aria-label={lang === "es" ? "Cerrar explicación" : "Close explanation"}>×</button>
