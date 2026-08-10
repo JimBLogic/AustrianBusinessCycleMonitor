@@ -8,9 +8,14 @@ const files = await Promise.all([
   "app/learn/course.tsx",
   "app/learn/library.ts",
   "app/api/data-manifest/route.ts",
+  "app/api/workspace/route.ts",
+  "app/api/files/route.ts",
+  "app/api/files/[id]/route.ts",
+  "app/chatgpt-auth.ts",
   "app/data/bitcoin-spot.ts",
   "app/data/upstream.ts",
   "app/version.ts",
+  "next.config.ts",
   "INSPIRATION.md",
 ].map(async (path) => [path, await readFile(new URL(`../${path}`, import.meta.url), "utf8")]));
 
@@ -29,7 +34,7 @@ test("retains complete Spanish and English navigation paths", () => {
 });
 
 test("identifies the next immutable Sites release and its canonical repository mirror", () => {
-  assert.match(source, /SITE_RELEASE = 29/);
+  assert.match(source, /SITE_RELEASE = 31/);
   assert.match(source, /DATA_SCHEMA_VERSION = "1\.2\.0"/);
   assert.match(source, /sites-current/);
   assert.equal(source.includes("Manual refresh uses no-store"), false);
@@ -42,9 +47,19 @@ test("documents resilient Bitcoin sourcing and truthful initial UI states", () =
     "per-provider circuit breaker",
     "PENDIENTE DE LA PRIMERA CARGA",
     "Cambiar idioma a inglés",
-    "SITES V29",
+    "SITE_RELEASE}",
   ]) assert.ok(source.includes(expected), `missing audited behavior: ${expected}`);
   assert.equal(source.includes("new Date(0)"), false);
+});
+
+test("keeps authenticated mutations same-site and applies browser hardening headers", () => {
+  for (const expected of [
+    "isTrustedMutation(request)",
+    "Cross-site request rejected",
+    "Content-Security-Policy",
+    "frame-ancestors 'none'",
+    "Cross-Origin-Resource-Policy",
+  ]) assert.ok(source.includes(expected), `missing DevSecOps control: ${expected}`);
 });
 
 test("does not reintroduce retired or access-blocked public links", () => {
