@@ -16,6 +16,7 @@ const files = await Promise.all([
   "app/data/upstream.ts",
   "app/version.ts",
   "next.config.ts",
+  "README.md",
   "INSPIRATION.md",
 ].map(async (path) => [path, await readFile(new URL(`../${path}`, import.meta.url), "utf8")]));
 
@@ -60,6 +61,18 @@ test("keeps authenticated mutations same-site and applies browser hardening head
     "frame-ancestors 'none'",
     "Cross-Origin-Resource-Policy",
   ]) assert.ok(source.includes(expected), `missing DevSecOps control: ${expected}`);
+});
+
+test("documents the maintained release and a reproducible local full-stack rebuild", () => {
+  for (const expected of [
+    "Always start from `sites-current/`",
+    "Start frontend and backend together",
+    "npm run validate:artifact",
+    "D1 database bound as `DB`",
+    "`BUCKET` binding",
+    "app/version.ts` and `/api/health`",
+  ]) assert.ok(source.includes(expected), `missing reconstruction guidance: ${expected}`);
+  assert.equal(source.includes("Sites v25 reference interface"), false);
 });
 
 test("does not reintroduce retired or access-blocked public links", () => {
