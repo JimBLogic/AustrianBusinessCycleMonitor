@@ -1,4 +1,4 @@
-import { getChatGPTUser } from "../../../chatgpt-auth";
+import { getChatGPTUser, isTrustedMutation } from "../../../chatgpt-auth";
 import { getBindings, upsertUser } from "../../../../db/runtime";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +32,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   });
 }
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!isTrustedMutation(request)) return Response.json({ error: "Cross-site request rejected" }, { status: 403 });
   const { id } = await params;
   const ctx = await ownedFile(id);
   if ("error" in ctx) return ctx.error;

@@ -1,4 +1,4 @@
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { getChatGPTUser, isTrustedMutation } from "../../chatgpt-auth";
 import { ensureDatabase, getBindings, upsertUser } from "../../../db/runtime";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +46,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!isTrustedMutation(request)) return Response.json({ error: "Cross-site request rejected" }, { status: 403 });
   const ctx = await context();
   if (!ctx) return unauthorized();
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
@@ -81,6 +82,7 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  if (!isTrustedMutation(request)) return Response.json({ error: "Cross-site request rejected" }, { status: 403 });
   const ctx = await context();
   if (!ctx) return unauthorized();
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
@@ -103,6 +105,7 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  if (!isTrustedMutation(request)) return Response.json({ error: "Cross-site request rejected" }, { status: 403 });
   const ctx = await context();
   if (!ctx) return unauthorized();
   const url = new URL(request.url);

@@ -54,6 +54,28 @@ export function chatGPTSignOutPath(returnTo = "/"): string {
   return `${SIGN_OUT_PATH}?return_to=${encodeURIComponent(safeReturnTo)}`;
 }
 
+/**
+ * Authenticated mutations are initiated by this Site's own UI. Reject browser
+ * requests that advertise a cross-site initiator; this is defense in depth on
+ * top of the hosting layer's session isolation and SameSite cookies.
+ */
+export function isTrustedMutation(request: Request): boolean {
+  const fetchSite = request.headers.get("sec-fetch-site");
+  if (fetchSite && !["same-origin", "same-site", "none"].includes(fetchSite)) return false;
+
+  const origin = request.headers.get("origin");
+  if (!origin) return true;
+  try {
+    const originUrl = new URL(origin);
+    const requestUrl = new URL(request.url);
+    const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+    const expectedHost = forwardedHost || request.headers.get("host") || requestUrl.host;
+    return originUrl.protocol === "https:" && originUrl.host === expectedHost;
+  } catch {
+    return false;
+  }
+}
+
 function safeRelativeReturnPath(value: string): string {
   if (!value.startsWith("/") || value.startsWith("//")) return "/";
 
