@@ -1,4 +1,4 @@
-import { getChatGPTUser } from "../../chatgpt-auth";
+import { getChatGPTUser, isTrustedMutation } from "../../chatgpt-auth";
 import { getBindings, upsertUser } from "../../../db/runtime";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +32,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (!isTrustedMutation(request)) return Response.json({ error: "Cross-site request rejected" }, { status: 403 });
   const ctx = await context();
   if (!ctx) return Response.json({ error: "ChatGPT sign-in required" }, { status: 401 });
   const form = await request.formData();
