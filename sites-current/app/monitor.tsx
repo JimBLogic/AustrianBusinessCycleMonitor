@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE } from "./version";
 
 type Lang = "en" | "es";
 type Point = { date: string; value: number };
@@ -605,13 +606,21 @@ export default function Monitor() {
   const modelAvailable = data.provenance.mode !== "fallback" && modelStatus !== "withheld";
   const modelProvisional = modelStatus === "provisional";
   const cycle = cycleBand(cycleScore, lang);
-  const scoreComponents = [
+  const baseScoreComponents = [
     { key: "liquidity", label: lang === "es" ? "Liquidez" : "Liquidity", score: data.derived.scores.liquidity, weight: 0.27, inputs: "M2 YoY · Δ Fed funds · tipo real" },
     { key: "credit", label: lang === "es" ? "Crédito" : "Credit", score: data.derived.scores.credit, weight: 0.23, inputs: "BAA–10Y · 10Y–2Y · VIX" },
-    { key: "real", label: lang === "es" ? "Economía real" : "Real economy", score: data.derived.scores.realEconomy, weight: 0.20, inputs: "INDPRO YoY · Δ paro · Δ capacidad" },
+    { key: "realEconomy", label: lang === "es" ? "Economía real" : "Real economy", score: data.derived.scores.realEconomy, weight: 0.20, inputs: "INDPRO YoY · Δ paro · Δ capacidad" },
     { key: "inflation", label: lang === "es" ? "Inflación" : "Inflation", score: data.derived.scores.inflation, weight: 0.15, inputs: "CPI YoY · WTI 90d · dólar 90d" },
     { key: "fiscal", label: lang === "es" ? "Fiscal" : "Fiscal", score: data.derived.scores.fiscal, weight: 0.15, inputs: "Deuda YoY · deuda/PIB" },
   ];
+  const readyWeight = baseScoreComponents.reduce((sum, item) => (
+    data.provenance.engineReady?.[item.key] === false ? sum : sum + item.weight
+  ), 0);
+  const scoreComponents = baseScoreComponents.map((item) => {
+    const ready = data.provenance.engineReady?.[item.key] !== false;
+    const effectiveWeight = modelProvisional && ready && readyWeight > 0 ? item.weight / readyWeight : item.weight;
+    return { ...item, ready, effectiveWeight };
+  });
   const gold = latestValue(data, "gold");
   const debt = latestValue(data, "treasuryDebt") ?? latestValue(data, "federalDebt");
   const btc = data.bitcoin.price;
@@ -662,13 +671,14 @@ export default function Monitor() {
 
   function showEngine(key: keyof typeof engineLabels, score: number) {
     const reading = engineReading(key, score, lang);
+    const engineAvailable = modelAvailable && data.provenance.engineReady?.[key] !== false;
     setDetail({
       eyebrow: `${reading.range} · ${lang === "es" ? "LECTURA CONDICIONAL" : "CONDITIONAL READING"}`,
       title: engineLabels[key][lang === "en" ? 0 : 1],
-      value: modelAvailable ? `${score}/100` : "—",
-      fact: modelAvailable ? reading.fact : (lang === "es" ? "Las entradas necesarias para este motor no tienen cobertura suficiente. No se asigna un cero ni una lectura neutral." : "The required inputs for this engine lack sufficient coverage. No zero or neutral reading is assigned."),
-      interpretation: modelAvailable ? reading.interpretation : (lang === "es" ? "La lente austriaca queda suspendida hasta disponer de observaciones verificables." : "The Austrian interpretation is withheld until verifiable observations are available."),
-      watch: modelAvailable ? reading.watch : (lang === "es" ? "Consultar el estado de fuentes y la fecha de cada observación." : "Check source status and each observation date."),
+      value: engineAvailable ? `${score}/100` : "—",
+      fact: engineAvailable ? reading.fact : (lang === "es" ? "Las entradas necesarias para este motor no tienen cobertura suficiente. No se asigna un cero ni una lectura neutral." : "The required inputs for this engine lack sufficient coverage. No zero or neutral reading is assigned."),
+      interpretation: engineAvailable ? reading.interpretation : (lang === "es" ? "La lente austriaca queda suspendida hasta disponer de observaciones verificables." : "The Austrian interpretation is withheld until verifiable observations are available."),
+      watch: engineAvailable ? reading.watch : (lang === "es" ? "Consultar el estado de fuentes y la fecha de cada observación." : "Check source status and each observation date."),
       sourceLabel: lang === "es" ? "Fórmula, entradas y fuentes" : "Formula, inputs and sources",
       sourceUrl: "/api/data-manifest",
     });
@@ -949,7 +959,10 @@ export default function Monitor() {
             ["realEconomy", lang === "es" ? "Economía real" : "Real economy", data.derived.scores.realEconomy, "Industry + jobs + capacity"],
             ["inflation", lang === "es" ? "Inflación" : "Inflation", data.derived.scores.inflation, "CPI + oil + dollar"],
             ["fiscal", lang === "es" ? "Fiscal" : "Fiscal", data.derived.scores.fiscal, "Debt + debt/GDP"],
-          ].map(([key, label, score, formula]) => <button type="button" key={String(key)} onClick={() => showEngine(key as keyof typeof engineLabels, Number(score))}><div><span>{label}</span><b>{modelAvailable ? score : "—"}</b></div><div className="engine-bar"><i style={{ width: `${modelAvailable ? score : 0}%` }} /></div><small>{formula}</small><em>{lang === "es" ? "Interpretar" : "Interpret"} ↗</em></button>)}
+          ].map(([key, label, score, formula]) => {
+            const engineAvailable = modelAvailable && data.provenance.engineReady?.[String(key)] !== false;
+            return <button type="button" key={String(key)} onClick={() => showEngine(key as keyof typeof engineLabels, Number(score))}><div><span>{label}</span><b>{engineAvailable ? score : "—"}</b></div><div className="engine-bar"><i style={{ width: `${engineAvailable ? score : 0}%` }} /></div><small>{engineAvailable ? formula : (lang === "es" ? "Entradas incompletas" : "Incomplete inputs")}</small><em>{lang === "es" ? "Interpretar" : "Interpret"} ↗</em></button>;
+          })}
         </div>
         <article className="cycle-methodology" id="cycle-methodology">
           <div className="method-head">
@@ -969,13 +982,15 @@ export default function Monitor() {
           </div>
           <div className="score-equation">
             {scoreComponents.map((item) => <div key={item.key}>
-              <div><span>{item.label}</span><b>{modelAvailable ? item.score : "—"} × {Math.round(item.weight * 100)}%</b></div>
+              <div><span>{item.label}</span><b>{modelAvailable && item.ready ? item.score : "—"} × {modelAvailable && item.ready ? `${format(item.effectiveWeight * 100, 1)}%` : "—"}</b></div>
               <small>{item.inputs}</small>
-              <div className="contribution"><i style={{ width: `${modelAvailable ? item.score : 0}%` }} /><em>{modelAvailable ? `+${format(item.score * item.weight, 1)} pt` : "—"}</em></div>
+              <div className="contribution"><i style={{ width: `${modelAvailable && item.ready ? item.score : 0}%` }} /><em>{modelAvailable && item.ready ? `+${format(item.score * item.effectiveWeight, 1)} pt` : (lang === "es" ? "EXCLUIDO" : "WITHHELD")}</em></div>
             </div>)}
           </div>
           <div className="formula-total">
-            <code>IDC = LIQ×0.27 + CREDIT×0.23 + REAL×0.20 + INFL×0.15 + FISCAL×0.15</code>
+            <code>{modelProvisional
+              ? (lang === "es" ? "IDC provisional = Σ(motor disponible × peso reponderado)" : "Provisional CDI = Σ(available engine × reweighted share)")
+              : "IDC = LIQ×0.27 + CREDIT×0.23 + REAL×0.20 + INFL×0.15 + FISCAL×0.15"}</code>
             <strong>= {modelAvailable ? `${cycleScore}/100` : "—"}</strong>
           </div>
           <div className="pillar-lineage">
@@ -1082,7 +1097,7 @@ export default function Monitor() {
           </article>
           <article className="freshness-panel">
             <div className="backend-title">
-              <div><span className="kicker">{lang === "es" ? "MOTOR DE DATOS · SITES V27" : "DATA ENGINE · SITES V27"}</span><h3>{lang === "es" ? "Estado de las fuentes" : "Source status"}</h3></div>
+              <div><span className="kicker">{lang === "es" ? `MOTOR ${ENGINE_VERSION} · SITES V${SITE_RELEASE}` : `ENGINE ${ENGINE_VERSION} · SITES V${SITE_RELEASE}`}</span><h3>{lang === "es" ? "Estado de las fuentes" : "Source status"}</h3></div>
               <span className="backend-live">● {lang === "es" ? "ACTIVO" : "LIVE"}</span>
             </div>
             <p>{lang === "es"
@@ -1169,7 +1184,8 @@ export default function Monitor() {
             ["REAL ECONOMY", lang === "en" ? "Real economy" : "Economía real", data.derived.scores.realEconomy, lang === "en" ? "Production, employment and capacity test whether the financial boom has real confirmation." : "Producción, empleo y capacidad comprueban si el auge financiero tiene confirmación real."],
           ].map(([code,title,score,body], i) => {
             const key = (["liquidity", "credit", "realEconomy"] as const)[i];
-            return <button type="button" key={String(code)} onClick={() => showEngine(key, Number(score))}><span>0{i+1} · {code}</span><div className="pillar-score"><strong>{modelAvailable ? score : "—"}</strong><small>/100</small></div><h3>{title}</h3><p>{body}</p><div className="pillar-bar"><i style={{width:`${modelAvailable ? score : 0}%`}} /></div><em>{lang === "es" ? "Interpretar pilar" : "Interpret pillar"} ↗</em></button>;
+            const engineAvailable = modelAvailable && data.provenance.engineReady?.[key] !== false;
+            return <button type="button" key={String(code)} onClick={() => showEngine(key, Number(score))}><span>0{i+1} · {code}</span><div className="pillar-score"><strong>{engineAvailable ? score : "—"}</strong><small>/100</small></div><h3>{title}</h3><p>{body}</p><div className="pillar-bar"><i style={{width:`${engineAvailable ? score : 0}%`}} /></div><em>{lang === "es" ? "Interpretar pilar" : "Interpret pillar"} ↗</em></button>;
           })}
         </div>
         <div className="process">
@@ -1300,7 +1316,7 @@ export default function Monitor() {
           ].map(([name,desc,url])=><a key={name} href={url} target="_blank" rel="noreferrer"><span><b>{name}</b><small>{desc}</small></span><em>↗</em></a>)}
         </div>
       </section>
-      <footer><span>{lang === "es" ? "ABCM · CONTEXTO HOY. MEJORES DECISIONES MAÑANA." : "ABCM · CONTEXT TODAY. BETTER DECISIONS TOMORROW."}</span><span>SITES V29 · DATA 1.2 · <a href={`/learn?lang=${lang}`} target="_blank" rel="noreferrer">{lang === "es" ? "Aprende ↗" : "Learn ↗"}</a> · JimBLogic · 2026 · <a href="https://github.com/JimBLogic/AustrianBusinessCycleMonitor">GitHub ↗</a></span></footer>
+      <footer><span>{lang === "es" ? "ABCM · CONTEXTO HOY. MEJORES DECISIONES MAÑANA." : "ABCM · CONTEXT TODAY. BETTER DECISIONS TOMORROW."}</span><span>SITES V{SITE_RELEASE} · DATA {DATA_SCHEMA_VERSION} · <a href="/api/health" target="_blank" rel="noreferrer">{lang === "es" ? "Integridad ↗" : "Integrity ↗"}</a> · <a href={`/learn?lang=${lang}`} target="_blank" rel="noreferrer">{lang === "es" ? "Aprende ↗" : "Learn ↗"}</a> · JimBLogic · 2026 · <a href="https://github.com/JimBLogic/AustrianBusinessCycleMonitor">GitHub ↗</a></span></footer>
       {detail&&<div className="detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetail(null); }}>
         <article className="detail-dialog" role="dialog" aria-modal="true" aria-labelledby="detail-title">
           <button className="detail-close" type="button" onClick={() => setDetail(null)} aria-label={lang === "es" ? "Cerrar explicación" : "Close explanation"}>×</button>
