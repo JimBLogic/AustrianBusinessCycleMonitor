@@ -1,73 +1,164 @@
-# Austrian Business Cycle Monitor — Sites v29
+# Austrian Business Cycle Monitor — maintained Sites application
 
-Maintained source for the public Austrian Business Cycle Monitor:
+This directory is the maintained source of the public application:
 [austrian-business-cycle-monitor.jimblogic.chatgpt.site](https://austrian-business-cycle-monitor.jimblogic.chatgpt.site).
 
-This checkout is the canonical source prepared for Sites release **29**. It
-consolidates the audited loading-state, Bitcoin-source and provider-resilience
-work in the current public release. Its public GitHub
-mirror lives in
-[`sites-current/`](https://github.com/JimBLogic/AustrianBusinessCycleMonitor/tree/master/sites-current);
-`sites-v25/` is a frozen historical reference and is not the current code path.
+Do not infer the active release from a README heading. The two authoritative
+release checks are:
 
-The application combines a bilingual macroeconomic monitor with guided learning
-paths. Its analysis is organized around three pillars: monetary policy, credit
-markets, and the real economy.
+- [`app/version.ts`](app/version.ts) in the source tree;
+- [`/api/health`](https://austrian-business-cycle-monitor.jimblogic.chatgpt.site/api/health)
+  in the deployed application.
 
-## Public surface
+The repository may retain `sites-v25/` as a frozen historical snapshot. It is
+not maintained, deployed, or used as the starting point for new work.
 
-- `/` — live macroeconomic monitor
-- `/learn` — learning hub
-- `/learn/austrian-economics` — Austrian economics course
-- `/learn/bitcoin-sovereignty` — Bitcoin and monetary sovereignty course
-- `/api/data` — normalized indicator snapshot
-- `/api/bitcoin` — independently confirmed 60-second Bitcoin price pulse
-- `/api/data-manifest` — indicator provenance and metadata
-- `/api/health` — runtime health
+## What runs here
 
-The authenticated `/workspace` route and its file/export APIs remain part of the
-product, but are intentionally absent from public navigation.
+The frontend and backend are one deployable TypeScript application:
 
-## Architecture
+- React/Next-compatible pages rendered by Vinext;
+- API routes under `app/api/`;
+- a Cloudflare Worker entry point in `worker/index.ts`;
+- local or hosted D1 persistence through the `DB` binding;
+- local or hosted R2 file storage through the `BUCKET` binding;
+- optional authenticated workspace routes;
+- official macroeconomic providers plus explicit fallback and freshness states.
 
-- Next.js-compatible application rendered by Vinext on Cloudflare
-- shared, cached macroeconomic snapshot with D1 persistence
-- typed upstream registry, bounded retries, freshness limits, and explicit
-  live/stale/last-known-good states
-- browser-local monitor briefing and course progress
-- Sign in with ChatGPT helpers for the protected workspace
-- D1 and R2 bindings declared in `.openai/hosting.json`
+Public routes include `/`, `/learn`, `/api/data`, `/api/bitcoin`,
+`/api/data-manifest`, and `/api/health`. The authenticated `/workspace` route
+and its file/export APIs are intentionally absent from public navigation.
 
-## Local development
+## Recreate the current web application locally
 
-Requires Node.js `>=22.13.0` on Linux.
+### Requirements
+
+- Git;
+- Node.js `>=22.13.0`;
+- Bash on Linux, macOS, or WSL2;
+- an optional [FRED API key](https://fred.stlouisfed.org/docs/api/api_key.html)
+  for the primary FRED REST path.
+
+### 1. Clone the canonical repository
+
+```bash
+git clone https://github.com/JimBLogic/AustrianBusinessCycleMonitor.git
+cd AustrianBusinessCycleMonitor/sites-current
+```
+
+Always start from `sites-current/`. The numbered `sites-v*/` directories are
+historical references.
+
+### 2. Install the locked dependencies
 
 ```bash
 npm run install:ci
+```
+
+The install script verifies the lockfile and package integrity, uses a
+project-local cache, and refuses overlapping installs.
+
+### 3. Configure optional local secrets
+
+Create an ignored `.dev.vars` file in `sites-current/`:
+
+```dotenv
+FRED_API_KEY=replace-with-your-own-key
+```
+
+Never commit `.dev.vars`, `.env*`, API keys, database exports, or credentials.
+Without a FRED key the application keeps the limitation visible and uses its
+documented official-source fallback mesh; it does not invent neutral values.
+
+### 4. Start frontend and backend together
+
+```bash
 npm run dev
 ```
 
-Useful checks:
+Open `http://localhost:5173`. Vite serves the frontend while Miniflare runs the
+Worker and API routes in the same process. The development configuration creates
+project-local D1 and R2 emulators for the `DB` and `BUCKET` bindings, so a
+second backend terminal is not required.
+
+Local runtime state is stored beneath ignored project directories such as
+`.wrangler/` and `.sites-runtime/`. Delete those directories only when you
+intentionally want a fresh local database and bucket.
+
+### 5. Validate the reconstruction
 
 ```bash
 npm run lint
 npm test
+npm run build
+npm run validate:artifact
 ```
 
-The Sites lifecycle performs the production build during checkpoint creation.
-Use `npm run build` directly only for targeted diagnosis.
+Then check:
 
-## Data and migrations
+```bash
+curl http://localhost:5173/api/health
+curl http://localhost:5173/api/data-manifest
+```
 
-- `db/runtime.ts` manages the D1-backed indicator snapshot.
+A valid production artifact contains `dist/server/index.js` with a default
+Worker `fetch` export and `dist/.openai/hosting.json` with the binding names.
+
+## Hosting the current frontend and backend
+
+The maintained Sites deployment packages both layers together. There is no
+separate static frontend that can be hosted safely while ignoring its API,
+D1, R2, and Worker requirements.
+
+### ChatGPT Sites — maintained production path
+
+1. Import or edit the `austrian-business-cycle-monitor` Site from the canonical
+   `sites-current/` source.
+2. Preserve `.openai/hosting.json`; `DB` and `BUCKET` are logical binding names,
+   not credentials or portable resource IDs.
+3. Provision or retain one D1 database bound as `DB` and one R2 bucket bound as
+   `BUCKET`.
+4. Add `FRED_API_KEY` as a hosted secret/environment value. Never place it in
+   Git or in `.openai/hosting.json`.
+5. Run the locked build and artifact validation.
+6. Create an immutable Sites checkpoint, publish it, and wait for the deployment
+   status to become `succeeded`.
+7. Verify `/api/health`, `/api/data`, `/api/bitcoin`, and the visible release
+   identity before treating the release as complete.
+
+### Another Cloudflare account or hosting provider
+
+Treat `worker/index.ts`, the API routes, D1 schema/migrations, R2 storage, and
+security headers as one system. A new host must provide compatible Worker,
+database, object-storage, secrets, and scheduled-refresh semantics. Create
+host-specific deployment configuration outside the maintained Sites manifest;
+do not replace the logical `DB`/`BUCKET` bindings with secrets or production IDs
+in committed source.
+
+If the target cannot provide those backend capabilities, use the repository's
+separate Flask/React/Docker production path documented in the root README and
+`docs/DEPLOYMENT.md` instead of publishing a frontend-only imitation.
+
+## Data, migrations, and backups
+
+- `db/runtime.ts` manages D1-backed records and macro snapshots.
 - `db/schema.ts` defines the maintained database schema.
 - `drizzle/` contains committed migrations.
 - `npm run db:generate` creates a migration after an intentional schema change.
+- R2 objects and D1 data are runtime state and are not recreated by cloning Git.
 
-## Repository hygiene
+Back up hosted D1 and R2 data separately before migration or provider changes.
+Source control recreates the application, not its production records.
 
-Starter examples, unused template artwork, generated TypeScript build metadata,
-and unreferenced helpers are not committed. The content-integrity tests guard
-against their accidental return. Product routes, persistent bindings, migration
-history, and reproducible build assets must not be removed merely because they
-are not linked from the public navigation.
+## Release discipline
+
+1. Change source in the maintained checkout.
+2. Update `app/version.ts` once for the next immutable Sites release.
+3. Run lint, tests, the production build, and dependency audit.
+4. Publish and verify the Site.
+5. Mirror the exact source into `sites-current/` through a PR.
+6. Merge only after CI is green and no review thread remains unresolved.
+
+README prose intentionally avoids claiming a fixed “latest” release number.
+That value changes; `app/version.ts` and `/api/health` are the machine-verifiable
+sources of truth.
