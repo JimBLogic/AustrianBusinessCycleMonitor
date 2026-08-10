@@ -4,21 +4,32 @@ An evidence-first macroeconomic monitor built with Flask, React, TypeScript, FRE
 
 The public application displays deterministic snapshots derived from official observations. Each indicator includes its observation date, freshness, formula, and primary-source lineage. Missing or stale inputs remain explicit; the application does not manufacture plausible replacement values.
 
-## Sites v25 reference interface
+## Current public Sites application
 
-The complete source of the solid ChatGPT Sites version is preserved in [`sites-v25/`](sites-v25/README.md). It contains the bilingual monitor, shared refresh cache, local personal briefing, learning routes, workspace/export APIs, integrity tests, and a one-command Docker path.
+The maintained source of the live application is
+[\`sites-current/\`](sites-current/README.md). It contains the full bilingual
+frontend, Worker/API backend, D1 persistence, R2 storage, authenticated workspace,
+learning routes, integrity checks, and locked build tooling.
 
 - Live application: <https://austrian-business-cycle-monitor.jimblogic.chatgpt.site/>
-- Local Docker: `cd sites-v25 && docker compose up --build`
-- Native validation: `cd sites-v25 && npm run install:ci && npm test`
+- Runtime integrity: <https://austrian-business-cycle-monitor.jimblogic.chatgpt.site/api/health>
+- Local full-stack start: \`cd sites-current && npm run install:ci && npm run dev\`
+- Complete reconstruction and hosting guide: [\`sites-current/README.md\`](sites-current/README.md)
 
-The Sites implementation coexists with the trusted Flask/React/FRED pipeline below. It does not delete the deterministic data foundation or rewrite its history.
+Do not derive the active release from a README title. The canonical source value
+is [\`sites-current/app/version.ts\`](sites-current/app/version.ts), and the
+deployed value is returned by \`/api/health\`. Numbered directories such as
+\`sites-v25/\` are frozen historical references, not supported deployment paths.
+
+The Sites implementation coexists with the trusted Flask/React/FRED pipeline
+below. Choose one complete runtime; do not publish a frontend from one path
+against an undocumented backend from the other.
 
 ## Repository map
 
 - `apps/` — Flask API, trusted FRED ingestion, SQLite repositories, and deterministic snapshots.
 - `packages/frontend/` — current public React interface for the trusted Flask pipeline.
-- `sites-v25/` — reproducible source of the published Sites v25 reference.
+- `sites-current/` — maintained source of the live full-stack Sites application.\n- `sites-v25/` — frozen historical snapshot; not the current code path.
 - `docs/` — maintained technical, operational, and educational documentation.
 - `archive/` — preserved Copilot-era experiments, launchers, reports, and superseded deployment material. Nothing in this directory is part of the supported runtime.
 
