@@ -26,11 +26,23 @@ for _ in $(seq 1 45); do
     break
   fi
   if ! kill -0 "${server_pid}" 2>/dev/null; then
+    set +e
+    wait "${server_pid}"
+    server_status=$?
+    set -e
+    server_pid=""
+    echo "Self-host runtime exited before becoming healthy (status ${server_status})." >&2
     cat "${log_file}" >&2
     exit 1
   fi
   sleep 1
 done
+
+if [[ ! -s "${runtime_dir}/health.json" ]]; then
+  echo "Self-host runtime did not become healthy before the timeout." >&2
+  cat "${log_file}" >&2
+  exit 1
+fi
 
 curl -fsS "http://127.0.0.1:${port}/" >"${runtime_dir}/home.html"
 curl -fsS "http://127.0.0.1:${port}/api/data-manifest" >"${runtime_dir}/manifest.json"
