@@ -8,3 +8,4 @@ npm-debug.log*
 .dev.vars
 .env*
 !.dev.vars.example
+!.env.selfhost.example

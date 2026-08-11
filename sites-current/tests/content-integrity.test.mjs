@@ -36,7 +36,7 @@ test("retains complete Spanish and English navigation paths", () => {
 });
 
 test("identifies the next immutable Sites release and its canonical repository mirror", () => {
-  assert.match(source, /SITE_RELEASE = 36/);
+  assert.match(source, /SITE_RELEASE = 38/);
   assert.match(source, /DATA_SCHEMA_VERSION = "1\.3\.0"/);
   assert.match(source, /sites-current/);
   assert.equal(source.includes("Manual refresh uses no-store"), false);
@@ -90,7 +90,12 @@ test("documents the maintained release and a reproducible local full-stack rebui
 });
 
 test("ships the exact Sites application as a persistent local container mirror", async () => {
-  for (const path of ["Dockerfile.local", "compose.local.yml", ".dev.vars.example", ".dockerignore"]) {
+  for (const path of [
+    "Dockerfile.local", "compose.local.yml", ".dev.vars.example", ".dockerignore",
+    "Dockerfile.selfhost", "compose.selfhost.yml", ".env.selfhost.example",
+    "Caddyfile.selfhost", "wrangler.selfhost.jsonc", "scripts/run-selfhost.sh",
+    "scripts/selfhost-smoke.sh",
+  ]) {
     await access(new URL(`../${path}`, import.meta.url));
   }
   for (const expected of [
@@ -98,6 +103,9 @@ test("ships the exact Sites application as a persistent local container mirror",
     "compose.local.yml",
     "Named Docker volumes",
     "GitHub Pages alone cannot host",
+    "Exact self-hosted mirror on a VPS",
+    "same compiled Worker artifact",
+    "compose.selfhost.yml",
   ]) assert.ok(source.includes(expected), `missing container guidance: ${expected}`);
 });
 

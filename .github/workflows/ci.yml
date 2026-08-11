@@ -186,6 +186,55 @@ jobs:
           test "$status_code" = "503"
           jq -e '.error.code == "snapshot_store_unavailable"' trusted-error.json
 
+  sites-selfhost-smoke:
+    name: Exact Sites self-host smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.14'
+          cache: npm
+          cache-dependency-path: sites-current/package-lock.json
+
+      - name: Install locked Sites dependencies
+        working-directory: sites-current
+        run: npm ci
+
+      - name: Validate source and production Worker artifact
+        working-directory: sites-current
+        run: |
+          npm run lint
+          npm test
+          npm audit --omit=dev --audit-level=high
+
+
+      - name: Validate exact self-host Compose
+        working-directory: sites-current
+        run: |
+          cp .env.selfhost.example .env.selfhost
+          docker compose --env-file .env.selfhost -f compose.selfhost.yml config > compose.selfhost.resolved.yml
+          grep -q "Dockerfile.selfhost" compose.selfhost.resolved.yml
+
+      - name: Build and smoke exact self-host image
+        working-directory: sites-current
+        run: |
+          docker build --progress=plain -f Dockerfile.selfhost -t abcm-sites-selfhost:ci .
+          docker run -d --name abcm-sites-selfhost -p 8787:8787 abcm-sites-selfhost:ci
+          trap 'docker logs abcm-sites-selfhost || true; docker rm -f abcm-sites-selfhost || true' EXIT
+
+          for attempt in {1..60}; do
+            if curl -fsS http://127.0.0.1:8787/api/health | jq -e '.release == 38'; then
+              break
+            fi
+            sleep 2
+          done
+
+          curl -fsS http://127.0.0.1:8787/ > selfhost-index.html
+          curl -fsS http://127.0.0.1:8787/api/data-manifest | jq -e '.build.siteRelease == 38'
+          grep -q "Austrian Business Cycle Monitor" selfhost-index.html
   publish-image:
     name: Publish container image
     runs-on: ubuntu-latest

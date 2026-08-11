@@ -157,9 +157,40 @@ host-specific deployment configuration outside the maintained Sites manifest;
 do not replace the logical `DB`/`BUCKET` bindings with secrets or production IDs
 in committed source.
 
-If the target cannot provide those backend capabilities, use the repository's
-separate Flask/React/Docker production path documented in the root README and
-`docs/DEPLOYMENT.md` instead of publishing a frontend-only imitation.
+### Exact self-hosted mirror on a VPS
+
+`compose.selfhost.yml` runs the same compiled Worker artifact, client assets,
+routes and API contract as Sites. Wrangler's local Workers runtime supplies
+persistent D1/R2-compatible storage, and Caddy provides the public HTTPS edge.
+
+```bash
+cp .env.selfhost.example .env.selfhost
+```
+
+For local HTTP, keep `DOMAIN=http://localhost`. For an Internet-facing server,
+set `DOMAIN` to a real DNS name pointing at the VPS and optionally set
+`FRED_API_KEY`. Then start the exact mirror:
+
+```bash
+docker compose --env-file .env.selfhost -f compose.selfhost.yml up -d --build
+docker compose --env-file .env.selfhost -f compose.selfhost.yml ps
+```
+
+Verify it through the configured domain:
+
+```bash
+curl -fsS https://YOUR_DOMAIN/api/health
+curl -fsS https://YOUR_DOMAIN/api/data-manifest
+```
+
+The `abcm-worker-data` volume preserves macro editions, workspace records and
+objects across image replacements. Back it up before host migrations or major
+runtime upgrades. Run one `monitor` replica: the local D1/R2 emulator is a
+single-host persistence layer, not a distributed database.
+
+The root Flask/React `compose.production.yml` remains available for historical
+compatibility, but it is not required for an exact visual mirror and should not
+be placed in front of this frontend.
 
 ## Deployment matrix
 
@@ -168,11 +199,12 @@ separate Flask/React/Docker production path documented in the root README and
 | Managed production | ChatGPT Sites with `DB` and `BUCKET` | Yes | Hosted D1 and R2 |
 | Local native development | `npm run dev` | Yes | Project-local emulation |
 | Local container mirror | `compose.local.yml` | Yes | Named Docker volumes |
-| Traditional VPS production | Root `compose.production.yml` | No; maintained Flask/React runtime | SQLite volume |
+| Exact VPS self-host | `compose.selfhost.yml` | Yes | Named Worker-runtime volume |
+| Historical VPS runtime | Root `compose.production.yml` | No; separate Flask/React UI | SQLite volume |
 
 GitHub Pages alone cannot host `sites-current/`: it only serves static files and
-cannot provide the Worker API, D1, R2 or server-side refresh gate. Use Sites or
-a compatible Cloudflare Worker host for the exact application.
+cannot provide the Worker API, D1, R2 or server-side refresh gate. Use Sites,
+the exact VPS stack, or a compatible Cloudflare Worker host.
 
 ## Data, migrations, and backups
 
