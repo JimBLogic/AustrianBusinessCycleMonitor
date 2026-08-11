@@ -67,7 +67,7 @@ jobs:
           healthy=false
           for attempt in {1..60}; do
             if curl -fsS http://127.0.0.1:8787/api/health |
-              jq -e --argjson release "$expected_release" '.release == $release'; then
+              jq -e --argjson release "$expected_release" '.siteRelease == $release'; then
               healthy=true
               break
             fi
