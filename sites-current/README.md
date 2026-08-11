@@ -229,3 +229,17 @@ Source control recreates the application, not its production records.
 README prose intentionally avoids claiming a fixed “latest” release number.
 That value changes; `app/version.ts` and `/api/health` are the machine-verifiable
 sources of truth.
+
+## Path-scoped CI
+
+GitHub validates the maintained and historical applications independently:
+
+- changes under `sites-current/` run the exact Sites/self-host build, tests,
+  dependency audit, Compose validation, and one production-container smoke;
+- changes to the historical Flask/React application run its backend, frontend,
+  and production Docker checks without rebuilding the maintained Sites image;
+- workflow-level `cancel-in-progress` replaces superseded runs on the same
+  branch instead of consuming runners for obsolete commits.
+
+The split changes scheduling only. It does not remove a release gate, and public
+web requests never trigger GitHub Actions.
