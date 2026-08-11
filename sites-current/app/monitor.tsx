@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE } from "./version";
 
 type Lang = "en" | "es";
+type SignalKey = "money" | "monetaryStance" | "creditRisk" | "termStructure" | "production" | "labour" | "consumerPrices" | "resourcesFx" | "debtBurden" | "fiscalImpulse";
 type Point = { date: string; value: number };
 type Detail = {
   eyebrow: string;
@@ -28,7 +29,7 @@ type Data = {
   observedAt: string;
   requestedAt: string;
   refreshMode: string;
-  cache?: { generatedAt: string; validUntil: string; ttlSeconds: number; mode: string };
+  cache?: { generatedAt: string; validUntil: string; nextManualAt?: string; nextDailyAt?: string; ttlSeconds: number; editionTtlSeconds?: number; mode: string };
   series: Record<string, Point[]>;
   latest: Record<string, Point | null>;
   bitcoin: {
@@ -42,7 +43,7 @@ type Data = {
   };
   derived: {
     changes: Record<string, number | null>;
-    scores: { liquidity: number; credit: number; realEconomy: number; inflation: number; fiscal: number; composite: number };
+    scores: { liquidity: number; credit: number; realEconomy: number; inflation: number; fiscal: number; composite: number } & Record<SignalKey, number>;
     regime: string;
     correlations: Record<string, number | null>;
     ratios: { bitcoinGoldOunces: number | null; sp500Gold: number | null; debtToM2: number | null; realRate: number | null };
@@ -54,7 +55,7 @@ type Data = {
     fredAvailable?: number; fredTotal?: number; modelReady?: boolean;
     modelStatus?: "complete" | "provisional" | "withheld";
     modelInputsAvailable?: number; modelInputsTotal?: number; availableWeight?: number;
-    engineReady?: Record<string, boolean>; mode: string;
+    engineReady?: Record<string, boolean>; signalReady?: Record<string, boolean>; mode: string;
   };
 };
 
@@ -68,7 +69,7 @@ const fallback: Data = {
   bitcoin: { price: null, change24h: null, marketCap: null, priceConsensus: "unavailable", priceSpreadPercent: null, priceSources: [], supply: 0, stockToFlow: 0, blockHeight: null, hashRate: null, difficulty: null, feeFast: null, feeHour: null },
   derived: {
     changes: {},
-    scores: { liquidity: 0, credit: 0, realEconomy: 0, inflation: 0, fiscal: 0, composite: 0 },
+    scores: { liquidity: 0, credit: 0, realEconomy: 0, inflation: 0, fiscal: 0, money: 0, monetaryStance: 0, creditRisk: 0, termStructure: 0, production: 0, labour: 0, consumerPrices: 0, resourcesFx: 0, debtBurden: 0, fiscalImpulse: 0, composite: 0 },
     regime: "mixed-transition",
     correlations: {},
     ratios: { bitcoinGoldOunces: null, sp500Gold: null, debtToM2: null, realRate: null },
@@ -318,8 +319,8 @@ function cycleBand(score: number, lang: Lang) {
     {
       max: 20,
       range: "0–20",
-      en: ["Low distortion", "The five engines show little simultaneous pressure. This does not mean “no risk”: it means the model sees few cycle distortions in the variables it measures."],
-      es: ["Distorsión baja", "Los cinco motores muestran poca presión simultánea. No significa «sin riesgo»: significa que el modelo detecta pocas distorsiones cíclicas en las variables que mide."],
+      en: ["Low distortion", "The ten signal bands show little simultaneous pressure. This does not mean “no risk”: it means the model sees few cycle distortions in the variables it measures."],
+      es: ["Distorsión baja", "Las diez franjas muestran poca presión simultánea. No significa «sin riesgo»: significa que el modelo detecta pocas distorsiones cíclicas en las variables que mide."],
     },
     {
       max: 40,
@@ -485,7 +486,7 @@ export default function Monitor() {
     setLoading(true);
     setRefreshNotice(manual ? (lang === "es" ? "Solicitando la instantánea compartida más reciente…" : "Requesting the latest shared snapshot…") : "");
     try {
-      const response = await fetch("/api/data", { cache: "no-store" });
+      const response = await fetch("/api/data", { method: manual ? "POST" : "GET", cache: "no-store" });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const next: Data = await response.json();
       if (next.provenance.mode === "fallback") throw new Error("No upstream source returned a usable snapshot");
@@ -583,16 +584,21 @@ export default function Monitor() {
     return () => window.clearInterval(id);
   }, [loadBitcoin]);
   useEffect(() => {
-    const validUntil = data.cache?.validUntil
-      ? new Date(data.cache.validUntil).getTime()
-      : new Date(data.requestedAt).getTime() + 900_000;
+    const validUntil = data.cache?.nextDailyAt
+      ? new Date(data.cache.nextDailyAt).getTime()
+      : new Date(data.requestedAt).getTime() + 86_400_000;
     if (!Number.isFinite(validUntil) || data.provenance.mode === "fallback") return;
     // A small per-device jitter prevents every open tab requesting the new
     // shared snapshot on the exact same millisecond.
-    const delay = Math.max(60_000, validUntil - Date.now() + Math.floor(Math.random() * 30_000));
-    const id = window.setTimeout(() => void load(false), delay);
+    const expired = validUntil <= Date.now();
+    const delay = expired
+      ? 2_000 + Math.floor(Math.random() * 8_000)
+      : Math.max(60_000, validUntil - Date.now() + Math.floor(Math.random() * 30_000));
+    // Render the durable edition first. If its daily window has elapsed, a
+    // single gated POST refreshes it without holding the page hostage.
+    const id = window.setTimeout(() => void load(expired), delay);
     return () => window.clearTimeout(id);
-  }, [data.cache?.validUntil, data.provenance.mode, data.requestedAt, load]);
+  }, [data.cache?.nextDailyAt, data.cache?.validUntil, data.provenance.mode, data.requestedAt, load]);
   useEffect(() => { const id = setInterval(() => setQuote((q) => (q + 1) % quotes.length), 12_000); return () => clearInterval(id); }, []);
   useEffect(() => {
     if (!detail) return;
@@ -606,18 +612,23 @@ export default function Monitor() {
   const modelAvailable = data.provenance.mode !== "fallback" && modelStatus !== "withheld";
   const modelProvisional = modelStatus === "provisional";
   const cycle = cycleBand(cycleScore, lang);
-  const baseScoreComponents = [
-    { key: "liquidity", label: lang === "es" ? "Liquidez" : "Liquidity", score: data.derived.scores.liquidity, weight: 0.27, inputs: "M2 YoY · Δ Fed funds · tipo real" },
-    { key: "credit", label: lang === "es" ? "Crédito" : "Credit", score: data.derived.scores.credit, weight: 0.23, inputs: "BAA–10Y · 10Y–2Y · VIX" },
-    { key: "realEconomy", label: lang === "es" ? "Economía real" : "Real economy", score: data.derived.scores.realEconomy, weight: 0.20, inputs: "INDPRO YoY · Δ paro · Δ capacidad" },
-    { key: "inflation", label: lang === "es" ? "Inflación" : "Inflation", score: data.derived.scores.inflation, weight: 0.15, inputs: "CPI YoY · WTI 90d · dólar 90d" },
-    { key: "fiscal", label: lang === "es" ? "Fiscal" : "Fiscal", score: data.derived.scores.fiscal, weight: 0.15, inputs: "Deuda YoY · deuda/PIB" },
+  const baseScoreComponents: Array<{ key: SignalKey; parent: keyof typeof engineLabels; label: string; score: number; weight: number; inputs: string; observed: string }> = [
+    { key: "money", parent: "liquidity", label: lang === "es" ? "Oferta monetaria" : "Money supply", score: data.derived.scores.money, weight: 0.14, inputs: "M2 YoY", observed: `M2 ${format(data.derived.changes.m2Growth)}% YoY` },
+    { key: "monetaryStance", parent: "liquidity", label: lang === "es" ? "Postura monetaria" : "Monetary stance", score: data.derived.scores.monetaryStance, weight: 0.13, inputs: "Δ Fed funds · tipo real", observed: `Δ tipos ${format(data.derived.changes.rateChange)} pp · real ${format(data.derived.ratios.realRate)}%` },
+    { key: "creditRisk", parent: "credit", label: lang === "es" ? "Riesgo crediticio" : "Credit risk", score: data.derived.scores.creditRisk, weight: 0.13, inputs: "BAA–10Y · VIX", observed: `BAA–10Y ${format(latestValue(data, "creditSpread"))} · VIX ${format(latestValue(data, "vix"))}` },
+    { key: "termStructure", parent: "credit", label: lang === "es" ? "Estructura temporal" : "Term structure", score: data.derived.scores.termStructure, weight: 0.10, inputs: "10Y–2Y", observed: `10Y–2Y ${format(latestValue(data, "yieldCurve"))} pp` },
+    { key: "production", parent: "realEconomy", label: lang === "es" ? "Estructura productiva" : "Productive structure", score: data.derived.scores.production, weight: 0.12, inputs: "INDPRO YoY · Δ capacidad", observed: `INDPRO ${format(data.derived.changes.industrialGrowth)}% · Δ capacidad ${format(data.derived.changes.capacityChange)} pp` },
+    { key: "labour", parent: "realEconomy", label: lang === "es" ? "Ajuste laboral" : "Labour adjustment", score: data.derived.scores.labour, weight: 0.08, inputs: "Δ desempleo 1A", observed: `Δ desempleo ${format(data.derived.changes.unemploymentChange)} pp` },
+    { key: "consumerPrices", parent: "inflation", label: lang === "es" ? "Precios de consumo" : "Consumer prices", score: data.derived.scores.consumerPrices, weight: 0.09, inputs: "CPI YoY", observed: `CPI ${format(data.derived.changes.cpiGrowth)}% YoY` },
+    { key: "resourcesFx", parent: "inflation", label: lang === "es" ? "Recursos y divisa" : "Resources & FX", score: data.derived.scores.resourcesFx, weight: 0.06, inputs: "WTI 90d · dólar 90d", observed: `WTI ${format(data.derived.changes.oilMomentum)}% · dólar ${format(data.derived.changes.dollarMomentum)}%` },
+    { key: "debtBurden", parent: "fiscal", label: lang === "es" ? "Carga de deuda" : "Debt burden", score: data.derived.scores.debtBurden, weight: 0.09, inputs: "Deuda / PIB", observed: `Deuda/PIB ${format(latestValue(data, "debtToGdp"))}%` },
+    { key: "fiscalImpulse", parent: "fiscal", label: lang === "es" ? "Impulso fiscal" : "Fiscal impulse", score: data.derived.scores.fiscalImpulse, weight: 0.06, inputs: "Deuda YoY", observed: `Deuda ${format(data.derived.changes.debtGrowth)}% YoY` },
   ];
   const readyWeight = baseScoreComponents.reduce((sum, item) => (
-    data.provenance.engineReady?.[item.key] === false ? sum : sum + item.weight
+    data.provenance.signalReady?.[item.key] === false || !Number.isFinite(item.score) ? sum : sum + item.weight
   ), 0);
   const scoreComponents = baseScoreComponents.map((item) => {
-    const ready = data.provenance.engineReady?.[item.key] !== false;
+    const ready = data.provenance.signalReady?.[item.key] !== false && Number.isFinite(item.score);
     const effectiveWeight = modelProvisional && ready && readyWeight > 0 ? item.weight / readyWeight : item.weight;
     return { ...item, ready, effectiveWeight };
   });
@@ -644,14 +655,14 @@ export default function Monitor() {
   const snapshotAgeMinutes = snapshotDate
     ? Math.max(0, Math.floor((clock - snapshotDate.getTime()) / 60_000))
     : null;
-  const snapshotNeedsRefresh = snapshotAgeMinutes == null || snapshotAgeMinutes >= 15;
+  const snapshotNeedsRefresh = snapshotAgeMinutes == null || snapshotAgeMinutes >= 1_440;
   const snapshotTimestamp = snapshotDate
     ? new Intl.DateTimeFormat(lang === "es" ? "es-ES" : "en-GB", {
       dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Madrid",
     }).format(snapshotDate)
     : "—";
-  const nextRefreshDate = data.cache?.validUntil
-    ? validTimestamp(data.cache.validUntil)
+  const nextRefreshDate = (data.cache?.nextManualAt ?? data.cache?.validUntil)
+    ? validTimestamp(data.cache?.nextManualAt ?? data.cache?.validUntil)
     : snapshotDate ? new Date(snapshotDate.getTime() + 900_000) : null;
   const nextRefreshTimestamp = nextRefreshDate
     ? new Intl.DateTimeFormat(lang === "es" ? "es-ES" : "en-GB", {
@@ -680,6 +691,23 @@ export default function Monitor() {
       interpretation: engineAvailable ? reading.interpretation : (lang === "es" ? "La lente austriaca queda suspendida hasta disponer de observaciones verificables." : "The Austrian interpretation is withheld until verifiable observations are available."),
       watch: engineAvailable ? reading.watch : (lang === "es" ? "Consultar el estado de fuentes y la fecha de cada observación." : "Check source status and each observation date."),
       sourceLabel: lang === "es" ? "Fórmula, entradas y fuentes" : "Formula, inputs and sources",
+      sourceUrl: "/api/data-manifest",
+    });
+  }
+
+  function showSignal(item: (typeof scoreComponents)[number]) {
+    const reading = engineReading(item.parent, item.score, lang);
+    const available = modelAvailable && item.ready;
+    setDetail({
+      eyebrow: `${reading.range} · ${format(item.weight * 100, 0)}% ${lang === "es" ? "DEL ÍNDICE" : "OF THE INDEX"}`,
+      title: item.label,
+      value: available ? `${item.score}/100` : "—",
+      fact: available
+        ? `${item.observed}. ${reading.fact}`
+        : (lang === "es" ? "Las cifras requeridas no tienen cobertura suficiente; la franja queda excluida y su peso se redistribuye entre señales completas." : "The required figures lack sufficient coverage; this band is withheld and its weight is redistributed across complete signals."),
+      interpretation: available ? reading.interpretation : (lang === "es" ? "No se publica una interpretación austriaca sin observaciones verificables." : "No Austrian interpretation is published without verifiable observations."),
+      watch: available ? reading.watch : (lang === "es" ? "Revisar fechas, procedencia y estado de cada variable." : "Review each variable's date, provenance and status."),
+      sourceLabel: lang === "es" ? "Auditar fórmula y fuentes" : "Audit formula and sources",
       sourceUrl: "/api/data-manifest",
     });
   }
@@ -824,8 +852,8 @@ export default function Monitor() {
               <p>{snapshotAgeMinutes == null
                 ? (lang === "es" ? "PENDIENTE DE LA PRIMERA CARGA. Las fechas aparecerán cuando exista una instantánea válida." : "AWAITING THE FIRST LOAD. Dates will appear when a valid snapshot exists.")
                 : snapshotNeedsRefresh
-                  ? (lang === "es" ? `Esta instantánea tiene ${snapshotAgeMinutes} min. El sistema solicitará automáticamente la siguiente versión compartida sin multiplicar consultas a las fuentes.` : `This snapshot is ${snapshotAgeMinutes} min old. The system will automatically request the next shared version without multiplying source queries.`)
-                  : (lang === "es" ? `Generada hace ${snapshotAgeMinutes} min. Todos los visitantes comparten esta copia; el briefing personal se calcula únicamente en su dispositivo.` : `Generated ${snapshotAgeMinutes} min ago. Every visitor shares this copy; the personal briefing is calculated only on their device.`)}</p>
+                  ? (lang === "es" ? `La edición diaria tiene ${Math.floor(snapshotAgeMinutes / 60)} h. La próxima lectura solicitará una edición nueva; mientras tanto se conserva esta copia verificada.` : `The daily edition is ${Math.floor(snapshotAgeMinutes / 60)} h old. The next read will request a new edition; this verified copy remains available meanwhile.`)
+                  : (lang === "es" ? `Edición diaria generada hace ${snapshotAgeMinutes} min. Se sirve al instante a todos los visitantes; una actualización manual solo se habilita cada 15 minutos.` : `Daily edition generated ${snapshotAgeMinutes} min ago. It is served instantly to every visitor; manual refresh unlocks only every 15 minutes.`)}</p>
             </div>
             {refreshNotice && <div className={`refresh-notice ${refreshNotice.includes("failed") || refreshNotice.includes("No se") ? "error" : ""}`}>{refreshNotice}</div>}
           </div>
@@ -948,26 +976,17 @@ export default function Monitor() {
           <div>
             <span className="kicker">{lang === "es" ? "00 · MOTOR DE INTERPRETACIÓN ACTUAL" : "00 · LIVE INTERPRETATION ENGINE"}</span>
             <h2>{lang === "es" ? "Los datos hablan entre sí." : "The data talks to itself."}</h2>
-            <p>{lang === "es" ? "Cada actualización recalcula el régimen, los cinco motores macro, las correlaciones y los ratios. No se limita a mostrar cotizaciones aisladas." : "Every refresh recomputes the regime, five macro engines, correlations and ratios. It does not stop at isolated quotes."}</p>
+            <p>{lang === "es" ? "Diez franjas separan dinero, tipos, crédito, curva, producción, empleo, precios, recursos y deuda. Cada cifra conduce a una lectura condicional; ninguna señal aislada pretende demostrar el ciclo." : "Ten bands separate money, rates, credit, the curve, production, labour, prices, resources and debt. Every figure leads to a conditional reading; no isolated signal claims to prove the cycle."}</p>
           </div>
-          <div className="engine-badge"><span>{lang === "es" ? "ACTUALIZACIÓN" : "REFRESH"}</span><b>{lang === "es" ? "SNAPSHOT COMPARTIDO · 15 MIN" : "SHARED SNAPSHOT · 15 MIN"}</b></div>
+          <div className="engine-badge"><span>{lang === "es" ? "PUBLICACIÓN" : "PUBLICATION"}</span><b>{lang === "es" ? "EDICIÓN DIARIA · REFRESCO 15 MIN" : "DAILY EDITION · 15 MIN REFRESH"}</b></div>
         </div>
         <div className="score-strip">
-          {[
-            ["liquidity", lang === "es" ? "Liquidez" : "Liquidity", data.derived.scores.liquidity, "M2 + rates + real rate"],
-            ["credit", lang === "es" ? "Crédito" : "Credit", data.derived.scores.credit, "Spreads + curve + VIX"],
-            ["realEconomy", lang === "es" ? "Economía real" : "Real economy", data.derived.scores.realEconomy, "Industry + jobs + capacity"],
-            ["inflation", lang === "es" ? "Inflación" : "Inflation", data.derived.scores.inflation, "CPI + oil + dollar"],
-            ["fiscal", lang === "es" ? "Fiscal" : "Fiscal", data.derived.scores.fiscal, "Debt + debt/GDP"],
-          ].map(([key, label, score, formula]) => {
-            const engineAvailable = modelAvailable && data.provenance.engineReady?.[String(key)] !== false;
-            return <button type="button" key={String(key)} onClick={() => showEngine(key as keyof typeof engineLabels, Number(score))}><div><span>{label}</span><b>{engineAvailable ? score : "—"}</b></div><div className="engine-bar"><i style={{ width: `${engineAvailable ? score : 0}%` }} /></div><small>{engineAvailable ? formula : (lang === "es" ? "Entradas incompletas" : "Incomplete inputs")}</small><em>{lang === "es" ? "Interpretar" : "Interpret"} ↗</em></button>;
-          })}
+          {scoreComponents.map((item) => <button type="button" key={item.key} onClick={() => showSignal(item)}><div><span>{item.label}</span><b>{modelAvailable && item.ready ? item.score : "—"}</b></div><div className="engine-bar"><i style={{ width: `${modelAvailable && item.ready ? item.score : 0}%` }} /></div><small>{item.ready ? item.observed : (lang === "es" ? "Entradas incompletas" : "Incomplete inputs")}</small><em>{lang === "es" ? "Interpretar" : "Interpret"} ↗</em></button>)}
         </div>
         <article className="cycle-methodology" id="cycle-methodology">
           <div className="method-head">
             <div>
-              <span className="kicker">{lang === "es" ? "METODOLOGÍA ABIERTA · V1.1" : "OPEN METHODOLOGY · V1.1"}</span>
+              <span className="kicker">{lang === "es" ? "METODOLOGÍA ABIERTA · V1.2" : "OPEN METHODOLOGY · V1.2"}</span>
               <h3>{modelAvailable ? (lang === "es" ? `Por qué el índice marca ${cycleScore}/100` : `Why the index reads ${cycleScore}/100`) : (lang === "es" ? "Por qué el índice no publica una cifra" : "Why the index is withholding a score")}</h3>
               <p>{modelAvailable
                 ? modelProvisional
@@ -990,7 +1009,7 @@ export default function Monitor() {
           <div className="formula-total">
             <code>{modelProvisional
               ? (lang === "es" ? "IDC provisional = Σ(motor disponible × peso reponderado)" : "Provisional CDI = Σ(available engine × reweighted share)")
-              : "IDC = LIQ×0.27 + CREDIT×0.23 + REAL×0.20 + INFL×0.15 + FISCAL×0.15"}</code>
+              : "IDC = MONEY×.14 + STANCE×.13 + RISK×.13 + CURVE×.10 + PROD×.12 + LAB×.08 + CPI×.09 + RES×.06 + BURDEN×.09 + FISC×.06"}</code>
             <strong>= {modelAvailable ? `${cycleScore}/100` : "—"}</strong>
           </div>
           <div className="pillar-lineage">
@@ -1067,7 +1086,7 @@ export default function Monitor() {
             ["S&P 500 / GOLD", `${format(data.derived.ratios.sp500Gold, 2)}×`, lang === "es" ? "Nivel del índice dividido por el precio de una onza de oro. Muestra rendimiento relativo entre activos nominales y dinero duro." : "Index level divided by the price of one ounce of gold. It shows relative performance between nominal assets and hard money.", seriesSourceUrl(data, "sp500")],
             ["DEBT / M2", `${format(data.derived.ratios.debtToM2, 2)}×`, lang === "es" ? "Deuda federal bruta dividida por M2. Es una relación de escalas monetarias, no una medida de solvencia por sí sola." : "Gross federal debt divided by M2. It compares monetary scales; it is not a standalone solvency measure.", debtSourceUrl(data)],
             [lang === "es" ? "TIPO REAL APROX." : "APPROX. REAL RATE", `${format(data.derived.ratios.realRate, 2)}%`, lang === "es" ? "Fondos federales menos inflación interanual del IPC. Es una aproximación retrospectiva, no el tipo natural ni una expectativa real ex ante." : "Federal funds rate minus year-over-year CPI inflation. It is a backward-looking approximation, not the natural rate or an ex-ante real expectation.", seriesSourceUrl(data, "fedFunds")],
-            [lang === "es" ? "RIESGO COMPUESTO" : "COMPOSITE RISK", modelAvailable ? `${data.derived.scores.composite}/100` : "—", lang === "es" ? "Media ponderada transparente de cinco motores. Mide presión cíclica modelizada, no probabilidad de caída ni señal operativa." : "Transparent weighted average of five engines. It measures modeled cyclical pressure, not crash probability or a trading signal.", "/api/data-manifest"],
+            [lang === "es" ? "RIESGO COMPUESTO" : "COMPOSITE RISK", modelAvailable ? `${data.derived.scores.composite}/100` : "—", lang === "es" ? "Media ponderada transparente de diez franjas. Mide presión cíclica modelizada, no probabilidad de caída ni señal operativa." : "Transparent weighted average of ten bands. It measures modeled cyclical pressure, not crash probability or a trading signal.", "/api/data-manifest"],
           ].map(([label, value, explanation, url]) => <button type="button" key={label} onClick={() => setDetail({
             eyebrow: lang === "es" ? "RATIO · DEFINICIÓN Y LÍMITES" : "RATIO · DEFINITION AND LIMITS",
             title: String(label), value: String(value), fact: String(explanation),
