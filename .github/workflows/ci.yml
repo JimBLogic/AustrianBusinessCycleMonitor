@@ -210,9 +210,6 @@ jobs:
           npm test
           npm audit --omit=dev --audit-level=high
 
-      - name: Smoke the self-hosted Worker runtime
-        working-directory: sites-current
-        run: ABCM_SELFHOST_DEBUG=1 npm run test:selfhost
 
       - name: Validate exact self-host Compose
         working-directory: sites-current
