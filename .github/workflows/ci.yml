@@ -226,14 +226,14 @@ jobs:
           trap 'docker logs abcm-sites-selfhost || true; docker rm -f abcm-sites-selfhost || true' EXIT
 
           for attempt in {1..60}; do
-            if curl -fsS http://127.0.0.1:8787/api/health | jq -e '.release == 37'; then
+            if curl -fsS http://127.0.0.1:8787/api/health | jq -e '.release == 38'; then
               break
             fi
             sleep 2
           done
 
           curl -fsS http://127.0.0.1:8787/ > selfhost-index.html
-          curl -fsS http://127.0.0.1:8787/api/data-manifest | jq -e '.build.siteRelease == 37'
+          curl -fsS http://127.0.0.1:8787/api/data-manifest | jq -e '.build.siteRelease == 38'
           grep -q "Austrian Business Cycle Monitor" selfhost-index.html
   publish-image:
     name: Publish container image
