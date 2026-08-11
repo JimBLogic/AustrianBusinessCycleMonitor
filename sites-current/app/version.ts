@@ -1,7 +1,7 @@
-// Sites versions are immutable. Publishing this maintained source creates v32.
-export const SITE_RELEASE = 32;
-export const ENGINE_VERSION = "abcm-sites-6";
-export const DATA_SCHEMA_VERSION = "1.2.0";
+// Sites versions are immutable. Publishing this maintained source creates v34.
+export const SITE_RELEASE = 34;
+export const ENGINE_VERSION = "abcm-sites-7-ten-signal";
+export const DATA_SCHEMA_VERSION = "1.3.0";
 
 export const SOURCE_MIRROR = {
   repository: "https://github.com/JimBLogic/AustrianBusinessCycleMonitor",
