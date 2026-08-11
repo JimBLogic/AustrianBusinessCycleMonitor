@@ -4,8 +4,14 @@ name: Austrian Business Cycle Monitor CI
 on:
   push:
     branches: [master, main, develop]
+    paths-ignore:
+      - "sites-current/**"
+      - ".github/workflows/sites-current.yml"
   pull_request:
     branches: [master, main]
+    paths-ignore:
+      - "sites-current/**"
+      - ".github/workflows/sites-current.yml"
   workflow_dispatch:
 
 permissions:
@@ -19,6 +25,7 @@ jobs:
   backend:
     name: Backend · Python 3.11
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -46,6 +53,7 @@ jobs:
   frontend:
     name: Frontend · React/Vite
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -73,7 +81,7 @@ jobs:
           name: frontend-typecheck-report
           path: packages/frontend/typecheck.log
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 3
 
       - name: Run tests
         working-directory: packages/frontend
@@ -98,11 +106,12 @@ jobs:
           name: frontend-dist
           path: packages/frontend/dist
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 3
 
   backend-quality:
     name: Backend quality report
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -120,6 +129,7 @@ jobs:
   frontend-quality:
     name: Frontend lint report
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -138,6 +148,7 @@ jobs:
   docker-smoke:
     name: Production Docker smoke
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [backend, frontend]
     steps:
       - uses: actions/checkout@v4
@@ -160,7 +171,7 @@ jobs:
           name: docker-build-report
           path: docker-build.log
           if-no-files-found: warn
-          retention-days: 7
+          retention-days: 3
 
       - name: Run production container smoke test
         run: |
@@ -186,58 +197,10 @@ jobs:
           test "$status_code" = "503"
           jq -e '.error.code == "snapshot_store_unavailable"' trusted-error.json
 
-  sites-selfhost-smoke:
-    name: Exact Sites self-host smoke
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22.14'
-          cache: npm
-          cache-dependency-path: sites-current/package-lock.json
-
-      - name: Install locked Sites dependencies
-        working-directory: sites-current
-        run: npm ci
-
-      - name: Validate source and production Worker artifact
-        working-directory: sites-current
-        run: |
-          npm run lint
-          npm test
-          npm audit --omit=dev --audit-level=high
-
-
-      - name: Validate exact self-host Compose
-        working-directory: sites-current
-        run: |
-          cp .env.selfhost.example .env.selfhost
-          docker compose --env-file .env.selfhost -f compose.selfhost.yml config > compose.selfhost.resolved.yml
-          grep -q "Dockerfile.selfhost" compose.selfhost.resolved.yml
-
-      - name: Build and smoke exact self-host image
-        working-directory: sites-current
-        run: |
-          docker build --progress=plain -f Dockerfile.selfhost -t abcm-sites-selfhost:ci .
-          docker run -d --name abcm-sites-selfhost -p 8787:8787 abcm-sites-selfhost:ci
-          trap 'docker logs abcm-sites-selfhost || true; docker rm -f abcm-sites-selfhost || true' EXIT
-
-          for attempt in {1..60}; do
-            if curl -fsS http://127.0.0.1:8787/api/health | jq -e '.release == 38'; then
-              break
-            fi
-            sleep 2
-          done
-
-          curl -fsS http://127.0.0.1:8787/ > selfhost-index.html
-          curl -fsS http://127.0.0.1:8787/api/data-manifest | jq -e '.build.siteRelease == 38'
-          grep -q "Austrian Business Cycle Monitor" selfhost-index.html
   publish-image:
     name: Publish container image
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [backend, frontend, docker-smoke]
     if: ${{ github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master') }}
     permissions:
