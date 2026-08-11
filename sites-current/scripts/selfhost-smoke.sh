@@ -52,7 +52,7 @@ node -e '
   const health = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
   const manifest = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
   const home = fs.readFileSync(process.argv[3], "utf8");
-  if (health.release !== 39 || manifest.build?.siteRelease !== 39) process.exit(1);
+  if (health.siteRelease !== 40 || manifest.build?.siteRelease !== 40) process.exit(1);
   if (!home.includes("Austrian Business Cycle Monitor")) process.exit(1);
 ' "${runtime_dir}/health.json" "${runtime_dir}/manifest.json" "${runtime_dir}/home.html"
 
