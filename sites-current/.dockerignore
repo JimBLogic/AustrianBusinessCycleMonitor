@@ -1,0 +1,10 @@
+.git
+.next
+.sites-runtime
+.wrangler
+dist
+node_modules
+npm-debug.log*
+.dev.vars
+.env*
+!.dev.vars.example
