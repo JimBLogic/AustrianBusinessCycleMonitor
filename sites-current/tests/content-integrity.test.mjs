@@ -16,6 +16,7 @@ const files = await Promise.all([
   "app/data/bitcoin-spot.ts",
   "app/data/upstream.ts",
   "app/version.ts",
+  "scripts/selfhost-smoke.sh",
   "next.config.ts",
   "README.md",
   "INSPIRATION.md",
@@ -36,7 +37,7 @@ test("retains complete Spanish and English navigation paths", () => {
 });
 
 test("identifies the next immutable Sites release and its canonical repository mirror", () => {
-  assert.match(source, /SITE_RELEASE = 38/);
+  assert.match(source, /SITE_RELEASE = 40/);
   assert.match(source, /DATA_SCHEMA_VERSION = "1\.3\.0"/);
   assert.match(source, /sites-current/);
   assert.equal(source.includes("Manual refresh uses no-store"), false);
@@ -106,7 +107,17 @@ test("ships the exact Sites application as a persistent local container mirror",
     "Exact self-hosted mirror on a VPS",
     "same compiled Worker artifact",
     "compose.selfhost.yml",
+    "health.siteRelease",
   ]) assert.ok(source.includes(expected), `missing container guidance: ${expected}`);
+});
+
+test("documents path-scoped CI without weakening either deployment gate", () => {
+  for (const expected of [
+    "Path-scoped CI",
+    "sites-current/",
+    "historical Flask/React",
+    "cancel-in-progress",
+  ]) assert.ok(source.includes(expected), `missing CI efficiency guidance: ${expected}`);
 });
 
 test("does not reintroduce retired or access-blocked public links", () => {

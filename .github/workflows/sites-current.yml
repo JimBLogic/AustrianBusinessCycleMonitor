@@ -1,0 +1,81 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Maintained Sites mirror CI
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "sites-current/**"
+      - ".github/workflows/sites-current.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "sites-current/**"
+      - ".github/workflows/sites-current.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sites-current-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  exact-mirror:
+    name: Exact Sites and self-host mirror
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: sites-current
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.14"
+          cache: npm
+          cache-dependency-path: sites-current/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Validate maintained source
+        run: |
+          npm run lint
+          npm test
+          npm audit --omit=dev --audit-level=high
+
+      - name: Validate exact self-host Compose
+        run: |
+          cp .env.selfhost.example .env.selfhost
+          docker compose --env-file .env.selfhost -f compose.selfhost.yml config > compose.selfhost.resolved.yml
+          grep -q "Dockerfile.selfhost" compose.selfhost.resolved.yml
+
+      - name: Build and smoke exact self-host image
+        run: |
+          set -euo pipefail
+          expected_release="$(sed -n 's/^export const SITE_RELEASE = \([0-9][0-9]*\);$/\1/p' app/version.ts)"
+          test -n "$expected_release"
+
+          docker build --progress=plain -f Dockerfile.selfhost -t abcm-sites-selfhost:ci .
+          docker run -d --name abcm-sites-selfhost -p 8787:8787 abcm-sites-selfhost:ci
+          trap 'docker logs abcm-sites-selfhost || true; docker rm -f abcm-sites-selfhost || true' EXIT
+
+          healthy=false
+          for attempt in {1..60}; do
+            if curl -fsS http://127.0.0.1:8787/api/health |
+              jq -e --argjson release "$expected_release" '.siteRelease == $release'; then
+              healthy=true
+              break
+            fi
+            sleep 2
+          done
+          test "$healthy" = true
+
+          curl -fsS http://127.0.0.1:8787/ > selfhost-index.html
+          curl -fsS http://127.0.0.1:8787/api/data-manifest |
+            jq -e --argjson release "$expected_release" '.build.siteRelease == $release'
+          grep -q "Austrian Business Cycle Monitor" selfhost-index.html

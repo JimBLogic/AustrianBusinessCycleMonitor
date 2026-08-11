@@ -1,5 +1,5 @@
-// Sites versions are immutable. Publishing this maintained source creates v38.
-export const SITE_RELEASE = 38;
+// Sites versions are immutable. Publishing this maintained source creates v40.
+export const SITE_RELEASE = 40;
 export const ENGINE_VERSION = "abcm-sites-7-ten-signal";
 export const DATA_SCHEMA_VERSION = "1.3.0";
 
