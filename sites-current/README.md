@@ -104,6 +104,28 @@ curl http://localhost:5173/api/data-manifest
 A valid production artifact contains `dist/server/index.js` with a default
 Worker `fetch` export and `dist/.openai/hosting.json` with the binding names.
 
+### Local container mirror
+
+The exact Sites application can also run locally in a container, including
+Miniflare-backed D1 and R2 emulation:
+
+```bash
+cp .dev.vars.example .dev.vars
+docker compose --env-file .dev.vars -f compose.local.yml up --build
+```
+
+Open `http://localhost:5173`. The named volumes preserve the local database and
+object store between container replacements. Stop it with:
+
+```bash
+docker compose --env-file .dev.vars -f compose.local.yml down
+```
+
+Add `-v` only when you intentionally want to erase the local D1/R2 state. This
+container is a reproducible local mirror and QA environment; it is not the
+recommended Internet-facing production server because it runs the Cloudflare
+development emulator.
+
 ## Hosting the current frontend and backend
 
 The maintained Sites deployment packages both layers together. There is no
@@ -138,6 +160,19 @@ in committed source.
 If the target cannot provide those backend capabilities, use the repository's
 separate Flask/React/Docker production path documented in the root README and
 `docs/DEPLOYMENT.md` instead of publishing a frontend-only imitation.
+
+## Deployment matrix
+
+| Goal | Supported path | Same Sites UI and API | Persistent data |
+| --- | --- | --- | --- |
+| Managed production | ChatGPT Sites with `DB` and `BUCKET` | Yes | Hosted D1 and R2 |
+| Local native development | `npm run dev` | Yes | Project-local emulation |
+| Local container mirror | `compose.local.yml` | Yes | Named Docker volumes |
+| Traditional VPS production | Root `compose.production.yml` | No; maintained Flask/React runtime | SQLite volume |
+
+GitHub Pages alone cannot host `sites-current/`: it only serves static files and
+cannot provide the Worker API, D1, R2 or server-side refresh gate. Use Sites or
+a compatible Cloudflare Worker host for the exact application.
 
 ## Data, migrations, and backups
 
