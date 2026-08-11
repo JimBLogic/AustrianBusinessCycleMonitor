@@ -36,7 +36,7 @@ test("retains complete Spanish and English navigation paths", () => {
 });
 
 test("identifies the next immutable Sites release and its canonical repository mirror", () => {
-  assert.match(source, /SITE_RELEASE = 35/);
+  assert.match(source, /SITE_RELEASE = 36/);
   assert.match(source, /DATA_SCHEMA_VERSION = "1\.3\.0"/);
   assert.match(source, /sites-current/);
   assert.equal(source.includes("Manual refresh uses no-store"), false);
@@ -87,6 +87,18 @@ test("documents the maintained release and a reproducible local full-stack rebui
     "app/version.ts` and `/api/health`",
   ]) assert.ok(source.includes(expected), `missing reconstruction guidance: ${expected}`);
   assert.equal(source.includes("Sites v25 reference interface"), false);
+});
+
+test("ships the exact Sites application as a persistent local container mirror", async () => {
+  for (const path of ["Dockerfile.local", "compose.local.yml", ".dev.vars.example", ".dockerignore"]) {
+    await access(new URL(`../${path}`, import.meta.url));
+  }
+  for (const expected of [
+    "Local container mirror",
+    "compose.local.yml",
+    "Named Docker volumes",
+    "GitHub Pages alone cannot host",
+  ]) assert.ok(source.includes(expected), `missing container guidance: ${expected}`);
 });
 
 test("does not reintroduce retired or access-blocked public links", () => {
