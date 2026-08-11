@@ -25,6 +25,18 @@ export async function GET() {
       ratios: ["BTC / gold", "S&P 500 / gold", "US federal debt / M2", "fed funds minus CPI YoY"],
       scores: {
         scale: "Every engine and the composite are clamped to 0–100. Higher means more modeled cycle pressure, not a probability.",
+        tenSignalModel: {
+          money: { inputs: ["M2 YoY"], formula: "clamp(50 + M2_YOY*6)", compositeWeight: 0.14 },
+          monetaryStance: { inputs: ["fed funds 1Y delta", "approximate real rate"], formula: "clamp(45 - FEDFUNDS_1Y_DELTA*8 - REAL_RATE*3)", compositeWeight: 0.13 },
+          creditRisk: { inputs: ["BAA–10Y spread", "VIX"], formula: "clamp(15 + BAA10Y*17 + VIX*0.9)", compositeWeight: 0.13 },
+          termStructure: { inputs: ["10Y–2Y curve"], formula: "clamp(35 + max(0,-T10Y2Y)*35)", compositeWeight: 0.10 },
+          production: { inputs: ["industrial production YoY", "capacity utilization 1Y delta"], formula: "clamp(45 - INDPRO_YOY*6 - CAPACITY_1Y_DELTA*5)", compositeWeight: 0.12 },
+          labour: { inputs: ["unemployment 1Y delta"], formula: "clamp(35 + UNRATE_1Y_DELTA*25)", compositeWeight: 0.08 },
+          consumerPrices: { inputs: ["CPI YoY"], formula: "clamp(25 + CPI_YOY*12)", compositeWeight: 0.09 },
+          resourcesFx: { inputs: ["WTI 90D momentum", "broad dollar 90D momentum"], formula: "clamp(40 + WTI_90D*0.55 - DOLLAR_90D*0.65)", compositeWeight: 0.06 },
+          debtBurden: { inputs: ["federal debt / GDP"], formula: "clamp(35 + max(0,DEBT_GDP-80)*0.75)", compositeWeight: 0.09 },
+          fiscalImpulse: { inputs: ["federal debt YoY"], formula: "clamp(35 + DEBT_YOY*3)", compositeWeight: 0.06 },
+        },
         liquidity: {
           inputs: ["M2 YoY", "fed funds 1Y delta", "approximate real rate"],
           formula: "clamp(48 + M2_YOY*5 - FEDFUNDS_1Y_DELTA*7 - REAL_RATE*2)",
@@ -50,7 +62,7 @@ export async function GET() {
           formula: "clamp(38 + max(0,DEBT_GDP-80)*0.65 + DEBT_YOY*2)",
           compositeWeight: 0.15,
         },
-        composite: "clamp(liquidity*0.27 + credit*0.23 + realEconomy*0.20 + inflation*0.15 + fiscal*0.15)",
+        composite: "clamp(money*.14 + monetaryStance*.13 + creditRisk*.13 + termStructure*.10 + production*.12 + labour*.08 + consumerPrices*.09 + resourcesFx*.06 + debtBurden*.09 + fiscalImpulse*.06)",
         bands: [
           { range: "0–20", label: "low distortion" },
           { range: "21–40", label: "contained distortion" },
@@ -70,10 +82,10 @@ export async function GET() {
     security: {
       secrets: "No browser-exposed API secrets are required by the temporary backend.",
       upstreams: "The server calls a fixed allowlist of upstream endpoints; it is not an open proxy.",
-      caching: "Every public read uses one shared 900-second snapshot window. Query parameters cannot bypass the shared cache.",
+      caching: "GET serves one durable shared edition for up to 24 hours. POST requests a newer edition only when the latest durable snapshot is at least 15 minutes old. Query parameters cannot bypass either gate.",
     },
     reliability: {
-      strategy: ["typed provider registry", "official source before independent fallback", "bounded exponential backoff for transient 5xx, 429 and network failures", "per-provider circuit breaker after repeated failures", "Retry-After-aware cooldown", "6–12 second per-attempt timeouts", "deterministic date sorting and duplicate removal", "per-series D1 last-known-good recovery", "explicit live / stale / backup / unavailable states", "provisional model only above a 70% complete-engine threshold"],
+      strategy: ["durable 24-hour D1 edition", "15-minute server-enforced manual refresh gate", "typed provider registry", "official source before independent fallback", "bounded exponential backoff for transient 5xx, 429 and network failures", "per-provider circuit breaker after repeated failures", "Retry-After-aware cooldown", "6–12 second per-attempt timeouts", "deterministic date sorting and duplicate removal", "per-series D1 last-known-good recovery", "explicit live / stale / backup / unavailable states", "provisional model only above a 70% complete-signal threshold"],
       semantics: "A fresh request does not imply a new official observation. The response separates requestedAt from each series observedAt.",
     },
     inspiration: {
