@@ -21,6 +21,18 @@ type EngineReadiness = {
   inflation: boolean;
   fiscal: boolean;
 };
+type SignalReadiness = {
+  money: boolean;
+  monetaryStance: boolean;
+  creditRisk: boolean;
+  termStructure: boolean;
+  production: boolean;
+  labour: boolean;
+  consumerPrices: boolean;
+  resourcesFx: boolean;
+  debtBurden: boolean;
+  fiscalImpulse: boolean;
+};
 
 const FRED: Record<FredSeriesKey, string> = FRED_SERIES;
 
@@ -415,11 +427,101 @@ function n(value: number | null | undefined, fallback = 0) {
 }
 
 export async function GET(request: Request) {
-  void request;
+  const manual = request.method === "POST";
   // Public reads always use the shared refresh window. A query parameter must
   // never let one visitor fan out uncached requests to every upstream provider.
-  const force = false;
+  const force = manual;
   const runtimeIsSites = Boolean(getRuntimeBindings()?.DB);
+
+  // Fast path: every visitor receives the latest durable edition immediately.
+  // Normal reads create at most one new edition per 24 hours; an explicit
+  // visitor refresh is allowed after 15 minutes. The persisted edition remains
+  // available when upstream providers are slow or unavailable.
+  try {
+    const persisted = await readLatestMacroSnapshot();
+    const persistedAt = persisted?.requestedAt ? Date.parse(persisted.requestedAt) : Number.NaN;
+    const minimumAgeMs = 15 * 60_000;
+    if (persisted && Number.isFinite(persistedAt) && (!manual || Date.now() - persistedAt < minimumAgeMs)) {
+      const metrics = persisted.metrics as {
+        latest?: Record<string, Point | null>;
+        series?: Record<string, Point[]>;
+        bitcoin?: Record<string, unknown>;
+        changes?: Record<string, number | null>;
+        derived?: Record<string, unknown>;
+        freshness?: Array<Record<string, unknown>>;
+      };
+      const storedSeries = metrics.series ?? {};
+      const storedLatest = metrics.latest ?? {};
+      const storedBitcoin = metrics.bitcoin ?? {};
+      const storedDerived = metrics.derived ?? {};
+      const storedScores = persisted.scores as Record<string, number>;
+      // Versions written before v33 contained the five parent engines only.
+      // Preserve instant availability during the transition, explicitly mark
+      // the reading provisional, and let the background daily refresh replace
+      // these temporary aliases with the ten independently calculated signals.
+      const normalizedScores = {
+        ...storedScores,
+        money: Number.isFinite(storedScores.money) ? storedScores.money : storedScores.liquidity,
+        monetaryStance: Number.isFinite(storedScores.monetaryStance) ? storedScores.monetaryStance : storedScores.liquidity,
+        creditRisk: Number.isFinite(storedScores.creditRisk) ? storedScores.creditRisk : storedScores.credit,
+        termStructure: Number.isFinite(storedScores.termStructure) ? storedScores.termStructure : storedScores.credit,
+        production: Number.isFinite(storedScores.production) ? storedScores.production : storedScores.realEconomy,
+        labour: Number.isFinite(storedScores.labour) ? storedScores.labour : storedScores.realEconomy,
+        consumerPrices: Number.isFinite(storedScores.consumerPrices) ? storedScores.consumerPrices : storedScores.inflation,
+        resourcesFx: Number.isFinite(storedScores.resourcesFx) ? storedScores.resourcesFx : storedScores.inflation,
+        debtBurden: Number.isFinite(storedScores.debtBurden) ? storedScores.debtBurden : storedScores.fiscal,
+        fiscalImpulse: Number.isFinite(storedScores.fiscalImpulse) ? storedScores.fiscalImpulse : storedScores.fiscal,
+      };
+      const hasNativeTenSignals = Number.isFinite(storedScores.money);
+      const generatedAt = persisted.requestedAt;
+      const nextManualAt = new Date(persistedAt + 15 * 60_000).toISOString();
+      const nextDailyAt = new Date(persistedAt + 24 * 60 * 60_000).toISOString();
+      return Response.json({
+        schemaVersion: DATA_SCHEMA_VERSION,
+        engineVersion: ENGINE_VERSION,
+        siteRelease: SITE_RELEASE,
+        requestedAt: generatedAt,
+        observedAt: generatedAt,
+        refreshMode: manual ? "manual-cooldown" : "daily-edition",
+        cache: {
+          generatedAt,
+          validUntil: nextManualAt,
+          nextManualAt,
+          nextDailyAt,
+          ttlSeconds: 900,
+          editionTtlSeconds: 86400,
+          mode: "durable-daily-edition",
+        },
+        series: storedSeries,
+        latest: storedLatest,
+        bitcoin: storedBitcoin,
+        derived: {
+          changes: metrics.changes ?? {},
+          scores: normalizedScores,
+          regime: persisted.regime,
+          correlations: storedDerived.correlations ?? {},
+          ratios: storedDerived.ratios ?? {},
+        },
+        freshness: metrics.freshness ?? [],
+        upstreams: getUpstreamHealth(),
+        provenance: {
+          ...persisted.provenance,
+          mode: "daily-persisted",
+          modelStatus: hasNativeTenSignals ? persisted.provenance.modelStatus : "provisional",
+        },
+      }, {
+        headers: {
+          "Cache-Control": "public, max-age=60, s-maxage=900, stale-while-revalidate=86400",
+          "X-ABCM-Refresh": manual ? "manual-cooldown" : "daily-edition",
+          "X-ABCM-Next-Manual-Refresh": nextManualAt,
+          "X-ABCM-Next-Daily-Edition": nextDailyAt,
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    }
+  } catch {
+    // The live pipeline remains available when persistence is temporarily down.
+  }
 
   let results: Record<string, SeriesResult>;
   if (getRuntimeBindings()?.FRED_API_KEY) {
@@ -520,6 +622,18 @@ export async function GET(request: Request) {
     inflation: [cpiGrowth, oilMomentum, dollarMomentum].every(Number.isFinite),
     fiscal: [debtToGdp, debtGrowth].every(Number.isFinite),
   };
+  const signalReady: SignalReadiness = {
+    money: Number.isFinite(m2Growth),
+    monetaryStance: [rateChange, realRate].every(Number.isFinite),
+    creditRisk: [latest(series.creditSpread)?.value, latest(series.vix)?.value].every(Number.isFinite),
+    termStructure: Number.isFinite(latest(series.yieldCurve)?.value),
+    production: [industrialGrowth, capacityChange].every(Number.isFinite),
+    labour: Number.isFinite(unemploymentChange),
+    consumerPrices: Number.isFinite(cpiGrowth),
+    resourcesFx: [oilMomentum, dollarMomentum].every(Number.isFinite),
+    debtBurden: Number.isFinite(debtToGdp),
+    fiscalImpulse: Number.isFinite(debtGrowth),
+  };
   const modelInputs = [
     m2Growth, rateChange, realRate, latest(series.creditSpread)?.value,
     latest(series.yieldCurve)?.value, latest(series.vix)?.value,
@@ -528,20 +642,37 @@ export async function GET(request: Request) {
   ];
   const modelInputsAvailable = modelInputs.filter(Number.isFinite).length;
   const modelInputsTotal = modelInputs.length;
-  const modelReady = Object.values(engineReady).every(Boolean);
+  const modelReady = Object.values(signalReady).every(Boolean);
 
-  const liquidityScore = clamp(48 + n(m2Growth) * 5 - n(rateChange) * 7 - n(realRate) * 2);
-  const creditScore = clamp(20 + n(latest(series.creditSpread)?.value) * 16 + Math.max(0, -n(latest(series.yieldCurve)?.value)) * 18 + n(latest(series.vix)?.value) * 0.8);
-  const realEconomyScore = clamp(45 - n(industrialGrowth) * 5 + n(unemploymentChange) * 16 - n(capacityChange) * 4);
-  const inflationScore = clamp(35 + n(cpiGrowth) * 10 + n(oilMomentum) * 0.45 - n(dollarMomentum) * 0.5);
-  const fiscalScore = clamp(38 + Math.max(0, n(debtToGdp) - 80) * 0.65 + n(debtGrowth) * 2);
+  const signalScores = {
+    money: clamp(50 + n(m2Growth) * 6),
+    monetaryStance: clamp(45 - n(rateChange) * 8 - n(realRate) * 3),
+    creditRisk: clamp(15 + n(latest(series.creditSpread)?.value) * 17 + n(latest(series.vix)?.value) * 0.9),
+    termStructure: clamp(35 + Math.max(0, -n(latest(series.yieldCurve)?.value)) * 35),
+    production: clamp(45 - n(industrialGrowth) * 6 - n(capacityChange) * 5),
+    labour: clamp(35 + n(unemploymentChange) * 25),
+    consumerPrices: clamp(25 + n(cpiGrowth) * 12),
+    resourcesFx: clamp(40 + n(oilMomentum) * 0.55 - n(dollarMomentum) * 0.65),
+    debtBurden: clamp(35 + Math.max(0, n(debtToGdp) - 80) * 0.75),
+    fiscalImpulse: clamp(35 + n(debtGrowth) * 3),
+  };
+  const liquidityScore = clamp((signalScores.money * 0.14 + signalScores.monetaryStance * 0.13) / 0.27);
+  const creditScore = clamp((signalScores.creditRisk * 0.13 + signalScores.termStructure * 0.10) / 0.23);
+  const realEconomyScore = clamp((signalScores.production * 0.12 + signalScores.labour * 0.08) / 0.20);
+  const inflationScore = clamp((signalScores.consumerPrices * 0.09 + signalScores.resourcesFx * 0.06) / 0.15);
+  const fiscalScore = clamp((signalScores.debtBurden * 0.09 + signalScores.fiscalImpulse * 0.06) / 0.15);
   const weightedEngines = [
-    { key: "liquidity" as const, score: liquidityScore, weight: 0.27 },
-    { key: "credit" as const, score: creditScore, weight: 0.23 },
-    { key: "realEconomy" as const, score: realEconomyScore, weight: 0.20 },
-    { key: "inflation" as const, score: inflationScore, weight: 0.15 },
-    { key: "fiscal" as const, score: fiscalScore, weight: 0.15 },
-  ].filter((engine) => engineReady[engine.key]);
+    { key: "money" as const, score: signalScores.money, weight: 0.14 },
+    { key: "monetaryStance" as const, score: signalScores.monetaryStance, weight: 0.13 },
+    { key: "creditRisk" as const, score: signalScores.creditRisk, weight: 0.13 },
+    { key: "termStructure" as const, score: signalScores.termStructure, weight: 0.10 },
+    { key: "production" as const, score: signalScores.production, weight: 0.12 },
+    { key: "labour" as const, score: signalScores.labour, weight: 0.08 },
+    { key: "consumerPrices" as const, score: signalScores.consumerPrices, weight: 0.09 },
+    { key: "resourcesFx" as const, score: signalScores.resourcesFx, weight: 0.06 },
+    { key: "debtBurden" as const, score: signalScores.debtBurden, weight: 0.09 },
+    { key: "fiscalImpulse" as const, score: signalScores.fiscalImpulse, weight: 0.06 },
+  ].filter((engine) => signalReady[engine.key]);
   const availableWeight = weightedEngines.reduce((sum, engine) => sum + engine.weight, 0);
   const composite = availableWeight >= 0.70
     ? clamp(weightedEngines.reduce((sum, engine) => sum + engine.score * engine.weight, 0) / availableWeight)
@@ -586,18 +717,22 @@ export async function GET(request: Request) {
 
   const requestedAt = new Date().toISOString();
   const cacheTtlSeconds = 900;
+  const editionTtlSeconds = 86_400;
   let payload = {
     schemaVersion: DATA_SCHEMA_VERSION,
     engineVersion: ENGINE_VERSION,
     siteRelease: SITE_RELEASE,
     requestedAt,
     observedAt: requestedAt,
-    refreshMode: "shared-snapshot",
+    refreshMode: manual ? "manual-refresh" : "daily-edition",
     cache: {
       generatedAt: requestedAt,
       validUntil: new Date(Date.parse(requestedAt) + cacheTtlSeconds * 1000).toISOString(),
+      nextManualAt: new Date(Date.parse(requestedAt) + cacheTtlSeconds * 1000).toISOString(),
+      nextDailyAt: new Date(Date.parse(requestedAt) + editionTtlSeconds * 1000).toISOString(),
       ttlSeconds: cacheTtlSeconds,
-      mode: "shared-snapshot",
+      editionTtlSeconds,
+      mode: "durable-daily-edition",
     },
     series: { ...series, bitcoin: bitcoinHistory },
     latest: Object.fromEntries(Object.entries(series).map(([key, points]) => [key, latest(points)])),
@@ -619,7 +754,7 @@ export async function GET(request: Request) {
     },
     derived: {
       changes: { m2Growth, rateChange, cpiGrowth, oilMomentum, dollarMomentum, industrialGrowth, unemploymentChange, capacityChange, debtGrowth },
-      scores: { liquidity: liquidityScore, credit: creditScore, realEconomy: realEconomyScore, inflation: inflationScore, fiscal: fiscalScore, composite },
+      scores: { liquidity: liquidityScore, credit: creditScore, realEconomy: realEconomyScore, inflation: inflationScore, fiscal: fiscalScore, ...signalScores, composite },
       regime,
       correlations,
       ratios,
@@ -645,6 +780,7 @@ export async function GET(request: Request) {
       modelInputsAvailable,
       modelInputsTotal,
       engineReady,
+      signalReady,
       availableWeight,
       mode: fredAvailable > 0 || bitcoinPrice || treasuryDebt.length ? "live" : "fallback",
     },
@@ -679,7 +815,7 @@ export async function GET(request: Request) {
         refreshMode: payload.refreshMode,
         regime,
         scores: payload.derived.scores,
-        metrics: { latest: payload.latest, series: payload.series, bitcoin: payload.bitcoin, changes: payload.derived.changes },
+        metrics: { latest: payload.latest, series: payload.series, bitcoin: payload.bitcoin, changes: payload.derived.changes, derived: { correlations: payload.derived.correlations, ratios: payload.derived.ratios }, freshness: payload.freshness },
         provenance: payload.provenance,
       }, force);
     } catch {
@@ -689,10 +825,15 @@ export async function GET(request: Request) {
 
   return Response.json(payload, {
     headers: {
-      "Cache-Control": `public, s-maxage=${cacheTtlSeconds}, stale-while-revalidate=3600`,
-      "X-ABCM-Refresh": "shared-snapshot",
-      "X-ABCM-Next-Refresh": payload.cache.validUntil,
+      "Cache-Control": `public, max-age=60, s-maxage=${cacheTtlSeconds}, stale-while-revalidate=${editionTtlSeconds}`,
+      "X-ABCM-Refresh": payload.refreshMode,
+      "X-ABCM-Next-Manual-Refresh": payload.cache.nextManualAt,
+      "X-ABCM-Next-Daily-Edition": payload.cache.nextDailyAt,
       "X-Content-Type-Options": "nosniff",
     },
   });
+}
+
+export async function POST(request: Request) {
+  return GET(new Request(request.url, { method: "POST", headers: request.headers }));
 }

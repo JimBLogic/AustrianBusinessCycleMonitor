@@ -7,6 +7,7 @@ const files = await Promise.all([
   "app/learn/learn-home.tsx",
   "app/learn/course.tsx",
   "app/learn/library.ts",
+  "app/api/data/route.ts",
   "app/api/data-manifest/route.ts",
   "app/api/workspace/route.ts",
   "app/api/files/route.ts",
@@ -35,10 +36,23 @@ test("retains complete Spanish and English navigation paths", () => {
 });
 
 test("identifies the next immutable Sites release and its canonical repository mirror", () => {
-  assert.match(source, /SITE_RELEASE = 32/);
-  assert.match(source, /DATA_SCHEMA_VERSION = "1\.2\.0"/);
+  assert.match(source, /SITE_RELEASE = 35/);
+  assert.match(source, /DATA_SCHEMA_VERSION = "1\.3\.0"/);
   assert.match(source, /sites-current/);
   assert.equal(source.includes("Manual refresh uses no-store"), false);
+});
+
+test("publishes ten auditable signals with durable daily editions", () => {
+  for (const expected of [
+    "monetaryStance",
+    "termStructure",
+    "consumerPrices",
+    "fiscalImpulse",
+    "editionTtlSeconds",
+    "nextManualAt",
+    "nextDailyAt",
+    "durable-daily-edition",
+  ]) assert.ok(source.includes(expected), `missing daily ten-signal contract: ${expected}`);
 });
 
 test("documents resilient Bitcoin sourcing and truthful initial UI states", () => {
