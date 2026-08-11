@@ -36,7 +36,7 @@ test("retains complete Spanish and English navigation paths", () => {
 });
 
 test("identifies the next immutable Sites release and its canonical repository mirror", () => {
-  assert.match(source, /SITE_RELEASE = 37/);
+  assert.match(source, /SITE_RELEASE = 38/);
   assert.match(source, /DATA_SCHEMA_VERSION = "1\.3\.0"/);
   assert.match(source, /sites-current/);
   assert.equal(source.includes("Manual refresh uses no-store"), false);
