@@ -1,0 +1,6 @@
+# Optional. The application retains explicit fallbacks when this is empty.
+# Obtain a key at https://fred.stlouisfed.org/docs/api/api_key.html
+FRED_API_KEY=
+
+# Port exposed by compose.local.yml on the host.
+ABCM_LOCAL_PORT=5173
