@@ -1,4 +1,5 @@
 import { getRuntimeBindings, readLatestMacroSnapshot, recordMacroSnapshot } from "../../../db/runtime";
+import { strFromU8, unzipSync } from "fflate";
 import {
   FRED_SERIES,
   MAX_OBSERVATION_AGE_DAYS,
@@ -12,6 +13,21 @@ import { DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE } from "../../version
 export const dynamic = "force-dynamic";
 
 type Point = { date: string; value: number };
+type CorrelationEvidence = {
+  observations: number;
+  startMonth: string | null;
+  endMonth: string | null;
+};
+type CorrelationReading = CorrelationEvidence & { value: number | null };
+type RatioEvidence = {
+  status: "available" | "stale" | "insufficient";
+  observationMonth: string | null;
+  numerator: number | null;
+  denominator: number | null;
+  numeratorObservations: number;
+  denominatorObservations: number;
+};
+type RatioReading = RatioEvidence & { value: number | null };
 type SeriesSource = "api" | "csv" | "dbnomics" | "bls" | "cboe" | "worldbank" | "coinbase";
 type SeriesResult = { points: Point[]; error: string | null; source?: SeriesSource };
 type EngineReadiness = {
@@ -35,6 +51,7 @@ type SignalReadiness = {
 };
 
 const FRED: Record<FredSeriesKey, string> = FRED_SERIES;
+const WORLD_BANK_MONTHLY_PRICES_URL = "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx";
 
 function parseCsv(text: string): Point[] {
   return text.trim().split(/\r?\n/).slice(1).map((row) => {
@@ -188,6 +205,84 @@ function normalizedDate(period: string) {
   return period.slice(0, 10);
 }
 
+function decodeSpreadsheetText(value: string) {
+  return value
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([\da-f]+);/gi, (_, code: string) => String.fromCodePoint(Number.parseInt(code, 16)))
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+function spreadsheetText(fragment: string) {
+  return [...fragment.matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)]
+    .map((match) => decodeSpreadsheetText(match[1]))
+    .join("");
+}
+
+function parseWorldBankGoldWorkbook(buffer: ArrayBuffer): Point[] {
+  const files = unzipSync(new Uint8Array(buffer));
+  const worksheetFile = files["xl/worksheets/sheet2.xml"];
+  if (!worksheetFile) return [];
+  const sharedStringsFile = files["xl/sharedStrings.xml"];
+  const sharedStrings = sharedStringsFile
+    ? [...strFromU8(sharedStringsFile).matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>/g)].map((match) => spreadsheetText(match[1]))
+    : [];
+  const worksheet = strFromU8(worksheetFile);
+  const rows = [...worksheet.matchAll(/<row\b[^>]*>([\s\S]*?)<\/row>/g)];
+  let goldColumn = "";
+  const parsedRows = rows.map((row) => {
+    const cells = new Map<string, string>();
+    for (const cell of row[1].matchAll(/<c\b([^>]*)>([\s\S]*?)<\/c>/g)) {
+      const column = cell[1].match(/\br="([A-Z]+)\d+"/)?.[1];
+      if (!column) continue;
+      const type = cell[1].match(/\bt="([^"]+)"/)?.[1];
+      const raw = cell[2].match(/<v>([\s\S]*?)<\/v>/)?.[1] ?? "";
+      const value = type === "s"
+        ? sharedStrings[Number(raw)] ?? ""
+        : type === "inlineStr"
+          ? spreadsheetText(cell[2])
+          : raw;
+      cells.set(column, value.trim());
+      if (value.trim() === "Gold") goldColumn = column;
+    }
+    return cells;
+  });
+  if (!goldColumn) return [];
+  return parsedRows.flatMap((cells) => {
+    const period = cells.get("A") ?? "";
+    const value = Number(cells.get(goldColumn));
+    if (!Number.isFinite(value)) return [];
+    const monthlyPeriod = period.match(/^(\d{4})M(0[1-9]|1[0-2])$/);
+    const serial = Number(period);
+    const date = monthlyPeriod
+      ? `${monthlyPeriod[1]}-${monthlyPeriod[2]}-01`
+      : Number.isFinite(serial)
+        ? new Date(Math.round((serial - 25_569) * 86_400_000)).toISOString().slice(0, 10)
+        : "";
+    return date >= "2015-01-01" ? [{ date, value }] : [];
+  });
+}
+
+async function worldBankGoldSeries(force: boolean): Promise<SeriesResult> {
+  try {
+    const response = await fetchUpstream(WORLD_BANK_MONTHLY_PRICES_URL, {
+      headers: { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+      ...(force ? {} : { cf: { cacheTtl: 86_400, cacheEverything: true } }),
+    } as RequestInit, sourcePolicy("world-bank-pink-sheet"));
+    if (!response.ok) {
+      await response.body?.cancel();
+      return { points: [], error: `World Bank HTTP ${response.status}` };
+    }
+    const points = parseWorldBankGoldWorkbook(await response.arrayBuffer());
+    return { points, error: points.length ? null : "World Bank gold history unavailable", source: "worldbank" };
+  } catch (error) {
+    return { points: [], error: error instanceof Error ? error.message : "World Bank gold history failed" };
+  }
+}
+
 async function dbnomicsSeries(provider: string, dataset: string, code: string, force: boolean): Promise<SeriesResult> {
   const url = `https://api.db.nomics.world/v22/series/${encodeURIComponent(provider)}/${encodeURIComponent(dataset)}/${encodeURIComponent(code)}?observations=1`;
   const payload = await safeJson(url, force, 12000);
@@ -328,14 +423,19 @@ async function fillMacroFallbacks(results: Record<string, SeriesResult>, force: 
   }
 
   if (!results.gold.points.length) {
-    const paxg = await safeJson("https://api.coinbase.com/v2/prices/PAXG-USD/spot", true);
-    const value = Number(paxg?.data?.amount);
-    if (Number.isFinite(value)) {
-      results.gold = {
-        points: [{ date: new Date().toISOString().slice(0, 10), value }],
-        error: null,
-        source: "coinbase",
-      };
+    const worldBankGold = await worldBankGoldSeries(force);
+    if (worldBankGold.points.length) {
+      results.gold = worldBankGold;
+    } else {
+      const paxg = await safeJson("https://api.coinbase.com/v2/prices/PAXG-USD/spot", true);
+      const value = Number(paxg?.data?.amount);
+      if (Number.isFinite(value)) {
+        results.gold = {
+          points: [{ date: new Date().toISOString().slice(0, 10), value }],
+          error: "historical gold series unavailable; current PAXG proxy only",
+          source: "coinbase",
+        };
+      }
     }
   }
 }
@@ -361,7 +461,10 @@ function freshnessStatus(key: FredSeriesKey, result: SeriesResult) {
   const observation = latest(result.points);
   if (!observation) return "unavailable";
   const ageDays = (Date.now() - Date.parse(observation.date)) / 86_400_000;
-  return ageDays <= MAX_OBSERVATION_AGE_DAYS[key] ? "live" : "stale";
+  const maximumAgeDays = key === "gold" && result.source === "worldbank"
+    ? 75
+    : MAX_OBSERVATION_AGE_DAYS[key];
+  return ageDays <= maximumAgeDays ? "live" : "stale";
 }
 
 function valueBefore(points: Point[], days: number) {
@@ -389,33 +492,177 @@ function delta(points: Point[], days: number) {
   return end && start ? end.value - start.value : null;
 }
 
-function monthlyReturns(points: Point[]) {
+const MIN_CORRELATION_OBSERVATIONS = 24;
+const MAX_CORRELATION_OBSERVATIONS = 60;
+
+function monthlyLevels(points: Point[]) {
   const months = new Map<string, number>();
-  for (const point of points) months.set(point.date.slice(0, 7), point.value);
-  const entries = [...months.entries()].sort(([a], [b]) => a.localeCompare(b));
-  const returns = new Map<string, number>();
-  for (let i = 1; i < entries.length; i++) {
-    const [month, value] = entries[i];
-    const previous = entries[i - 1][1];
-    if (previous) returns.set(month, (value / previous) - 1);
+  for (const point of points) {
+    const month = point.date.match(/^(\d{4}-\d{2})/)?.[1];
+    if (month && Number.isFinite(point.value)) months.set(month, point.value);
   }
-  return returns;
+  return months;
 }
 
-function correlation(a: Point[], b: Point[]) {
-  const ar = monthlyReturns(a);
-  const br = monthlyReturns(b);
-  const pairs = [...ar.entries()].filter(([month]) => br.has(month)).slice(-60)
-    .map(([month, value]) => [value, br.get(month)!]);
-  if (pairs.length < 8) return null;
-  const meanA = pairs.reduce((sum, pair) => sum + pair[0], 0) / pairs.length;
-  const meanB = pairs.reduce((sum, pair) => sum + pair[1], 0) / pairs.length;
-  const numerator = pairs.reduce((sum, pair) => sum + (pair[0] - meanA) * (pair[1] - meanB), 0);
+function isConsecutiveMonth(previous: string, current: string) {
+  const [previousYear, previousMonth] = previous.split("-").map(Number);
+  const [currentYear, currentMonth] = current.split("-").map(Number);
+  return currentYear * 12 + currentMonth === previousYear * 12 + previousMonth + 1;
+}
+
+function correlation(a: Point[], b: Point[]): CorrelationReading {
+  const aLevels = monthlyLevels(a);
+  const bLevels = monthlyLevels(b);
+  const commonMonths = [...aLevels.keys()]
+    .filter((month) => bLevels.has(month))
+    .sort();
+  const allPairs: Array<{ a: number; b: number; startMonth: string; endMonth: string }> = [];
+  for (let index = 1; index < commonMonths.length; index++) {
+    const startMonth = commonMonths[index - 1];
+    const endMonth = commonMonths[index];
+    if (!isConsecutiveMonth(startMonth, endMonth)) continue;
+    const previousA = aLevels.get(startMonth)!;
+    const previousB = bLevels.get(startMonth)!;
+    if (previousA === 0 || previousB === 0) continue;
+    const returnA = (aLevels.get(endMonth)! / previousA) - 1;
+    const returnB = (bLevels.get(endMonth)! / previousB) - 1;
+    if (Number.isFinite(returnA) && Number.isFinite(returnB)) {
+      allPairs.push({ a: returnA, b: returnB, startMonth, endMonth });
+    }
+  }
+  const pairs = allPairs.slice(-MAX_CORRELATION_OBSERVATIONS);
+  const evidence: CorrelationEvidence = {
+    observations: pairs.length,
+    startMonth: pairs[0]?.startMonth ?? null,
+    endMonth: pairs.at(-1)?.endMonth ?? null,
+  };
+  if (pairs.length < MIN_CORRELATION_OBSERVATIONS) return { value: null, ...evidence };
+  const meanA = pairs.reduce((sum, pair) => sum + pair.a, 0) / pairs.length;
+  const meanB = pairs.reduce((sum, pair) => sum + pair.b, 0) / pairs.length;
+  const numerator = pairs.reduce((sum, pair) => sum + (pair.a - meanA) * (pair.b - meanB), 0);
   const denominator = Math.sqrt(
-    pairs.reduce((sum, pair) => sum + (pair[0] - meanA) ** 2, 0) *
-    pairs.reduce((sum, pair) => sum + (pair[1] - meanB) ** 2, 0),
+    pairs.reduce((sum, pair) => sum + (pair.a - meanA) ** 2, 0) *
+    pairs.reduce((sum, pair) => sum + (pair.b - meanB) ** 2, 0),
   );
-  return denominator ? numerator / denominator : null;
+  return { value: denominator ? numerator / denominator : null, ...evidence };
+}
+
+function buildCorrelations(series: Record<string, Point[]>) {
+  const readings = {
+    m2_sp500: correlation(series.m2 ?? [], series.sp500 ?? []),
+    dollar_gold: correlation(series.dollar ?? [], series.gold ?? []),
+    oil_cpi: correlation(series.oil ?? [], series.cpi ?? []),
+    bitcoin_m2: correlation(series.bitcoin ?? [], series.m2 ?? []),
+    bitcoin_gold: correlation(series.bitcoin ?? [], series.gold ?? []),
+    sp500_gold: correlation(series.sp500 ?? [], series.gold ?? []),
+  };
+  return {
+    correlations: Object.fromEntries(Object.entries(readings).map(([key, reading]) => [key, reading.value])),
+    correlationEvidence: Object.fromEntries(Object.entries(readings).map(([key, reading]) => [key, {
+      observations: reading.observations,
+      startMonth: reading.startMonth,
+      endMonth: reading.endMonth,
+    }])),
+  };
+}
+
+function monthlyAverages(points: Point[]) {
+  const buckets = new Map<string, { sum: number; count: number }>();
+  for (const point of points) {
+    const month = point.date.match(/^(\d{4}-\d{2})/)?.[1];
+    if (!month || !Number.isFinite(point.value)) continue;
+    const current = buckets.get(month) ?? { sum: 0, count: 0 };
+    current.sum += point.value;
+    current.count += 1;
+    buckets.set(month, current);
+  }
+  return new Map([...buckets.entries()].map(([month, bucket]) => [month, {
+    value: bucket.sum / bucket.count,
+    observations: bucket.count,
+  }]));
+}
+
+function monthAgeDays(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const endOfMonth = Date.UTC(year, monthNumber, 0, 23, 59, 59);
+  return Math.max(0, (Date.now() - endOfMonth) / 86_400_000);
+}
+
+function pairedMonthlyRatio(numeratorPoints: Point[], denominatorPoints: Point[], maximumAgeDays: number): RatioReading {
+  const numeratorLevels = monthlyAverages(numeratorPoints);
+  const denominatorLevels = monthlyAverages(denominatorPoints);
+  const observationMonth = [...numeratorLevels.keys()]
+    .filter((month) => denominatorLevels.has(month))
+    .sort()
+    .at(-1) ?? null;
+  if (!observationMonth) {
+    return { value: null, status: "insufficient", observationMonth: null, numerator: null, denominator: null, numeratorObservations: 0, denominatorObservations: 0 };
+  }
+  const numerator = numeratorLevels.get(observationMonth)!;
+  const denominator = denominatorLevels.get(observationMonth)!;
+  const status = monthAgeDays(observationMonth) <= maximumAgeDays ? "available" : "stale";
+  const value = status === "available" && denominator.value !== 0 ? numerator.value / denominator.value : null;
+  return {
+    value,
+    status: denominator.value === 0 ? "insufficient" : status,
+    observationMonth,
+    numerator: numerator.value,
+    denominator: denominator.value,
+    numeratorObservations: numerator.observations,
+    denominatorObservations: denominator.observations,
+  };
+}
+
+function alignedRealRate(fedFunds: Point[], cpi: Point[]): RatioReading {
+  const fedFundsLevels = monthlyAverages(fedFunds);
+  const cpiLevels = monthlyAverages(cpi);
+  const observationMonth = [...fedFundsLevels.keys()]
+    .filter((month) => {
+      const [year, monthNumber] = month.split("-").map(Number);
+      const previousYearMonth = `${year - 1}-${String(monthNumber).padStart(2, "0")}`;
+      return cpiLevels.has(month) && cpiLevels.has(previousYearMonth);
+    })
+    .sort()
+    .at(-1) ?? null;
+  if (!observationMonth) {
+    return { value: null, status: "insufficient", observationMonth: null, numerator: null, denominator: null, numeratorObservations: 0, denominatorObservations: 0 };
+  }
+  const [year, monthNumber] = observationMonth.split("-").map(Number);
+  const previousYearMonth = `${year - 1}-${String(monthNumber).padStart(2, "0")}`;
+  const nominalRate = fedFundsLevels.get(observationMonth)!;
+  const currentCpi = cpiLevels.get(observationMonth)!;
+  const previousCpi = cpiLevels.get(previousYearMonth)!;
+  const inflationRate = previousCpi.value === 0 ? null : ((currentCpi.value / previousCpi.value) - 1) * 100;
+  const status = monthAgeDays(observationMonth) <= 75 ? "available" : "stale";
+  return {
+    value: status === "available" && inflationRate != null ? nominalRate.value - inflationRate : null,
+    status: inflationRate == null ? "insufficient" : status,
+    observationMonth,
+    numerator: nominalRate.value,
+    denominator: inflationRate,
+    numeratorObservations: nominalRate.observations,
+    denominatorObservations: currentCpi.observations,
+  };
+}
+
+function buildRatioModel(series: Record<string, Point[]>, debtSeries: Point[]) {
+  const readings = {
+    bitcoinGoldOunces: pairedMonthlyRatio(series.bitcoin ?? [], series.gold ?? [], 75),
+    sp500Gold: pairedMonthlyRatio(series.sp500 ?? [], series.gold ?? [], 75),
+    debtToM2: pairedMonthlyRatio(debtSeries, series.m2 ?? [], 160),
+    realRate: alignedRealRate(series.fedFunds ?? [], series.cpi ?? []),
+  };
+  return {
+    ratios: Object.fromEntries(Object.entries(readings).map(([key, reading]) => [key, reading.value])),
+    ratioEvidence: Object.fromEntries(Object.entries(readings).map(([key, reading]) => [key, {
+      status: reading.status,
+      observationMonth: reading.observationMonth,
+      numerator: reading.numerator,
+      denominator: reading.denominator,
+      numeratorObservations: reading.numeratorObservations,
+      denominatorObservations: reading.denominatorObservations,
+    }])),
+  };
 }
 
 function clamp(value: number) {
@@ -424,6 +671,13 @@ function clamp(value: number) {
 
 function n(value: number | null | undefined, fallback = 0) {
   return Number.isFinite(value) ? Number(value) : fallback;
+}
+
+function bitcoinNetworkProvenance(hasMempool: boolean, hasBlockchain: boolean) {
+  if (hasMempool && hasBlockchain) return "Mempool.space + Blockchain.com";
+  if (hasMempool) return "Mempool.space";
+  if (hasBlockchain) return "Blockchain.com";
+  return "unavailable";
 }
 
 export async function GET(request: Request) {
@@ -441,7 +695,9 @@ export async function GET(request: Request) {
     const persisted = await readLatestMacroSnapshot();
     const persistedAt = persisted?.requestedAt ? Date.parse(persisted.requestedAt) : Number.NaN;
     const minimumAgeMs = 15 * 60_000;
-    if (persisted && Number.isFinite(persistedAt) && (!manual || Date.now() - persistedAt < minimumAgeMs)) {
+    const persistedGold = (persisted?.metrics as { series?: Record<string, Point[]> } | undefined)?.series?.gold;
+    const persistedHasGoldHistory = Array.isArray(persistedGold) && persistedGold.length > 1;
+    if (persisted && persistedHasGoldHistory && Number.isFinite(persistedAt) && (!manual || Date.now() - persistedAt < minimumAgeMs)) {
       const metrics = persisted.metrics as {
         latest?: Record<string, Point | null>;
         series?: Record<string, Point[]>;
@@ -451,9 +707,21 @@ export async function GET(request: Request) {
         freshness?: Array<Record<string, unknown>>;
       };
       const storedSeries = metrics.series ?? {};
+      const storedCorrelationModel = buildCorrelations(storedSeries);
+      const storedDebtSeries = storedSeries.treasuryDebt?.length ? storedSeries.treasuryDebt : storedSeries.federalDebt ?? [];
+      const storedRatioModel = buildRatioModel(storedSeries, storedDebtSeries);
       const storedLatest = metrics.latest ?? {};
       const storedBitcoin = metrics.bitcoin ?? {};
-      const storedDerived = metrics.derived ?? {};
+      const storedBitcoinNetwork = bitcoinNetworkProvenance(
+        Number.isFinite(storedBitcoin.blockHeight) || Number.isFinite(storedBitcoin.feeFast) || Number.isFinite(storedBitcoin.feeHour),
+        Number.isFinite(storedBitcoin.supply) || Number.isFinite(storedBitcoin.hashRate) || Number.isFinite(storedBitcoin.difficulty),
+      );
+      const storedFreshness = (metrics.freshness ?? []).map((item) => {
+        const observedAt = typeof item.observedAt === "string" ? item.observedAt : null;
+        if (item.key !== "gold" || item.source !== "worldbank" || !observedAt) return item;
+        const ageDays = (Date.now() - Date.parse(observedAt)) / 86_400_000;
+        return { ...item, status: ageDays <= 75 ? "live" : "stale" };
+      });
       const storedScores = persisted.scores as Record<string, number>;
       // Versions written before v33 contained the five parent engines only.
       // Preserve instant availability during the transition, explicitly mark
@@ -499,13 +767,16 @@ export async function GET(request: Request) {
           changes: metrics.changes ?? {},
           scores: normalizedScores,
           regime: persisted.regime,
-          correlations: storedDerived.correlations ?? {},
-          ratios: storedDerived.ratios ?? {},
+          correlations: storedCorrelationModel.correlations,
+          correlationEvidence: storedCorrelationModel.correlationEvidence,
+          ratios: storedRatioModel.ratios,
+          ratioEvidence: storedRatioModel.ratioEvidence,
         },
-        freshness: metrics.freshness ?? [],
+        freshness: storedFreshness,
         upstreams: getUpstreamHealth(),
         provenance: {
           ...persisted.provenance,
+          bitcoinNetwork: storedBitcoinNetwork,
           mode: "daily-persisted",
           modelStatus: hasNativeTenSignals ? persisted.provenance.modelStatus : "provisional",
         },
@@ -613,8 +884,7 @@ export async function GET(request: Request) {
   const debtSeries = treasuryDebt.length ? treasuryDebt : series.federalDebt;
   const debtGrowth = change(debtSeries, 365);
   const debtToGdp = latest(series.debtToGdp)?.value ?? null;
-  const realRate = latest(series.fedFunds) && cpiGrowth != null
-    ? latest(series.fedFunds)!.value - cpiGrowth : null;
+  const realRate = alignedRealRate(series.fedFunds, series.cpi).value;
   const engineReady: EngineReadiness = {
     liquidity: [m2Growth, rateChange, realRate].every(Number.isFinite),
     credit: [latest(series.creditSpread)?.value, latest(series.yieldCurve)?.value, latest(series.vix)?.value].every(Number.isFinite),
@@ -686,21 +956,9 @@ export async function GET(request: Request) {
   if (engineReady.inflation && engineReady.realEconomy && inflationScore >= 68 && realEconomyScore >= 55) regime = "stagflation-risk";
   if (engineReady.liquidity && engineReady.realEconomy && liquidityScore < 42 && realEconomyScore < 45) regime = "disinflationary-reset";
 
-  const correlations = {
-    m2_sp500: correlation(series.m2, series.sp500),
-    dollar_gold: correlation(series.dollar, series.gold),
-    oil_cpi: correlation(series.oil, series.cpi),
-    bitcoin_m2: correlation(bitcoinHistory, series.m2),
-    bitcoin_gold: correlation(bitcoinHistory, series.gold),
-    sp500_gold: correlation(series.sp500, series.gold),
-  };
+  const correlationModel = buildCorrelations({ ...series, bitcoin: bitcoinHistory });
 
-  const ratios = {
-    bitcoinGoldOunces: bitcoinPrice && latest(series.gold) ? bitcoinPrice / latest(series.gold)!.value : null,
-    sp500Gold: latest(series.sp500) && latest(series.gold) ? latest(series.sp500)!.value / latest(series.gold)!.value : null,
-    debtToM2: latest(debtSeries) && latest(series.m2) ? latest(debtSeries)!.value / latest(series.m2)!.value : null,
-    realRate,
-  };
+  const ratioModel = buildRatioModel({ ...series, bitcoin: bitcoinHistory }, debtSeries);
 
   const freshness = Object.entries(FRED).map(([key, id]) => ({
     key, id, observedAt: latest(series[key])?.date ?? null,
@@ -756,15 +1014,17 @@ export async function GET(request: Request) {
       changes: { m2Growth, rateChange, cpiGrowth, oilMomentum, dollarMomentum, industrialGrowth, unemploymentChange, capacityChange, debtGrowth },
       scores: { liquidity: liquidityScore, credit: creditScore, realEconomy: realEconomyScore, inflation: inflationScore, fiscal: fiscalScore, ...signalScores, composite },
       regime,
-      correlations,
-      ratios,
+      correlations: correlationModel.correlations,
+      correlationEvidence: correlationModel.correlationEvidence,
+      ratios: ratioModel.ratios,
+      ratioEvidence: ratioModel.ratioEvidence,
     },
     freshness,
     upstreams: getUpstreamHealth(),
     provenance: {
       fred: fredProvenance,
       bitcoinPrice: bitcoinSpot.price ? bitcoinSpot.provider : coin?.bitcoin ? "CoinGecko" : chain ? "Blockchain.com" : "unavailable",
-      bitcoinNetwork: heightText ? "Mempool.space" : "unavailable",
+      bitcoinNetwork: bitcoinNetworkProvenance(Boolean(heightText || fees), Boolean(chain)),
       bitcoinHistory: bitcoinHistory.length ? "Blockchain.com Charts" : "unavailable",
       federalDebt: treasuryDebt.length
         ? "U.S. Treasury Fiscal Data"
@@ -815,7 +1075,7 @@ export async function GET(request: Request) {
         refreshMode: payload.refreshMode,
         regime,
         scores: payload.derived.scores,
-        metrics: { latest: payload.latest, series: payload.series, bitcoin: payload.bitcoin, changes: payload.derived.changes, derived: { correlations: payload.derived.correlations, ratios: payload.derived.ratios }, freshness: payload.freshness },
+        metrics: { latest: payload.latest, series: payload.series, bitcoin: payload.bitcoin, changes: payload.derived.changes, derived: { correlations: payload.derived.correlations, correlationEvidence: payload.derived.correlationEvidence, ratios: payload.derived.ratios, ratioEvidence: payload.derived.ratioEvidence }, freshness: payload.freshness },
         provenance: payload.provenance,
       }, force);
     } catch {
