@@ -1,18 +1,32 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE } from "./version";
+import { DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "./version";
 
 type Lang = "en" | "es";
 type SignalKey = "money" | "monetaryStance" | "creditRisk" | "termStructure" | "production" | "labour" | "consumerPrices" | "resourcesFx" | "debtBurden" | "fiscalImpulse";
+const WATCH_KEYS = ["m2", "creditSpread", "cpi", "unemployment", "federalDebt", "bitcoin"] as const;
+type WatchKey = (typeof WATCH_KEYS)[number];
 type Point = { date: string; value: number };
+type CorrelationEvidence = { observations: number; startMonth: string | null; endMonth: string | null };
+type RatioEvidence = {
+  status: "available" | "stale" | "insufficient";
+  observationMonth: string | null;
+  numerator: number | null;
+  denominator: number | null;
+  numeratorObservations: number;
+  denominatorObservations: number;
+};
 type Detail = {
   eyebrow: string;
   title: string;
   value: string;
   fact: string;
+  factLabel?: string;
   interpretation: string;
+  interpretationLabel?: string;
   watch: string;
+  watchLabel?: string;
   sourceLabel: string;
   sourceUrl: string;
 };
@@ -46,7 +60,9 @@ type Data = {
     scores: { liquidity: number; credit: number; realEconomy: number; inflation: number; fiscal: number; composite: number } & Record<SignalKey, number>;
     regime: string;
     correlations: Record<string, number | null>;
+    correlationEvidence?: Record<string, CorrelationEvidence>;
     ratios: { bitcoinGoldOunces: number | null; sp500Gold: number | null; debtToM2: number | null; realRate: number | null };
+    ratioEvidence?: Record<string, RatioEvidence>;
   };
   freshness: Array<{ key: string; id: string; observedAt: string | null; status: string; error: string | null; source?: string | null }>;
   upstreams?: Array<{ id: string; status: "ready" | "recovering" | "cooldown"; coolingUntil?: string | null }>;
@@ -72,7 +88,9 @@ const fallback: Data = {
     scores: { liquidity: 0, credit: 0, realEconomy: 0, inflation: 0, fiscal: 0, money: 0, monetaryStance: 0, creditRisk: 0, termStructure: 0, production: 0, labour: 0, consumerPrices: 0, resourcesFx: 0, debtBurden: 0, fiscalImpulse: 0, composite: 0 },
     regime: "mixed-transition",
     correlations: {},
+    correlationEvidence: {},
     ratios: { bitcoinGoldOunces: null, sp500Gold: null, debtToM2: null, realRate: null },
+    ratioEvidence: {},
   },
   freshness: [],
   provenance: { fred: "unavailable", bitcoinPrice: "unavailable", bitcoinNetwork: "unavailable", fredAvailable: 0, fredTotal: 16, modelReady: false, modelStatus: "withheld", modelInputsAvailable: 0, modelInputsTotal: 14, mode: "fallback" },
@@ -81,8 +99,8 @@ const fallback: Data = {
 const text = {
   en: {
     nav: ["Dashboard", "Liquidity", "Hard assets", "Theory", "Sources"],
-    live: "CURRENT MACRO MONITOR", title: "The cycle, decoded.", subtitle: "Official data. Austrian interpretation. Cypherpunk skepticism.",
-    intro: "Track money, credit, production and hard assets in one verifiable macro dashboard. The facts stay separate from the thesis.",
+    live: "VERIFIABLE MACRO MONITOR", title: "The cycle, decoded.", subtitle: "Official data. Austrian interpretation. Cypherpunk skepticism.",
+    intro: "Track money, credit, production and hard assets in a verifiable economic-cycle monitor. Data and interpretation remain separate.",
     refresh: "Refresh data", updated: "Observed", regime: "CURRENT REGIME", regimeName: "Late expansion / liquidity return",
     regimeBody: "Money growth is returning while credit stress remains contained and hard assets reprice monetary risk.",
     risk: "Cycle distortion index", confidence: "Data coverage", objective: "Observed signal", austrian: "Austrian lens",
@@ -97,8 +115,8 @@ const text = {
   },
   es: {
     nav: ["Panel", "Liquidez", "Activos duros", "Teoría", "Fuentes"],
-    live: "MONITOR MACRO ACTUALIZADO", title: "El ciclo, descifrado.", subtitle: "Datos oficiales. Interpretación austriaca. Escepticismo cypherpunk.",
-    intro: "Dinero, crédito, producción y activos duros en un único panel macro verificable. Los hechos permanecen separados de la tesis.",
+    live: "MONITOR MACRO VERIFICABLE", title: "El ciclo, descifrado.", subtitle: "Datos oficiales. Interpretación austriaca. Escepticismo cypherpunk.",
+    intro: "Dinero, crédito, producción y activos duros en un monitor verificable del ciclo económico. Los datos y la interpretación permanecen separados.",
     refresh: "Actualizar datos", updated: "Observado", regime: "RÉGIMEN ACTUAL", regimeName: "Expansión tardía / regreso de liquidez",
     regimeBody: "El crecimiento monetario regresa mientras el estrés crediticio sigue contenido y los activos duros revalorizan el riesgo monetario.",
     risk: "Índice de distorsión cíclica", confidence: "Cobertura de datos", objective: "Señal observada", austrian: "Lente austriaca",
@@ -114,28 +132,28 @@ const text = {
 };
 
 const seriesMeta = {
-  m2: { en: "M2 money stock", es: "Masa monetaria M2", unit: "USD bn", source: "M2SL", color: "#c7ff18" },
-  federalDebt: { en: "Federal debt", es: "Deuda federal", unit: "USD bn", source: "GFDEBTN", color: "#ff6b1a" },
-  cpi: { en: "Consumer prices", es: "Precios al consumidor", unit: "index points", source: "CPIAUCSL", color: "#bba4ff" },
-  oil: { en: "WTI crude oil", es: "Petróleo WTI", unit: "USD / barrel", source: "DCOILWTICO", color: "#f0c85a" },
-  gold: { en: "Gold", es: "Oro", unit: "USD / troy oz", source: "GOLDAMGBD228NLBM", color: "#ffd15c" },
-  sp500: { en: "S&P 500", es: "S&P 500", unit: "index points", source: "SP500", color: "#63d9c7" },
-  vix: { en: "VIX stress", es: "Estrés VIX", unit: "index points", source: "VIXCLS", color: "#ff8c70" },
-  industrialProduction: { en: "Industrial production", es: "Producción industrial", unit: "index points", source: "INDPRO", color: "#8ec5ff" },
-  bitcoin: { en: "Bitcoin", es: "Bitcoin", unit: "USD", source: "BLOCKCHAIN", color: "#ff6417" },
+  m2: { en: "M2 money stock", es: "Masa monetaria M2", unit: { en: "USD bn", es: "miles de millones USD" }, source: "M2SL", color: "#c7ff18" },
+  federalDebt: { en: "Federal debt", es: "Deuda federal", unit: { en: "USD bn", es: "miles de millones USD" }, source: "GFDEBTN", color: "#ff6b1a" },
+  cpi: { en: "Consumer prices", es: "Precios al consumidor", unit: { en: "index points", es: "puntos de índice" }, source: "CPIAUCSL", color: "#bba4ff" },
+  oil: { en: "WTI crude oil", es: "Petróleo WTI", unit: { en: "USD / barrel", es: "USD por barril" }, source: "DCOILWTICO", color: "#f0c85a" },
+  gold: { en: "Gold", es: "Oro", unit: { en: "USD / troy oz", es: "USD por onza troy" }, source: "GOLDAMGBD228NLBM", color: "#ffd15c" },
+  sp500: { en: "S&P 500", es: "S&P 500", unit: { en: "index points", es: "puntos de índice" }, source: "SP500", color: "#63d9c7" },
+  vix: { en: "VIX stress", es: "Estrés VIX", unit: { en: "index points", es: "puntos de índice" }, source: "VIXCLS", color: "#ff8c70" },
+  industrialProduction: { en: "Industrial production", es: "Producción industrial", unit: { en: "index points", es: "puntos de índice" }, source: "INDPRO", color: "#8ec5ff" },
+  bitcoin: { en: "Bitcoin", es: "Bitcoin", unit: { en: "USD", es: "USD" }, source: "BLOCKCHAIN", color: "#ff6417" },
 };
 
 const metrics = [
-  { key: "m2", label: ["M2 money stock", "Masa monetaria M2"], source: "M2SL", risk: 76, fact: ["Broad money and near-money held by the public.", "Dinero amplio y activos casi monetarios en manos del público."], thesis: ["Fast money growth can distort relative prices before CPI reacts.", "Un crecimiento rápido puede distorsionar precios relativos antes de aparecer en el IPC."], watch: ["YoY growth and its gap with real output.", "Crecimiento interanual y su brecha frente al producto real."] },
-  { key: "fedFunds", label: ["Federal funds rate", "Tipo de los fondos federales"], source: "FEDFUNDS", risk: 58, fact: ["The overnight policy rate anchoring dollar credit.", "El tipo oficial nocturno que ancla el crédito en dólares."], thesis: ["The issue is whether the administered rate diverges from genuine time preferences.", "La cuestión es si el tipo administrado diverge de las preferencias temporales reales."], watch: ["Cuts arriving while liquidity and asset prices accelerate.", "Recortes mientras la liquidez y los activos se aceleran."] },
-  { key: "yieldCurve", label: ["10Y–2Y yield curve", "Curva 10A–2A"], source: "T10Y2Y", risk: 64, fact: ["The spread between long and short Treasury yields.", "Diferencia entre rendimientos del Tesoro largos y cortos."], thesis: ["Re-steepening after inversion can reveal the transition from boom to correction.", "La positivización tras invertirse puede revelar la transición del auge a la corrección."], watch: ["A rapid steepening driven by falling short rates.", "Un empinamiento rápido por caída de tipos cortos."] },
-  { key: "creditSpread", label: ["Credit stress / BAA", "Estrés de crédito / BAA"], source: "BAA10Y", risk: 34, fact: ["Moody's BAA corporate yield minus the 10-year Treasury yield; unavailable observations stay unavailable.", "Rendimiento corporativo BAA de Moody's menos el Treasury a 10 años; si falta el dato se mantiene como no disponible."], thesis: ["Tight spreads can conceal malinvestment until refinancing conditions change.", "Diferenciales bajos pueden ocultar malas inversiones hasta que cambia la refinanciación."], watch: ["Stress acceleration, not merely its absolute level.", "La aceleración del estrés, no solo su nivel."] },
-  { key: "cpi", label: ["Consumer price index", "Índice de precios al consumo"], source: "CPIAUCSL", risk: 55, fact: ["A basket-based measure of consumer prices.", "Medida de precios de una cesta de consumo."], thesis: ["CPI is a late and partial record of monetary effects.", "El IPC es un registro tardío y parcial de los efectos monetarios."], watch: ["Services, shelter and the distribution of new money.", "Servicios, vivienda y distribución del dinero nuevo."] },
-  { key: "unemployment", label: ["Unemployment", "Desempleo"], source: "UNRATE", risk: 28, fact: ["Share of the labour force actively seeking work.", "Parte de la población activa que busca empleo."], thesis: ["Labour is usually a lagging confirmation, not an early cycle signal.", "El empleo suele confirmar tarde, no anticipar el ciclo."], watch: ["Rate of change and permanent job losses.", "Velocidad del cambio y pérdidas permanentes de empleo."] },
-  { key: "federalDebt", label: ["US federal debt", "Deuda federal de EE. UU."], source: "GFDEBTN", risk: 82, fact: ["Gross federal debt outstanding.", "Deuda federal bruta en circulación."], thesis: ["Persistent fiscal dominance increases pressure for financial repression or monetary accommodation.", "El dominio fiscal persistente aumenta la presión hacia represión financiera o acomodo monetario."], watch: ["Interest expense, maturity wall and debt-to-GDP.", "Intereses, vencimientos y deuda sobre PIB."] },
-  { key: "dollar", label: ["Broad dollar index", "Índice amplio del dólar"], source: "DTWEXBGS", risk: 46, fact: ["Trade-weighted value of the dollar.", "Valor del dólar ponderado por comercio."], thesis: ["Reserve demand can mask domestic dilution for long periods.", "La demanda de reserva puede ocultar la dilución interna durante mucho tiempo."], watch: ["Dollar weakness alongside commodity strength.", "Debilidad del dólar junto a fortaleza de materias primas."] },
-  { key: "oil", label: ["WTI crude oil", "Petróleo WTI"], source: "DCOILWTICO", risk: 44, fact: ["Benchmark price for US crude oil.", "Precio de referencia del crudo estadounidense."], thesis: ["Energy prices expose real resource constraints that credit cannot print away.", "La energía revela restricciones reales que el crédito no puede imprimir."], watch: ["Oil rising while growth indicators weaken.", "Petróleo al alza mientras el crecimiento se debilita."] },
-];
+  { key: "m2", label: ["M2 money stock", "Masa monetaria M2"], source: "M2SL", signal: "money", unit: ["USD bn", "miles de millones USD"], digits: 1, fact: ["Broad money and near-money held by the public.", "Dinero amplio y activos casi monetarios en manos del público."], thesis: ["Fast money growth can distort relative prices before CPI reacts.", "Un crecimiento rápido puede distorsionar precios relativos antes de aparecer en el IPC."], watch: ["YoY growth and its gap with real output.", "Crecimiento interanual y su brecha frente al producto real."] },
+  { key: "fedFunds", label: ["Federal funds rate", "Tipo de los fondos federales"], source: "FEDFUNDS", signal: "monetaryStance", unit: ["percent", "porcentaje"], digits: 2, fact: ["The overnight policy rate anchoring dollar credit.", "El tipo oficial nocturno que ancla el crédito en dólares."], thesis: ["The issue is whether the administered rate diverges from genuine time preferences.", "La cuestión es si el tipo administrado diverge de las preferencias temporales reales."], watch: ["Cuts arriving while liquidity and asset prices accelerate.", "Recortes mientras la liquidez y los activos se aceleran."] },
+  { key: "yieldCurve", label: ["10Y–2Y yield curve", "Curva 10A–2A"], source: "T10Y2Y", signal: "termStructure", unit: ["percentage points", "puntos porcentuales"], digits: 2, fact: ["The spread between long and short Treasury yields.", "Diferencia entre rendimientos del Tesoro largos y cortos."], thesis: ["Re-steepening after inversion can reveal the transition from boom to correction.", "La positivización tras invertirse puede revelar la transición del auge a la corrección."], watch: ["A rapid steepening driven by falling short rates.", "Un empinamiento rápido por caída de tipos cortos."] },
+  { key: "creditSpread", label: ["Credit stress / BAA", "Estrés de crédito / BAA"], source: "BAA10Y", signal: "creditRisk", unit: ["percentage points", "puntos porcentuales"], digits: 2, fact: ["Moody's BAA corporate yield minus the 10-year Treasury yield; unavailable observations stay unavailable.", "Rendimiento corporativo BAA de Moody's menos el Treasury a 10 años; si falta el dato se mantiene como no disponible."], thesis: ["Tight spreads can conceal malinvestment until refinancing conditions change.", "Diferenciales bajos pueden ocultar malas inversiones hasta que cambia la refinanciación."], watch: ["Stress acceleration, not merely its absolute level.", "La aceleración del estrés, no solo su nivel."] },
+  { key: "cpi", label: ["Consumer price index", "Índice de precios al consumo"], source: "CPIAUCSL", signal: "consumerPrices", unit: ["index points", "puntos de índice"], digits: 2, fact: ["A basket-based measure of consumer prices.", "Medida de precios de una cesta de consumo."], thesis: ["CPI is a late and partial record of monetary effects.", "El IPC es un registro tardío y parcial de los efectos monetarios."], watch: ["Services, shelter and the distribution of new money.", "Servicios, vivienda y distribución del dinero nuevo."] },
+  { key: "unemployment", label: ["Unemployment", "Desempleo"], source: "UNRATE", signal: "labour", unit: ["percent", "porcentaje"], digits: 1, fact: ["Share of the labour force actively seeking work.", "Parte de la población activa que busca empleo."], thesis: ["Labour is usually a lagging confirmation, not an early cycle signal.", "El empleo suele confirmar tarde, no anticipar el ciclo."], watch: ["Rate of change and permanent job losses.", "Velocidad del cambio y pérdidas permanentes de empleo."] },
+  { key: "federalDebt", label: ["US federal debt", "Deuda federal de EE. UU."], source: "GFDEBTN", signal: "debtBurden", unit: ["USD trillion", "billones USD"], digits: 1, fact: ["Gross federal debt outstanding.", "Deuda federal bruta en circulación."], thesis: ["Persistent fiscal dominance increases pressure for financial repression or monetary accommodation.", "El dominio fiscal persistente aumenta la presión hacia represión financiera o acomodo monetario."], watch: ["Interest expense, maturity wall and debt-to-GDP.", "Intereses, vencimientos y deuda sobre PIB."] },
+  { key: "dollar", label: ["Broad dollar index", "Índice amplio del dólar"], source: "DTWEXBGS", signal: "resourcesFx", unit: ["index points", "puntos de índice"], digits: 2, fact: ["Trade-weighted value of the dollar.", "Valor del dólar ponderado por comercio."], thesis: ["Reserve demand can mask domestic dilution for long periods.", "La demanda de reserva puede ocultar la dilución interna durante mucho tiempo."], watch: ["Dollar weakness alongside commodity strength.", "Debilidad del dólar junto a fortaleza de materias primas."] },
+  { key: "oil", label: ["WTI crude oil", "Petróleo WTI"], source: "DCOILWTICO", signal: "resourcesFx", unit: ["USD per barrel", "USD por barril"], digits: 2, fact: ["Benchmark price for US crude oil.", "Precio de referencia del crudo estadounidense."], thesis: ["Energy prices expose real resource constraints that credit cannot print away.", "La energía revela restricciones reales que el crédito no puede imprimir."], watch: ["Oil rising while growth indicators weaken.", "Petróleo al alza mientras el crecimiento se debilita."] },
+] as const;
 
 const quotes = [
   { quote: "Inflation is a policy.", author: "Ludwig von Mises", work: "Economic Policy", url: "https://mises.org/library/book/economic-policy-thoughts-today-and-tomorrow" },
@@ -145,15 +163,53 @@ const quotes = [
   { quote: "Only Bitcoin can credibly serve as long term store of value.", author: "Saifedean Ammous", work: "Can cryptocurrencies fulfil the functions of money?", url: "https://www.sciencedirect.com/science/article/pii/S1062976917300777" },
 ];
 
+const discriminationScenarios = [
+  { key:"ppi", short:"PPI", title:["Producer inflation shock","Shock de inflación al productor"], layer:["Upstream prices","Precios aguas arriba"], input:["PPI +1.2 pp · CPI stable · employment stable · policy unchanged","PPI +1,2 pp · IPC estable · empleo estable · política sin cambios"], classification:["Upstream cost pressure","Presión de costes aguas arriba"], mechanism:["Input and intermediate-goods costs rise first. Consumer pass-through depends on margins, demand and persistence.","Suben primero los costes de insumos y bienes intermedios. El traslado al consumidor depende de márgenes, demanda y persistencia."], lag:["Potential CPI pass-through: months, not automatic","Traslado potencial al IPC: meses, no automático"], falsifier:["PPI reverses while CPI and margins remain unchanged.","El PPI revierte mientras IPC y márgenes siguen sin cambios."], notThis:["Not consumer inflation; not a monetary-policy move","No es inflación al consumidor ni un movimiento de política monetaria"] },
+  { key:"cpi", short:"CPI", title:["Consumer inflation shock","Shock de inflación al consumidor"], layer:["Household prices","Precios de los hogares"], input:["Core CPI +0.6 pp · PPI stable · employment stable · policy unchanged","IPC subyacente +0,6 pp · PPI estable · empleo estable · política sin cambios"], classification:["Consumer-price persistence","Persistencia de precios al consumidor"], mechanism:["The household basket is repricing, eroding realized purchasing power. It may alter policy expectations without being a policy action itself.","La cesta de los hogares se encarece y erosiona poder adquisitivo realizado. Puede alterar expectativas de tipos sin ser una acción de política."], lag:["Observed at the consumer layer now; policy response is conditional","Ya observado en la capa de consumo; la respuesta monetaria es condicional"], falsifier:["Broad components decelerate and inflation expectations remain anchored.","Los componentes amplios desaceleran y las expectativas siguen ancladas."], notThis:["Not producer inflation; not proof of labour strength","No es inflación al productor ni prueba de fortaleza laboral"] },
+  { key:"employment", short:"JOBS", title:["Labour-market deterioration","Deterioro del mercado laboral"], layer:["Real economy","Economía real"], input:["Unemployment +0.5 pp · payroll growth slows · prices stable · policy unchanged","Desempleo +0,5 pp · se frena la creación de empleo · precios estables · política sin cambios"], classification:["Real-economy weakening","Debilitamiento de la economía real"], mechanism:["Hiring and income formation weaken. Labour usually confirms a turn after financial and production signals rather than causing consumer inflation.","Se debilitan la contratación y la formación de renta. El empleo suele confirmar el giro después de crédito y producción, no causar por sí solo el IPC."], lag:["Lagging confirmation; recession risk rises conditionally","Confirmación rezagada; aumenta de forma condicional el riesgo de recesión"], falsifier:["Participation explains the move and payrolls, hours and claims reaccelerate.","La participación explica el movimiento y nóminas, horas y solicitudes se reaceleran."], notThis:["Not inflation; not an automatic rate-cut signal","No es inflación ni una señal automática de recorte de tipos"] },
+  { key:"policy", short:"FED", title:["Monetary accommodation","Acomodación monetaria"], layer:["Money and credit","Dinero y crédito"], input:["Policy rate −100 bp · M2 accelerates · PPI/CPI stable initially · employment stable","Tipo oficial −100 pb · M2 acelera · PPI/IPC inicialmente estables · empleo estable"], classification:["Policy and liquidity impulse","Impulso de política y liquidez"], mechanism:["Administered funding conditions loosen first. Credit, asset prices and capital allocation can react before producer or consumer prices.","Primero se relajan las condiciones administradas de financiación. Crédito, activos y asignación de capital pueden reaccionar antes que PPI o IPC."], lag:["Financial transmission first; price effects are delayed and uncertain","Transmisión financiera primero; precios después y con incertidumbre"], falsifier:["Money and credit keep contracting despite the rate cut.","Dinero y crédito siguen contrayéndose pese al recorte."], notThis:["Not CPI or PPI inflation; not proof of stronger employment","No es inflación IPC/PPI ni prueba de mejora del empleo"] },
+] as const;
+
 function format(value: number | null | undefined, digits = 2) {
   if (value == null || !Number.isFinite(value)) return "—";
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: digits }).format(value);
+}
+
+function marketFormat(value: number | null | undefined, lang: Lang, digits = 2) {
+  if (value == null || !Number.isFinite(value)) return "—";
+  return new Intl.NumberFormat(lang === "es" ? "es-ES" : "en-US", { maximumFractionDigits: digits }).format(value);
 }
 
 function validTimestamp(value: string | null | undefined) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isFinite(date.getTime()) && date.getUTCFullYear() >= 2000 ? date : null;
+}
+
+function parseVisitBaseline(value: string | null): VisitBaseline | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as Partial<VisitBaseline>;
+    if (!validTimestamp(parsed.capturedAt) || typeof parsed.requestedAt !== "string" || typeof parsed.regime !== "string") return null;
+    if (!Number.isFinite(parsed.composite) || typeof parsed.modelReady !== "boolean") return null;
+    if (parsed.bitcoinPrice != null && !Number.isFinite(parsed.bitcoinPrice)) return null;
+    if (!parsed.latestDates || typeof parsed.latestDates !== "object" || Array.isArray(parsed.latestDates)) return null;
+    const latestDates = Object.fromEntries(Object.entries(parsed.latestDates).filter(([, date]) => date == null || typeof date === "string"));
+    return { ...parsed, latestDates } as VisitBaseline;
+  } catch {
+    return null;
+  }
+}
+
+function parseWatchlist(value: string | null): WatchKey[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return [...new Set(parsed.filter((key): key is WatchKey => typeof key === "string" && WATCH_KEYS.includes(key as WatchKey)))].slice(0, 4);
+  } catch {
+    return [];
+  }
 }
 
 function latestValue(data: Data, key: string) {
@@ -182,6 +238,13 @@ const dbnomicsLinks: Record<string, string> = {
   oil: "https://www.eia.gov/dnav/pet/pet_pri_spt_s1_d.htm",
 };
 
+const worldBankLinks: Record<string, string> = {
+  gold: "https://www.worldbank.org/en/research/commodity-markets",
+  federalDebt: "https://data.worldbank.org/indicator/GC.DOD.TOTL.GD.ZS?locations=US",
+  debtToGdp: "https://data.worldbank.org/indicator/GC.DOD.TOTL.GD.ZS?locations=US",
+  realGdpGrowth: "https://data.worldbank.org/indicator/NY.GDP.MKTP.KD.ZG?locations=US",
+};
+
 const fredSeriesIds: Record<string, string> = {
   m2: "M2SL",
   federalDebt: "GFDEBTN",
@@ -194,20 +257,21 @@ const fredSeriesIds: Record<string, string> = {
 
 function seriesSourceUrl(data: Data, key: string) {
   const item = data.freshness.find((entry) => entry.key === key);
+  if (item?.source === "dbnomics" && key === "yieldCurve") return "/api/data-manifest";
   if (item?.source === "dbnomics") return dbnomicsLinks[key] ?? "https://db.nomics.world/";
   if (item?.source === "bls") return key === "unemployment"
     ? "https://data.bls.gov/timeseries/LNS14000000"
     : "https://data.bls.gov/timeseries/CUSR0000SA0";
   if (item?.source === "cboe") return key === "vix"
     ? "https://www.cboe.com/tradable_products/vix/vix_historical_data/"
-    : "https://www.cboe.com/tradable_products/sp_500/spx_options/";
-  if (item?.source === "worldbank") return "https://data.worldbank.org/indicator/GC.DOD.TOTL.GD.ZS?locations=US";
+    : "https://www.cboe.com/us/indices/dashboard/spx/";
+  if (item?.source === "worldbank") return worldBankLinks[key] ?? "https://data.worldbank.org/country/united-states";
   if (item?.source === "coinbase") return "https://www.coinbase.com/price/pax-gold";
   return `https://fred.stlouisfed.org/series/${item?.id ?? metrics.find((metric) => metric.key === key)?.source ?? fredSeriesIds[key] ?? key}`;
 }
 
 function bitcoinSourceUrl(data: Data) {
-  if (data.provenance.bitcoinPrice === "Coinbase + Kraken") return "https://docs.kraken.com/api-reference/market-data/get-ticker-information";
+  if (data.provenance.bitcoinPrice === "Coinbase + Kraken") return "/api/bitcoin";
   if (data.provenance.bitcoinPrice === "Kraken") return "https://docs.kraken.com/api-reference/market-data/get-ticker-information";
   if (data.provenance.bitcoinPrice === "Coinbase Exchange") return "https://docs.cdp.coinbase.com/api-reference/exchange-api/rest-api/products/get-product-ticker";
   if (data.provenance.bitcoinPrice === "CoinGecko") return "https://www.blockchain.com/explorer/charts/market-price";
@@ -223,39 +287,129 @@ function observedDate(data: Data, key: string) {
   return data.latest[key]?.date ?? data.freshness.find((item) => item.key === key)?.observedAt ?? "—";
 }
 
-function LineChart({ points, color, unit, horizon }: { points: Point[]; color: string; unit: string; horizon: number }) {
-  const [hover, setHover] = useState<number | null>(null);
+function marketState(data: Data, key: string) {
+  const status = data.freshness.find((item) => item.key === key)?.status;
+  if (status === "live") return "live";
+  if (status === "last-known-good") return "backup";
+  if (status === "stale") return "stale";
+  return "unavailable";
+}
+
+function marketStateLabel(state: string, lang: Lang) {
+  const labels: Record<string, [string, string]> = {
+    live: ["CURRENT", "AL DÍA"],
+    backup: ["LAST VERIFIED", "ÚLTIMO VERIFICADO"],
+    stale: ["STALE", "DESACTUALIZADO"],
+    unavailable: ["UNAVAILABLE", "SIN DATO"],
+    confirmed: ["TWO SOURCES", "DOS FUENTES"],
+    divergent: ["DIVERGENT", "DIVERGENCIA"],
+    "single-source": ["ONE SOURCE", "UNA FUENTE"],
+  };
+  return (labels[state] ?? labels.unavailable)[lang === "en" ? 0 : 1];
+}
+
+function sourceStatusLabel(status: string, lang: Lang) {
+  const labels: Record<string, [string, string]> = {
+    live: ["CURRENT", "AL DÍA"],
+    "last-known-good": ["LAST VERIFIED", "ÚLTIMO VERIFICADO"],
+    stale: ["STALE", "DESACTUALIZADO"],
+    unavailable: ["UNAVAILABLE", "NO DISPONIBLE"],
+  };
+  return (labels[status] ?? labels.unavailable)[lang === "en" ? 0 : 1];
+}
+
+function prepareChartPoints(points: Point[]) {
+  const byDate = new Map<string, Point>();
+  for (const point of points) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(point.date) && Number.isFinite(point.value)) byDate.set(point.date, point);
+  }
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function formatChartDate(date: string | undefined, lang: Lang) {
+  if (!date) return "—";
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (!Number.isFinite(parsed.getTime())) return "—";
+  return new Intl.DateTimeFormat(lang === "es" ? "es-ES" : "en-GB", {
+    day: "numeric", month: "short", year: "numeric", timeZone: "UTC",
+  }).format(parsed);
+}
+
+function compactChartValue(value: number, lang: Lang) {
+  return new Intl.NumberFormat(lang === "es" ? "es-ES" : "en-US", {
+    notation: "compact", maximumFractionDigits: 1,
+  }).format(value);
+}
+
+function LineChart({ points, color, unit, horizon, lang, status, state }: { points: Point[]; color: string; unit: string; horizon: number; lang: Lang; status: string; state: string }) {
+  const [cursor, setCursor] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const shown = points.slice(horizon === 0 ? 0 : -horizon);
+  const safePoints = prepareChartPoints(points);
+  const latestDate = safePoints.at(-1)?.date;
+  const cutoff = latestDate && horizon > 0 ? new Date(`${latestDate}T00:00:00Z`) : null;
+  if (cutoff) cutoff.setUTCFullYear(cutoff.getUTCFullYear() - horizon);
+  const shown = cutoff ? safePoints.filter((point) => point.date >= cutoff.toISOString().slice(0, 10)) : safePoints;
   const values = shown.map((p) => p.value);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
+  const min = values.length ? Math.min(...values) : 0;
+  const max = values.length ? Math.max(...values) : 0;
+  const rawRange = max - min || Math.max(Math.abs(max) * 0.1, 1);
+  const plotMin = min - rawRange * 0.08;
+  const plotMax = max + rawRange * 0.08;
+  const range = plotMax - plotMin || 1;
   const coords = shown.map((p, i) => ({
     ...p, x: shown.length === 1 ? 50 : 5 + (i / (shown.length - 1)) * 90,
-    y: 88 - ((p.value - min) / range) * 74,
+    y: 88 - ((p.value - plotMin) / range) * 74,
   }));
   const path = coords.map((p) => `${p.x},${p.y}`).join(" ");
-  function move(event: React.MouseEvent<SVGSVGElement>) {
+  const selectedIndex = coords.length ? Math.min(cursor ?? coords.length - 1, coords.length - 1) : 0;
+  const selected = coords[selectedIndex];
+  const start = coords[0];
+  const end = coords.at(-1);
+  const summary = coords.length
+    ? (lang === "es"
+        ? `${coords.length} observaciones entre ${formatChartDate(start?.date, lang)} y ${formatChartDate(end?.date, lang)}. Punto seleccionado: ${formatChartDate(selected?.date, lang)}, ${marketFormat(selected?.value, lang)} ${unit}.`
+        : `${coords.length} observations from ${formatChartDate(start?.date, lang)} to ${formatChartDate(end?.date, lang)}. Selected point: ${formatChartDate(selected?.date, lang)}, ${marketFormat(selected?.value, lang)} ${unit}.`)
+    : (lang === "es" ? "No hay observaciones verificadas para esta serie." : "There are no verified observations for this series.");
+  function move(event: React.PointerEvent<SVGSVGElement>) {
     if (!svgRef.current || !coords.length) return;
     const rect = svgRef.current.getBoundingClientRect();
-    const percent = (event.clientX - rect.left) / rect.width;
-    setHover(Math.max(0, Math.min(coords.length - 1, Math.round(percent * (coords.length - 1)))));
+    const percent = ((event.clientX - rect.left) / rect.width - 0.05) / 0.9;
+    setCursor(Math.max(0, Math.min(coords.length - 1, Math.round(percent * (coords.length - 1)))));
   }
-  const selected = hover == null ? coords.at(-1) : coords[hover];
+  function inspectWithKeyboard(event: React.KeyboardEvent<SVGSVGElement>) {
+    if (!coords.length) return;
+    let next: number | null = null;
+    if (event.key === "ArrowLeft" || event.key === "ArrowDown") next = Math.max(0, selectedIndex - 1);
+    if (event.key === "ArrowRight" || event.key === "ArrowUp") next = Math.min(coords.length - 1, selectedIndex + 1);
+    if (event.key === "Home") next = 0;
+    if (event.key === "End") next = coords.length - 1;
+    if (next == null) return;
+    event.preventDefault();
+    setCursor(next);
+  }
   return (
-    <div className="line-chart">
-      <div className="chart-readout">
-        <strong>{format(selected?.value)} <small>{unit}</small></strong>
-        <span>{selected?.date ? selected.date.slice(0, 7) : "—"}</span>
+    <div className="line-chart" aria-describedby="macro-chart-summary">
+      <p className="sr-only" id="macro-chart-summary" aria-live="polite">{summary}</p>
+      <div className="chart-readout" aria-live="polite">
+        <div><span>{lang === "es" ? "PUNTO SELECCIONADO" : "SELECTED POINT"}</span><strong>{marketFormat(selected?.value, lang)} <small>{unit}</small></strong><time dateTime={selected?.date}>{formatChartDate(selected?.date, lang)}</time></div>
+        <div className="chart-window"><span>{lang === "es" ? "VENTANA VISIBLE" : "VISIBLE WINDOW"}</span><b>{coords.length} {lang === "es" ? "OBSERVACIONES" : "OBSERVATIONS"}</b><small className={`chart-state ${state}`}>{status}</small></div>
       </div>
-      <svg ref={svgRef} viewBox="0 0 100 100" preserveAspectRatio="none" onMouseMove={move} onMouseLeave={() => setHover(null)} role="img" aria-label="Interactive time series">
-        {[14, 32.5, 51, 69.5, 88].map((y) => <line key={y} x1="5" x2="95" y1={y} y2={y} className="grid-line" />)}
-        <defs><linearGradient id="area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={color} stopOpacity=".32"/><stop offset="1" stopColor={color} stopOpacity="0"/></linearGradient></defs>
-        {coords.length > 1 && <polygon points={`5,88 ${path} 95,88`} fill="url(#area)" />}
-        <polyline points={path} fill="none" stroke={color} strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
-        {selected && <><line x1={selected.x} x2={selected.x} y1="10" y2="90" className="hover-line"/><circle cx={selected.x} cy={selected.y} r="1.5" fill={color}/></>}
-      </svg>
+      {coords.length > 1 ? <>
+        <div className="chart-plot">
+          <div className="chart-y-axis" aria-hidden="true"><span>{compactChartValue(plotMax, lang)}</span><span>{compactChartValue((plotMax + plotMin) / 2, lang)}</span><span>{compactChartValue(plotMin, lang)}</span></div>
+          <svg ref={svgRef} viewBox="0 0 100 100" preserveAspectRatio="none" onPointerMove={move} onKeyDown={inspectWithKeyboard} tabIndex={0} role="img" aria-labelledby="macro-chart-title macro-chart-description">
+            <title id="macro-chart-title">{lang === "es" ? "Serie temporal interactiva" : "Interactive time series"}</title>
+            <desc id="macro-chart-description">{summary} {lang === "es" ? "Usa las flechas, Inicio y Fin para inspeccionar puntos." : "Use the arrow, Home and End keys to inspect points."}</desc>
+            {[14, 32.5, 51, 69.5, 88].map((y) => <line key={y} x1="5" x2="95" y1={y} y2={y} className="grid-line" />)}
+            <defs><linearGradient id="macro-chart-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={color} stopOpacity=".32"/><stop offset="1" stopColor={color} stopOpacity="0"/></linearGradient><clipPath id="macro-chart-clip"><rect x="5" y="14" width="90" height="74" /></clipPath></defs>
+            <g clipPath="url(#macro-chart-clip)"><polygon points={`5,88 ${path} 95,88`} fill="url(#macro-chart-area)" /><polyline points={path} fill="none" stroke={color} strokeWidth="1.2" vectorEffect="non-scaling-stroke" /></g>
+            {selected && <><line x1={selected.x} x2={selected.x} y1="10" y2="90" className="hover-line"/><circle cx={selected.x} cy={selected.y} r="1.5" fill={color}/></>}
+          </svg>
+        </div>
+        <div className="chart-x-axis"><time dateTime={start?.date}>{formatChartDate(start?.date, lang)}</time><b>{lang === "es" ? "DESLIZA PARA INSPECCIONAR" : "SLIDE TO INSPECT"}</b><time dateTime={end?.date}>{formatChartDate(end?.date, lang)}</time></div>
+        <div className="chart-scrubber"><input type="range" min="0" max={Math.max(0, coords.length - 1)} value={selectedIndex} onChange={(event) => setCursor(Number(event.currentTarget.value))} aria-label={lang === "es" ? "Seleccionar una observación de la serie" : "Select a series observation"} aria-valuetext={`${formatChartDate(selected?.date, lang)} · ${marketFormat(selected?.value, lang)} ${unit}`} /><button type="button" onClick={() => setCursor(null)} disabled={selectedIndex === coords.length - 1}>{lang === "es" ? "ÚLTIMO DATO" : "LATEST"} →</button></div>
+      </>
+        : <div className="chart-empty" role="status"><b>{lang === "es" ? "Histórico no disponible" : "History unavailable"}</b><span>{lang === "es" ? "Se muestra la última observación verificada, sin inventar una tendencia." : "The latest verified observation is shown without inventing a trend."}</span></div>}
     </div>
   );
 }
@@ -269,34 +423,122 @@ const mixMeta: Record<string, { en: string; es: string; color: string }> = {
   dollar: { en: "Dollar", es: "Dólar", color: "#f3f0e5" },
 };
 
+function comparatorMonth(date: string) {
+  const match = date.match(/^(\d{4})-(\d{2})/);
+  return match ? `${match[1]}-${match[2]}` : null;
+}
+
+function formatComparatorMonth(month: string, lang: Lang) {
+  const [year, index] = month.split("-").map(Number);
+  return new Intl.DateTimeFormat(lang === "es" ? "es-ES" : "en-US", {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, index - 1, 1)));
+}
+
+const MIN_CORRELATION_OBSERVATIONS = 24;
+
+function correlationStrengthLabel(value: number | null, lang: Lang) {
+  if (value == null || !Number.isFinite(value)) return lang === "es" ? "Muestra insuficiente" : "Insufficient sample";
+  const magnitude = Math.abs(value);
+  if (magnitude < 0.2) return lang === "es" ? "Muy débil" : "Very weak";
+  if (magnitude < 0.4) return lang === "es" ? "Débil" : "Weak";
+  if (magnitude < 0.6) return lang === "es" ? "Moderada" : "Moderate";
+  if (magnitude < 0.8) return lang === "es" ? "Fuerte" : "Strong";
+  return lang === "es" ? "Muy fuerte" : "Very strong";
+}
+
+function correlationDirectionLabel(value: number, lang: Lang) {
+  if (value > 0) return lang === "es" ? "positiva" : "positive";
+  if (value < 0) return lang === "es" ? "negativa" : "negative";
+  return lang === "es" ? "sin dirección" : "no direction";
+}
+
 function NormalizedChart({ data, selected, lang }: { data: Data; selected: string[]; lang: Lang }) {
-  const lines = selected.map((key) => {
-    const points = (data.series[key] ?? []).slice(-60);
-    const base = points[0]?.value || 1;
-    const normalized = points.map((point, index) => ({
-      ...point,
-      x: points.length === 1 ? 50 : 5 + (index / (points.length - 1)) * 90,
-      y: 0,
-      normalized: (point.value / base) * 100,
-    }));
-    const values = normalized.map((point) => point.normalized);
-    return { key, normalized, min: Math.min(...values), max: Math.max(...values) };
-  }).filter((line) => line.normalized.length > 1);
+  const monthly = selected.map((key) => {
+    const observations = new Map<string, Point>();
+    for (const point of data.series[key] ?? []) {
+      const month = comparatorMonth(point.date);
+      if (month && Number.isFinite(point.value) && point.value > 0) observations.set(month, point);
+    }
+    return { key, observations };
+  });
+  const available = monthly.filter((series) => series.observations.size > 1);
+  const unavailable = monthly.filter((series) => series.observations.size <= 1).map((series) => series.key);
+  const commonMonths = available.length
+    ? [...available[0].observations.keys()]
+        .filter((month) => available.every((series) => series.observations.has(month)))
+        .sort()
+        .slice(-60)
+    : [];
+  const lines = commonMonths.length > 1 ? available.map((series) => {
+    const base = series.observations.get(commonMonths[0])!.value;
+    return {
+      key: series.key,
+      normalized: commonMonths.map((month, index) => ({
+        month,
+        x: 5 + (index / (commonMonths.length - 1)) * 90,
+        normalized: (series.observations.get(month)!.value / base) * 100,
+      })),
+    };
+  }) : [];
   const all = lines.flatMap((line) => line.normalized.map((point) => point.normalized));
-  const min = Math.min(...all, 90);
-  const max = Math.max(...all, 110);
-  const range = max - min || 1;
+  const rawMin = Math.min(...all, 100);
+  const rawMax = Math.max(...all, 100);
+  const padding = Math.max(5, (rawMax - rawMin) * 0.08);
+  const min = Math.floor((rawMin - padding) / 5) * 5;
+  const max = Math.ceil((rawMax + padding) / 5) * 5;
+  const range = Math.max(1, max - min);
+  const y = (value: number) => Math.max(15, Math.min(87, 87 - ((value - min) / range) * 72));
+  const start = commonMonths[0];
+  const end = commonMonths.at(-1);
+  const ready = lines.length > 0 && Boolean(start && end);
+  const summary = ready
+    ? (lang === "es"
+        ? `${lines.length} series comparadas durante ${commonMonths.length} meses comunes, desde ${formatComparatorMonth(start!, lang)} hasta ${formatComparatorMonth(end!, lang)}.`
+        : `${lines.length} series compared across ${commonMonths.length} common months, from ${formatComparatorMonth(start!, lang)} to ${formatComparatorMonth(end!, lang)}.`)
+    : (lang === "es"
+        ? "No hay al menos dos meses comunes para construir una comparación normalizada verificable."
+        : "There are not at least two common months for a verifiable normalized comparison.");
+  const dash = [undefined, "5 2.5", "1.5 2", "7 2 1.5 2", "3 2", "8 3"];
+
   return (
     <div className="normalized-chart">
-      <div className="normal-legend">{selected.map((key) => <span key={key}><i style={{ background: mixMeta[key].color }} />{mixMeta[key][lang]}</span>)}</div>
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="Normalized multi-asset comparison">
-        {[15, 33, 51, 69, 87].map((y) => <line key={y} x1="5" x2="95" y1={y} y2={y} className="grid-line" />)}
-        {lines.map((line) => {
-          const path = line.normalized.map((point) => `${point.x},${87 - ((point.normalized - min) / range) * 72}`).join(" ");
-          return <polyline key={line.key} points={path} fill="none" stroke={mixMeta[line.key].color} strokeWidth="1.3" vectorEffect="non-scaling-stroke" />;
+      <p className="sr-only" aria-live="polite">{summary}</p>
+      <div className="normal-legend" aria-label={lang === "es" ? "Estado de las series seleccionadas" : "Selected-series status"}>
+        {selected.map((key) => {
+          const isUnavailable = unavailable.includes(key) || !ready;
+          return <span key={key} className={isUnavailable ? "unavailable" : ""}>
+            <i style={{ background: mixMeta[key].color }} aria-hidden="true" />
+            <b>{mixMeta[key][lang]}</b>
+            <small>{isUnavailable ? (lang === "es" ? "sin comparación" : "no comparison") : `${commonMonths.length} ${lang === "es" ? "meses" : "months"}`}</small>
+          </span>;
         })}
-      </svg>
-      <div className="normal-axis"><span>{lang === "es" ? "Hace 60 observaciones" : "60 observations ago"}</span><b>BASE 100</b><span>{lang === "es" ? "Último dato" : "Latest"}</span></div>
+      </div>
+      {ready ? <>
+        <div className="normal-plot">
+          <div className="normal-y-scale" aria-hidden="true"><span>{Math.round(max)}</span><b>100</b><span>{Math.round(min)}</span></div>
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-labelledby="normalized-chart-title normalized-chart-description">
+            <title id="normalized-chart-title">{lang === "es" ? "Comparación mensual con base 100" : "Monthly base-100 comparison"}</title>
+            <desc id="normalized-chart-description">{summary}</desc>
+            <defs><clipPath id="normalized-plot-clip" clipPathUnits="userSpaceOnUse"><rect x="5" y="15" width="90" height="72" /></clipPath></defs>
+            {[15, 33, 51, 69, 87].map((gridY) => <line key={gridY} x1="5" x2="95" y1={gridY} y2={gridY} className="grid-line" />)}
+            <g clipPath="url(#normalized-plot-clip)">
+              <line x1="5" x2="95" y1={y(100)} y2={y(100)} className="normal-base-line" />
+              {lines.map((line, index) => {
+                const path = line.normalized.map((point) => `${point.x},${y(point.normalized)}`).join(" ");
+                return <polyline key={line.key} points={path} fill="none" stroke={mixMeta[line.key].color} strokeDasharray={dash[index]} strokeLinecap="round" strokeWidth="1.45" vectorEffect="non-scaling-stroke" />;
+              })}
+            </g>
+          </svg>
+        </div>
+        <div className="normal-axis"><span>{formatComparatorMonth(start!, lang)}</span><b>{lang === "es" ? "PRIMER MES = 100" : "FIRST MONTH = 100"}</b><span>{formatComparatorMonth(end!, lang)}</span></div>
+        <p className="normal-method">{lang === "es" ? "Última observación disponible de cada mes · máximo 60 meses comunes · índice comparativo, no rentabilidad." : "Latest available observation in each month · up to 60 common months · comparison index, not return."}</p>
+      </> : <div className="normalized-empty" role="status">
+        <b>{lang === "es" ? "Comparación no disponible" : "Comparison unavailable"}</b>
+        <span>{lang === "es" ? "Faltan al menos dos meses comunes entre las series activas. No se dibuja una tendencia aparente con fechas incompatibles." : "The active series do not share at least two months. No apparent trend is drawn from incompatible dates."}</span>
+      </div>}
     </div>
   );
 }
@@ -469,18 +711,39 @@ export default function Monitor() {
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
   const [clock, setClock] = useState(0);
   const [seriesKey, setSeriesKey] = useState<keyof typeof seriesMeta>("m2");
-  const [horizon, setHorizon] = useState(60);
+  const [horizon, setHorizon] = useState(5);
   const [selectedMetric, setSelectedMetric] = useState(metrics[0]);
   const [lens, setLens] = useState<"facts" | "thesis">("facts");
   const [quote, setQuote] = useState(0);
   const [menu, setMenu] = useState(false);
+  const [activeSection, setActiveSection] = useState("top");
   const [selectedMix, setSelectedMix] = useState(["m2", "sp500", "gold", "bitcoin"]);
   const [refreshNotice, setRefreshNotice] = useState("");
   const [detail, setDetail] = useState<Detail | null>(null);
   const [visitBaseline, setVisitBaseline] = useState<VisitBaseline | null>(null);
-  const [watchlist, setWatchlist] = useState<string[]>(["m2", "creditSpread", "bitcoin"]);
+  const [baselineSavedThisVisit, setBaselineSavedThisVisit] = useState(false);
+  const [watchlist, setWatchlist] = useState<WatchKey[]>(["m2", "creditSpread", "bitcoin"]);
+  const [diagnosticScenario, setDiagnosticScenario] = useState(0);
   const previousData = useRef<Data>(fallback);
+  const navRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const firstNavLinkRef = useRef<HTMLAnchorElement>(null);
+  const detailCloseRef = useRef<HTMLButtonElement>(null);
+  const detailReturnFocusRef = useRef<HTMLElement | null>(null);
+  const diagnosticTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const seriesTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const metricTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const t = text[lang];
+
+  const changeLanguage = useCallback((next: Lang) => {
+    setLang(next);
+    setMenu(false);
+    document.documentElement.lang = next;
+    try { window.localStorage.setItem("abcm:language", next); } catch { /* Preference storage is optional. */ }
+    const url = new URL(window.location.href);
+    url.searchParams.set("lang", next);
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }, []);
 
   const load = useCallback(async (manual = false) => {
     setLoading(true);
@@ -497,15 +760,17 @@ export default function Monitor() {
       previousData.current = next;
       try {
         window.localStorage.setItem("abcm:last-valid-snapshot", JSON.stringify(next));
-        window.localStorage.setItem("abcm:visit-baseline", JSON.stringify({
+        const nextBaseline = {
           capturedAt: new Date().toISOString(),
           requestedAt: next.requestedAt,
           regime: next.derived.regime,
           composite: next.derived.scores.composite,
-          modelReady: next.provenance.modelReady === true,
+          modelReady: next.provenance.mode !== "fallback" && (next.provenance.modelStatus ?? (next.provenance.modelReady ? "complete" : "withheld")) !== "withheld",
           bitcoinPrice: next.bitcoin.price,
           latestDates: Object.fromEntries(Object.entries(next.latest).map(([key, point]) => [key, point?.date ?? null])),
-        } satisfies VisitBaseline));
+        } satisfies VisitBaseline;
+        window.localStorage.setItem("abcm:visit-baseline", JSON.stringify(nextBaseline));
+        setBaselineSavedThisVisit(true);
       } catch {
         // Storage is an optional performance enhancement; live data still works without it.
       }
@@ -549,6 +814,17 @@ export default function Monitor() {
     }
   }, []);
   useEffect(() => {
+    const requestedLanguage = new URLSearchParams(window.location.search).get("lang");
+    let storedLanguage: string | null = null;
+    try { storedLanguage = window.localStorage.getItem("abcm:language"); } catch { /* Preference storage is optional. */ }
+    const initialLanguage: Lang = requestedLanguage === "en" || requestedLanguage === "es"
+      ? requestedLanguage
+      : storedLanguage === "en" || storedLanguage === "es" ? storedLanguage : "es";
+    document.documentElement.lang = initialLanguage;
+    const languageFrame = window.requestAnimationFrame(() => setLang(initialLanguage));
+    return () => window.cancelAnimationFrame(languageFrame);
+  }, []);
+  useEffect(() => {
     const initial = window.setTimeout(() => {
       try {
         const cached = window.localStorage.getItem("abcm:last-valid-snapshot");
@@ -562,13 +838,10 @@ export default function Monitor() {
         const storedConsent = window.localStorage.getItem("abcm:educational-notice:v1") === "accepted";
         const cookieConsent = document.cookie.split("; ").includes("abcm_educational_notice_v1=accepted");
         setDisclaimerOpen(!storedConsent && !cookieConsent);
-        const savedBaseline = window.localStorage.getItem("abcm:visit-baseline");
-        if (savedBaseline) setVisitBaseline(JSON.parse(savedBaseline) as VisitBaseline);
-        const savedWatchlist = window.localStorage.getItem("abcm:watchlist");
-        if (savedWatchlist) {
-          const parsed = JSON.parse(savedWatchlist) as string[];
-          if (Array.isArray(parsed) && parsed.length) setWatchlist(parsed);
-        }
+        const savedBaseline = parseVisitBaseline(window.localStorage.getItem("abcm:visit-baseline"));
+        if (savedBaseline) setVisitBaseline(savedBaseline);
+        const savedWatchlist = parseWatchlist(window.localStorage.getItem("abcm:watchlist"));
+        if (savedWatchlist.length) setWatchlist(savedWatchlist);
       } catch {
         setDisclaimerOpen(!document.cookie.split("; ").includes("abcm_educational_notice_v1=accepted"));
       }
@@ -602,10 +875,86 @@ export default function Monitor() {
   useEffect(() => { const id = setInterval(() => setQuote((q) => (q + 1) % quotes.length), 12_000); return () => clearInterval(id); }, []);
   useEffect(() => {
     if (!detail) return;
-    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setDetail(null); };
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
+    const opener = detailReturnFocusRef.current;
+    const focusFrame = window.requestAnimationFrame(() => detailCloseRef.current?.focus());
+    const handleDialogKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setDetail(null);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const dialog = document.getElementById("detail-dialog");
+      if (!dialog) return;
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(
+        'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])',
+      )).filter((element) => !element.hasAttribute("disabled") && element.getAttribute("aria-hidden") !== "true");
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", handleDialogKey);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener("keydown", handleDialogKey);
+      if (opener?.isConnected) window.requestAnimationFrame(() => opener.focus());
+      detailReturnFocusRef.current = null;
+    };
   }, [detail]);
+  useEffect(() => {
+    const sectionIds = ["top", "dashboard", "liquidity", "hard-assets", "theory", "sources"];
+    let frame = 0;
+    const updateActiveSection = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const marker = 96;
+        let current = "top";
+        sectionIds.forEach((id) => {
+          const section = document.getElementById(id);
+          if (section && section.getBoundingClientRect().top <= marker) current = id;
+        });
+        setActiveSection(current);
+      });
+    };
+    updateActiveSection();
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+    window.addEventListener("hashchange", updateActiveSection);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", updateActiveSection);
+      window.removeEventListener("hashchange", updateActiveSection);
+    };
+  }, []);
+  useEffect(() => {
+    if (!menu) return;
+    const focusFrame = window.requestAnimationFrame(() => firstNavLinkRef.current?.focus());
+    const closeMenu = (restoreFocus = false) => {
+      setMenu(false);
+      if (restoreFocus) window.requestAnimationFrame(() => menuButtonRef.current?.focus());
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeMenu(true);
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      if (navRef.current && !navRef.current.contains(event.target as Node)) closeMenu();
+    };
+    const onResize = () => { if (window.innerWidth > 760) closeMenu(); };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [menu]);
 
   const cycleScore = data.derived.scores.composite;
   const modelStatus = data.provenance.modelStatus ?? (data.provenance.modelReady ? "complete" : "withheld");
@@ -614,31 +963,57 @@ export default function Monitor() {
   const cycle = cycleBand(cycleScore, lang);
   const baseScoreComponents: Array<{ key: SignalKey; parent: keyof typeof engineLabels; label: string; score: number; weight: number; inputs: string; observed: string }> = [
     { key: "money", parent: "liquidity", label: lang === "es" ? "Oferta monetaria" : "Money supply", score: data.derived.scores.money, weight: 0.14, inputs: "M2 YoY", observed: `M2 ${format(data.derived.changes.m2Growth)}% YoY` },
-    { key: "monetaryStance", parent: "liquidity", label: lang === "es" ? "Postura monetaria" : "Monetary stance", score: data.derived.scores.monetaryStance, weight: 0.13, inputs: "Δ Fed funds · tipo real", observed: `Δ tipos ${format(data.derived.changes.rateChange)} pp · real ${format(data.derived.ratios.realRate)}%` },
+    { key: "monetaryStance", parent: "liquidity", label: lang === "es" ? "Postura monetaria" : "Monetary stance", score: data.derived.scores.monetaryStance, weight: 0.13, inputs: lang === "es" ? "Δ Fed funds · tipo real" : "Fed funds Δ · real rate", observed: lang === "es" ? `Δ tipos ${format(data.derived.changes.rateChange)} pp · real ${format(data.derived.ratios.realRate)}%` : `Rate Δ ${format(data.derived.changes.rateChange)} pp · real ${format(data.derived.ratios.realRate)}%` },
     { key: "creditRisk", parent: "credit", label: lang === "es" ? "Riesgo crediticio" : "Credit risk", score: data.derived.scores.creditRisk, weight: 0.13, inputs: "BAA–10Y · VIX", observed: `BAA–10Y ${format(latestValue(data, "creditSpread"))} · VIX ${format(latestValue(data, "vix"))}` },
     { key: "termStructure", parent: "credit", label: lang === "es" ? "Estructura temporal" : "Term structure", score: data.derived.scores.termStructure, weight: 0.10, inputs: "10Y–2Y", observed: `10Y–2Y ${format(latestValue(data, "yieldCurve"))} pp` },
-    { key: "production", parent: "realEconomy", label: lang === "es" ? "Estructura productiva" : "Productive structure", score: data.derived.scores.production, weight: 0.12, inputs: "INDPRO YoY · Δ capacidad", observed: `INDPRO ${format(data.derived.changes.industrialGrowth)}% · Δ capacidad ${format(data.derived.changes.capacityChange)} pp` },
-    { key: "labour", parent: "realEconomy", label: lang === "es" ? "Ajuste laboral" : "Labour adjustment", score: data.derived.scores.labour, weight: 0.08, inputs: "Δ desempleo 1A", observed: `Δ desempleo ${format(data.derived.changes.unemploymentChange)} pp` },
+    { key: "production", parent: "realEconomy", label: lang === "es" ? "Estructura productiva" : "Productive structure", score: data.derived.scores.production, weight: 0.12, inputs: lang === "es" ? "INDPRO YoY · Δ capacidad" : "INDPRO YoY · capacity Δ", observed: lang === "es" ? `INDPRO ${format(data.derived.changes.industrialGrowth)}% · Δ capacidad ${format(data.derived.changes.capacityChange)} pp` : `INDPRO ${format(data.derived.changes.industrialGrowth)}% · capacity Δ ${format(data.derived.changes.capacityChange)} pp` },
+    { key: "labour", parent: "realEconomy", label: lang === "es" ? "Ajuste laboral" : "Labour adjustment", score: data.derived.scores.labour, weight: 0.08, inputs: lang === "es" ? "Δ desempleo 1A" : "1Y unemployment Δ", observed: lang === "es" ? `Δ desempleo ${format(data.derived.changes.unemploymentChange)} pp` : `Unemployment Δ ${format(data.derived.changes.unemploymentChange)} pp` },
     { key: "consumerPrices", parent: "inflation", label: lang === "es" ? "Precios de consumo" : "Consumer prices", score: data.derived.scores.consumerPrices, weight: 0.09, inputs: "CPI YoY", observed: `CPI ${format(data.derived.changes.cpiGrowth)}% YoY` },
-    { key: "resourcesFx", parent: "inflation", label: lang === "es" ? "Recursos y divisa" : "Resources & FX", score: data.derived.scores.resourcesFx, weight: 0.06, inputs: "WTI 90d · dólar 90d", observed: `WTI ${format(data.derived.changes.oilMomentum)}% · dólar ${format(data.derived.changes.dollarMomentum)}%` },
-    { key: "debtBurden", parent: "fiscal", label: lang === "es" ? "Carga de deuda" : "Debt burden", score: data.derived.scores.debtBurden, weight: 0.09, inputs: "Deuda / PIB", observed: `Deuda/PIB ${format(latestValue(data, "debtToGdp"))}%` },
-    { key: "fiscalImpulse", parent: "fiscal", label: lang === "es" ? "Impulso fiscal" : "Fiscal impulse", score: data.derived.scores.fiscalImpulse, weight: 0.06, inputs: "Deuda YoY", observed: `Deuda ${format(data.derived.changes.debtGrowth)}% YoY` },
+    { key: "resourcesFx", parent: "inflation", label: lang === "es" ? "Recursos y divisa" : "Resources & FX", score: data.derived.scores.resourcesFx, weight: 0.06, inputs: lang === "es" ? "WTI 90d · dólar 90d" : "WTI 90d · broad dollar 90d", observed: lang === "es" ? `WTI ${format(data.derived.changes.oilMomentum)}% · dólar ${format(data.derived.changes.dollarMomentum)}%` : `WTI ${format(data.derived.changes.oilMomentum)}% · dollar ${format(data.derived.changes.dollarMomentum)}%` },
+    { key: "debtBurden", parent: "fiscal", label: lang === "es" ? "Carga de deuda" : "Debt burden", score: data.derived.scores.debtBurden, weight: 0.09, inputs: lang === "es" ? "Deuda / PIB" : "Debt / GDP", observed: lang === "es" ? `Deuda/PIB ${format(latestValue(data, "debtToGdp"))}%` : `Debt/GDP ${format(latestValue(data, "debtToGdp"))}%` },
+    { key: "fiscalImpulse", parent: "fiscal", label: lang === "es" ? "Impulso fiscal" : "Fiscal impulse", score: data.derived.scores.fiscalImpulse, weight: 0.06, inputs: lang === "es" ? "Deuda YoY" : "Debt YoY", observed: lang === "es" ? `Deuda ${format(data.derived.changes.debtGrowth)}% YoY` : `Debt ${format(data.derived.changes.debtGrowth)}% YoY` },
   ];
+  const signalHasData = (item: (typeof baseScoreComponents)[number]) => data.provenance.mode !== "fallback" && data.provenance.signalReady?.[item.key] !== false && Number.isFinite(item.score);
   const readyWeight = baseScoreComponents.reduce((sum, item) => (
-    data.provenance.signalReady?.[item.key] === false || !Number.isFinite(item.score) ? sum : sum + item.weight
+    signalHasData(item) ? sum + item.weight : sum
   ), 0);
   const scoreComponents = baseScoreComponents.map((item) => {
-    const ready = data.provenance.signalReady?.[item.key] !== false && Number.isFinite(item.score);
+    const ready = signalHasData(item);
     const effectiveWeight = modelProvisional && ready && readyWeight > 0 ? item.weight / readyWeight : item.weight;
     return { ...item, ready, effectiveWeight };
   });
+  const readySignalCount = scoreComponents.filter((item) => item.ready).length;
+  const engineCoverageState = !modelAvailable ? "withheld" : modelProvisional || readySignalCount < scoreComponents.length ? "provisional" : "complete";
+  const engineCoverageLabel = engineCoverageState === "complete"
+    ? (lang === "es" ? "COMPLETO" : "COMPLETE")
+    : engineCoverageState === "provisional"
+      ? (lang === "es" ? "PROVISIONAL" : "PROVISIONAL")
+      : (lang === "es" ? "RETENIDO" : "WITHHELD");
+  const availableWeightPercent = Math.round(Math.max(0, Math.min(1, data.provenance.availableWeight ?? readyWeight)) * 100);
+  const modelInputsAvailable = data.provenance.modelInputsAvailable ?? 0;
+  const modelInputsTotal = data.provenance.modelInputsTotal ?? 14;
   const gold = latestValue(data, "gold");
   const debt = latestValue(data, "treasuryDebt") ?? latestValue(data, "federalDebt");
+  const debtSeriesKey = latestValue(data, "treasuryDebt") != null ? "treasuryDebt" : "federalDebt";
   const btc = data.bitcoin.price;
   const meta = seriesMeta[seriesKey];
   const points = data.series[seriesKey] ?? [];
+  const chartSeriesKeys = Object.keys(seriesMeta) as (keyof typeof seriesMeta)[];
+  const chartProvider = seriesKey === "bitcoin" ? (data.provenance.bitcoinHistory ?? "BLOCKCHAIN.COM") : seriesSource(data, seriesKey);
   const regime = regimeText(data.derived.regime, lang);
   const goldSource = seriesSource(data, "gold");
+  const chartSource = seriesKey === "gold" && goldSource === "WORLD BANK"
+    ? "WORLD BANK · PINK SHEET"
+    : seriesKey === "gold" && goldSource === "COINBASE"
+      ? "COINBASE · PAXG PROXY"
+      : `${chartProvider} · ${meta.source}`;
+  const chartSourceUrl = seriesKey === "bitcoin"
+    ? "https://www.blockchain.com/explorer/charts/market-price"
+    : seriesKey === "federalDebt" ? debtSourceUrl(data) : seriesSourceUrl(data, seriesKey);
+  const chartState = seriesKey === "bitcoin" ? (points.length > 1 ? "live" : "unavailable") : marketState(data, seriesKey);
+  const chartStatus = seriesKey === "bitcoin" && points.length > 1
+    ? (lang === "es" ? "HISTÓRICO DISPONIBLE" : "HISTORY AVAILABLE")
+    : marketStateLabel(chartState, lang);
   const engineAssessments = ([
     ["liquidity", data.derived.scores.liquidity],
     ["credit", data.derived.scores.credit],
@@ -646,11 +1021,61 @@ export default function Monitor() {
     ["inflation", data.derived.scores.inflation],
     ["fiscal", data.derived.scores.fiscal],
   ] as Array<[keyof typeof engineLabels, number]>).map(([key, score]) => ({
-    key, score, label: engineLabels[key][lang === "en" ? 0 : 1], ...engineReading(key, score, lang),
+    key,
+    score,
+    available: modelAvailable && data.provenance.engineReady?.[key] !== false && Number.isFinite(score),
+    label: engineLabels[key][lang === "en" ? 0 : 1],
+    ...engineReading(key, score, lang),
   }));
-  const strongest = [...engineAssessments].sort((a, b) => b.score - a.score)[0];
-  const weakest = [...engineAssessments].sort((a, b) => a.score - b.score)[0];
+  const pillarCards = [
+    {
+      key: "liquidity" as const,
+      code: lang === "es" ? "POLÍTICA MONETARIA" : "MONETARY POLICY",
+      title: lang === "es" ? "Política monetaria" : "Monetary policy",
+      score: data.derived.scores.liquidity,
+      body: lang === "es"
+        ? "Las decisiones de la Reserva Federal, su balance, las reservas bancarias y la liquidez del sistema definen el impulso inicial. Terminar el QT detiene el drenaje; no equivale automáticamente a un nuevo QE."
+        : "Federal Reserve decisions, its balance sheet, bank reserves and system liquidity define the starting impulse. Ending QT stops the drain; it is not automatically a new QE.",
+    },
+    {
+      key: "credit" as const,
+      code: lang === "es" ? "MERCADOS DE CRÉDITO" : "CREDIT MARKETS",
+      title: lang === "es" ? "Mercados de crédito" : "Credit markets",
+      score: data.derived.scores.credit,
+      body: lang === "es"
+        ? "Las condiciones financieras, los repos, la emisión de deuda y la refinanciación muestran cómo se transmite —o se bloquea— la liquidez antes de llegar a empresas y hogares."
+        : "Financial conditions, repo markets, debt issuance and refinancing show how liquidity is transmitted—or blocked—before reaching companies and households.",
+    },
+    {
+      key: "realEconomy" as const,
+      code: lang === "es" ? "ECONOMÍA REAL" : "REAL ECONOMY",
+      title: lang === "es" ? "Economía real" : "Real economy",
+      score: data.derived.scores.realEconomy,
+      body: lang === "es"
+        ? "El empleo, el poder adquisitivo, el acceso a la vivienda, la pobreza y la situación de Main Street revelan quién se beneficia del ciclo y quién soporta realmente su coste."
+        : "Employment, purchasing power, housing affordability, poverty and Main Street reveal who benefits from the cycle and who actually bears its cost.",
+    },
+  ].map((pillar) => {
+    const available = modelAvailable && data.provenance.engineReady?.[pillar.key] !== false && Number.isFinite(pillar.score);
+    const state = available ? (modelProvisional ? "provisional" : "complete") : "withheld";
+    const status = state === "complete"
+      ? (lang === "es" ? "COBERTURA COMPLETA" : "COMPLETE COVERAGE")
+      : state === "provisional"
+        ? (lang === "es" ? "LECTURA PROVISIONAL" : "PROVISIONAL READING")
+        : (lang === "es" ? "LECTURA RETENIDA" : "READING WITHHELD");
+    return { ...pillar, available, state, status };
+  });
+  const availableEngineAssessments = engineAssessments.filter((assessment) => assessment.available);
+  const strongest = [...availableEngineAssessments].sort((a, b) => b.score - a.score)[0];
+  const weakest = [...availableEngineAssessments].sort((a, b) => a.score - b.score)[0];
   const divergence = strongest && weakest ? strongest.score - weakest.score : 0;
+  const freshnessCounts = data.freshness.reduce((counts, source) => {
+    if (source.status === "live") counts.live += 1;
+    else if (source.status === "last-known-good") counts.lastKnownGood += 1;
+    else if (source.status === "stale") counts.stale += 1;
+    else counts.unavailable += 1;
+    return counts;
+  }, { live: 0, lastKnownGood: 0, stale: 0, unavailable: 0 });
   const snapshotDate = data.provenance.mode === "fallback" ? null : validTimestamp(data.requestedAt);
   const snapshotAgeMinutes = snapshotDate
     ? Math.max(0, Math.floor((clock - snapshotDate.getTime()) / 60_000))
@@ -677,10 +1102,32 @@ export default function Monitor() {
     ? "—"
     : `${String(Math.floor(secondsToRefresh / 60)).padStart(2, "0")}:${String(secondsToRefresh % 60).padStart(2, "0")}`;
   const bitcoinConsensus = data.bitcoin.priceConsensus ?? "unavailable";
+  const bitcoinPriceAvailable = data.provenance.mode !== "fallback" && btc != null && Number.isFinite(btc) && btc > 0;
+  const bitcoinNetworkAvailable = data.provenance.mode !== "fallback" && data.provenance.bitcoinNetwork !== "unavailable";
+  const bitcoinSupplyAvailable = bitcoinNetworkAvailable && Number.isFinite(data.bitcoin.supply) && data.bitcoin.supply > 0;
+  const bitcoinPriceStatus = marketStateLabel(bitcoinConsensus, lang);
   const upstreamReady = data.upstreams?.filter((item) => item.status === "ready").length ?? 0;
   const upstreamCooling = data.upstreams?.filter((item) => item.status === "cooldown").length ?? 0;
+  const upstreamRecovering = data.upstreams?.filter((item) => item.status === "recovering").length ?? 0;
+  const upstreamTotal = data.upstreams?.length ?? 0;
+  const macroAvailable = data.provenance.fredAvailable ?? 0;
+  const macroTotal = data.provenance.fredTotal ?? 0;
+  const sourceHealthState = macroAvailable === 0 ? "offline" : macroTotal > 0 && macroAvailable === macroTotal ? "ok" : "partial";
+  const portableOutputState = data.provenance.mode === "fallback" ? "offline" : "ok";
+  const regimeStatus = modelAvailable
+    ? cycle.title.toUpperCase()
+    : (lang === "es" ? "SIN COBERTURA" : "NO COVERAGE");
 
-  function showEngine(key: keyof typeof engineLabels, score: number) {
+  function openCycleMethodology() {
+    const methodology = document.getElementById("cycle-methodology");
+    if (!methodology) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    methodology.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+    methodology.focus({ preventScroll: true });
+  }
+
+  function showEngine(key: keyof typeof engineLabels, score: number, trigger?: HTMLButtonElement) {
+    if (trigger) detailReturnFocusRef.current = trigger;
     const reading = engineReading(key, score, lang);
     const engineAvailable = modelAvailable && data.provenance.engineReady?.[key] !== false;
     setDetail({
@@ -695,21 +1142,81 @@ export default function Monitor() {
     });
   }
 
-  function showSignal(item: (typeof scoreComponents)[number]) {
-    const reading = engineReading(item.parent, item.score, lang);
-    const available = modelAvailable && item.ready;
+  function showCavaContext(trigger?: HTMLButtonElement) {
+    if (trigger) detailReturnFocusRef.current = trigger;
     setDetail({
-      eyebrow: `${reading.range} · ${format(item.weight * 100, 0)}% ${lang === "es" ? "DEL ÍNDICE" : "OF THE INDEX"}`,
+      eyebrow: lang === "es" ? "VÍDEO INSPIRADOR · RECONSTRUCCIÓN CONTEXTUAL" : "INSPIRING VIDEO · CONTEXTUAL RECONSTRUCTION",
+      title: lang === "es" ? "Los tres pilares" : "The three pillars",
+      value: "01 → 02 → 03",
+      fact: lang === "es"
+        ? "01 · Política monetaria: Reserva Federal, balance, reservas bancarias y liquidez. 02 · Mercados de crédito: condiciones financieras, repos, emisión de deuda y transmisión de la liquidez. 03 · Economía real: empleo, poder adquisitivo, vivienda, pobreza y situación de Main Street."
+        : "01 · Monetary policy: Federal Reserve, balance sheet, bank reserves and liquidity. 02 · Credit markets: financial conditions, repo, debt issuance and liquidity transmission. 03 · Real economy: employment, purchasing power, housing, poverty and Main Street.",
+      factLabel: lang === "es" ? "LOS TRES PILARES" : "THE THREE PILLARS",
+      interpretation: lang === "es"
+        ? "El vídeo que inspiró ABCM planteaba una divergencia: Wall Street y la economía tecnológica podían prosperar mientras parte de Main Street perdía poder adquisitivo. La idea útil fue seguir la cadena completa —marco monetario, transmisión crediticia y resultado material— antes de interpretar los máximos bursátiles como prosperidad general."
+        : "The video that inspired ABCM described a divergence: Wall Street and the technology economy could prosper while part of Main Street lost purchasing power. The useful idea was to follow the full chain—monetary framework, credit transmission and material outcome—before treating equity highs as general prosperity.",
+      interpretationLabel: lang === "es" ? "POR QUÉ INSPIRÓ EL MODELO" : "WHY IT INSPIRED THE MODEL",
+      watch: lang === "es"
+        ? "No confundir el final del QT con un nuevo QE. Conviene vigilar reservas, repos, TGA y la composición por vencimientos de la deuda: una emisión larga intensa podría elevar rentabilidades y endurecer las condiciones financieras. Es un escenario condicional, no una predicción. Esta síntesis reconstruye el argumento del vídeo; no es una transcripción literal ni atribuye a Cava las fórmulas de ABCM."
+        : "Do not confuse the end of QT with a new QE. Watch reserves, repo, the TGA and debt maturity composition: heavy long-duration issuance could lift yields and tighten financial conditions. This is a conditional scenario, not a forecast. This summary reconstructs the video’s argument; it is not a verbatim transcript and does not attribute ABCM formulas to Cava.",
+      watchLabel: lang === "es" ? "ESCENARIO Y MATICES A VIGILAR" : "SCENARIO AND CAVEATS TO WATCH",
+      sourceLabel: lang === "es" ? "Canal público de José Luis Cava" : "José Luis Cava’s public channel",
+      sourceUrl: "https://www.youtube.com/@JoseLuisCavatv",
+    });
+  }
+
+  function showSignal(item: (typeof scoreComponents)[number], trigger?: HTMLButtonElement) {
+    if (trigger) detailReturnFocusRef.current = trigger;
+    const reading = engineReading(item.parent, item.score, lang);
+    const available = item.ready;
+    setDetail({
+      eyebrow: `${available ? reading.range : (lang === "es" ? "SIN COBERTURA" : "NO COVERAGE")} · ${format(item.weight * 100, 0)}% ${lang === "es" ? "PESO BASE" : "BASE WEIGHT"}`,
       title: item.label,
       value: available ? `${item.score}/100` : "—",
       fact: available
         ? `${item.observed}. ${reading.fact}`
-        : (lang === "es" ? "Las cifras requeridas no tienen cobertura suficiente; la franja queda excluida y su peso se redistribuye entre señales completas." : "The required figures lack sufficient coverage; this band is withheld and its weight is redistributed across complete signals."),
+        : (lang === "es" ? "Las entradas requeridas no tienen cobertura suficiente; esta señal queda excluida del cálculo. Una ausencia no se convierte en cero." : "The required inputs lack sufficient coverage, so this signal is excluded from the calculation. Missing data is never converted into zero."),
       interpretation: available ? reading.interpretation : (lang === "es" ? "No se publica una interpretación austriaca sin observaciones verificables." : "No Austrian interpretation is published without verifiable observations."),
       watch: available ? reading.watch : (lang === "es" ? "Revisar fechas, procedencia y estado de cada variable." : "Review each variable's date, provenance and status."),
       sourceLabel: lang === "es" ? "Auditar fórmula y fuentes" : "Audit formula and sources",
       sourceUrl: "/api/data-manifest",
     });
+  }
+
+  function handleDiagnosticTabKey(event: React.KeyboardEvent<HTMLButtonElement>, index: number) {
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = (index + 1) % discriminationScenarios.length;
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = (index - 1 + discriminationScenarios.length) % discriminationScenarios.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = discriminationScenarios.length - 1;
+    if (nextIndex == null) return;
+    event.preventDefault();
+    setDiagnosticScenario(nextIndex);
+    window.requestAnimationFrame(() => diagnosticTabRefs.current[nextIndex]?.focus());
+  }
+
+  function handleSeriesTabKey(event: React.KeyboardEvent<HTMLButtonElement>, index: number) {
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = (index + 1) % chartSeriesKeys.length;
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = (index - 1 + chartSeriesKeys.length) % chartSeriesKeys.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = chartSeriesKeys.length - 1;
+    if (nextIndex == null) return;
+    event.preventDefault();
+    setSeriesKey(chartSeriesKeys[nextIndex]);
+    window.requestAnimationFrame(() => seriesTabRefs.current[nextIndex]?.focus());
+  }
+
+  function handleMetricTabKey(event: React.KeyboardEvent<HTMLButtonElement>, index: number) {
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = (index + 1) % metrics.length;
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = (index - 1 + metrics.length) % metrics.length;
+    if (event.key === "Home") nextIndex = 0;
+    if (event.key === "End") nextIndex = metrics.length - 1;
+    if (nextIndex == null) return;
+    event.preventDefault();
+    setSelectedMetric(metrics[nextIndex]);
+    window.requestAnimationFrame(() => metricTabRefs.current[nextIndex]?.focus());
   }
 
   function acceptDisclaimer() {
@@ -722,11 +1229,11 @@ export default function Monitor() {
     setDisclaimerOpen(false);
   }
 
-  function toggleWatch(key: string) {
+  function toggleWatch(key: WatchKey) {
     setWatchlist((current) => {
       const next = current.includes(key)
         ? (current.length === 1 ? current : current.filter((item) => item !== key))
-        : [...current, key].slice(-4);
+        : current.length >= 4 ? current : [...current, key];
       try { window.localStorage.setItem("abcm:watchlist", JSON.stringify(next)); } catch { /* device-local enhancement */ }
       return next;
     });
@@ -735,60 +1242,99 @@ export default function Monitor() {
   const tape = [
     {
       name: "BTC / USD",
-      value: `$${format(btc, 0)}`,
-      unit: data.bitcoin.change24h == null ? "USD" : `USD · 24h ${data.bitcoin.change24h >= 0 ? "+" : ""}${format(data.bitcoin.change24h)}%`,
+      value: `$${marketFormat(btc, lang, 0)}`,
+      unit: data.bitcoin.change24h == null ? "USD · spot" : `USD · 24h ${data.bitcoin.change24h >= 0 ? "+" : ""}${marketFormat(data.bitcoin.change24h, lang)}%`,
       source: data.provenance.bitcoinPrice.replace(" Exchange", "").toUpperCase(),
       date: data.bitcoin.priceObservedAt?.slice(0, 10) ?? "—",
+      state: bitcoinConsensus,
+      status: marketStateLabel(bitcoinConsensus, lang),
       url: bitcoinSourceUrl(data),
     },
     {
       name: goldSource === "COINBASE"
         ? (lang === "es" ? "ORO · PROXY PAXG" : "GOLD · PAXG PROXY")
-        : (lang === "es" ? "ORO / USD" : "GOLD / USD"),
-      value: `$${format(gold)}`,
+        : goldSource === "WORLD BANK"
+          ? (lang === "es" ? "ORO / USD · MEDIA MENSUAL" : "GOLD / USD · MONTHLY AVG")
+          : (lang === "es" ? "ORO / USD" : "GOLD / USD"),
+      value: `$${marketFormat(gold, lang)}`,
       unit: goldSource === "COINBASE"
         ? (lang === "es" ? "1 PAXG ≈ 1 onza troy · USD" : "1 PAXG ≈ 1 troy ounce · USD")
-        : (lang === "es" ? "USD por onza troy" : "USD per troy ounce"),
+        : goldSource === "WORLD BANK"
+          ? (lang === "es" ? "USD por onza troy · promedio mensual" : "USD per troy ounce · monthly average")
+          : (lang === "es" ? "USD por onza troy" : "USD per troy ounce"),
       source: goldSource === "COINBASE" ? "COINBASE · PAXG" : goldSource,
       date: observedDate(data, "gold"),
+      state: marketState(data, "gold"),
+      status: marketStateLabel(marketState(data, "gold"), lang),
       url: seriesSourceUrl(data, "gold"),
     },
     {
       name: lang === "es" ? "PETRÓLEO WTI" : "WTI CRUDE OIL",
-      value: `$${format(latestValue(data, "oil"))}`,
+      value: `$${marketFormat(latestValue(data, "oil"), lang)}`,
       unit: lang === "es" ? "USD por barril" : "USD per barrel",
       source: seriesSource(data, "oil"),
       date: observedDate(data, "oil"),
+      state: marketState(data, "oil"),
+      status: marketStateLabel(marketState(data, "oil"), lang),
       url: seriesSourceUrl(data, "oil"),
     },
     {
       name: "S&P 500",
-      value: format(latestValue(data, "sp500")),
+      value: marketFormat(latestValue(data, "sp500"), lang),
       unit: lang === "es" ? "Puntos de índice" : "Index points",
       source: seriesSource(data, "sp500"),
       date: observedDate(data, "sp500"),
+      state: marketState(data, "sp500"),
+      status: marketStateLabel(marketState(data, "sp500"), lang),
       url: seriesSourceUrl(data, "sp500"),
     },
     {
       name: lang === "es" ? "DÓLAR · ÍNDICE AMPLIO" : "DOLLAR · BROAD INDEX",
-      value: format(latestValue(data, "dollar")),
+      value: marketFormat(latestValue(data, "dollar"), lang),
       unit: lang === "es" ? "Base 100 · enero 2006" : "Base 100 · January 2006",
       source: seriesSource(data, "dollar"),
       date: observedDate(data, "dollar"),
+      state: marketState(data, "dollar"),
+      status: marketStateLabel(marketState(data, "dollar"), lang),
       url: seriesSourceUrl(data, "dollar"),
     },
     {
       name: lang === "es" ? "DEUDA FEDERAL EE. UU." : "US FEDERAL DEBT",
-      value: debt == null ? "—" : `$${format(debt / 1000, 1)}T`,
-      unit: lang === "es" ? "USD · billones" : "USD · trillions",
+      value: debt == null ? "—" : lang === "es" ? `$${marketFormat(debt / 1000, lang, 1)}` : `$${marketFormat(debt / 1000, lang, 1)}T`,
+      unit: data.provenance.federalDebt === "U.S. Treasury Fiscal Data"
+        ? (lang === "es" ? "billones USD · dato diario" : "USD trillions · daily")
+        : data.provenance.federalDebt === "World Bank"
+          ? (lang === "es" ? "billones USD · estimación anual" : "USD trillions · annual estimate")
+          : (lang === "es" ? "billones USD · dato trimestral" : "USD trillions · quarterly"),
       source: data.provenance.federalDebt === "U.S. Treasury Fiscal Data" ? "TREASURY" : `${seriesSource(data, "federalDebt")}${data.provenance.federalDebt === "World Bank" ? " · EST." : ""}`,
-      date: observedDate(data, latestValue(data, "treasuryDebt") ? "treasuryDebt" : "federalDebt"),
+      date: observedDate(data, debtSeriesKey),
+      state: marketState(data, debtSeriesKey),
+      status: marketStateLabel(marketState(data, debtSeriesKey), lang),
       url: debtSourceUrl(data),
     },
   ];
   const visitAgeHours = visitBaseline
     ? Math.max(0, Math.floor((clock - new Date(visitBaseline.capturedAt).getTime()) / 3_600_000))
     : null;
+  const visitAgeLabel = visitAgeHours == null
+    ? null
+    : visitAgeHours < 1
+      ? (lang === "es" ? "< 1 HORA" : "< 1 HOUR")
+      : visitAgeHours < 48
+        ? `${visitAgeHours}H`
+        : `${Math.floor(visitAgeHours / 24)}D`;
+  const baselineDateLabel = visitBaseline
+    ? new Intl.DateTimeFormat(lang === "es" ? "es-ES" : "en-GB", {
+      dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Madrid",
+    }).format(new Date(visitBaseline.capturedAt))
+    : null;
+  const visitStatusLabel = visitBaseline
+    ? visitAgeLabel
+    : loading
+      ? (lang === "es" ? "PREPARANDO BASE" : "PREPARING BASELINE")
+      : baselineSavedThisVisit
+        ? (lang === "es" ? "BASE GUARDADA" : "BASELINE SAVED")
+        : (lang === "es" ? "MEMORIA NO DISPONIBLE" : "MEMORY UNAVAILABLE");
   const releasedSinceVisit = visitBaseline
     ? Object.entries(data.latest).filter(([key, point]) => point?.date && point.date !== visitBaseline.latestDates[key]).length
     : null;
@@ -799,26 +1345,156 @@ export default function Monitor() {
     ? ((btc / visitBaseline.bitcoinPrice) - 1) * 100
     : null;
   const regimeChanged = Boolean(visitBaseline && visitBaseline.regime !== data.derived.regime);
-  const watchChoices = [
-    { key: "m2", label: "M2", value: format(latestValue(data, "m2")), date: observedDate(data, "m2") },
-    { key: "creditSpread", label: lang === "es" ? "Crédito BAA" : "BAA credit", value: format(latestValue(data, "creditSpread")), date: observedDate(data, "creditSpread") },
-    { key: "cpi", label: "CPI", value: format(latestValue(data, "cpi")), date: observedDate(data, "cpi") },
-    { key: "unemployment", label: lang === "es" ? "Desempleo" : "Unemployment", value: `${format(latestValue(data, "unemployment"))}%`, date: observedDate(data, "unemployment") },
-    { key: "federalDebt", label: lang === "es" ? "Deuda" : "Debt", value: debt == null ? "—" : `$${format(debt / 1000, 1)}T`, date: observedDate(data, "federalDebt") },
-    { key: "bitcoin", label: "Bitcoin", value: `$${format(btc, 0)}`, date: data.bitcoin.priceObservedAt?.slice(0, 10) ?? "—" },
+  const m2Watch = latestValue(data, "m2");
+  const creditWatch = latestValue(data, "creditSpread");
+  const cpiWatch = latestValue(data, "cpi");
+  const unemploymentWatch = latestValue(data, "unemployment");
+  const watchChoices: Array<{ key: WatchKey; label: string; value: string; unit: string; date: string; state: string; status: string }> = [
+    { key: "m2", label: "M2", value: m2Watch == null ? "—" : `$${marketFormat(m2Watch / 1000, lang, 2)}`, unit: lang === "es" ? "billones USD" : "USD trillions", date: observedDate(data, "m2"), state: marketState(data, "m2"), status: marketStateLabel(marketState(data, "m2"), lang) },
+    { key: "creditSpread", label: lang === "es" ? "Crédito BAA" : "BAA credit", value: creditWatch == null ? "—" : `${marketFormat(creditWatch, lang)} pp`, unit: lang === "es" ? "diferencial BAA–10Y" : "BAA–10Y spread", date: observedDate(data, "creditSpread"), state: marketState(data, "creditSpread"), status: marketStateLabel(marketState(data, "creditSpread"), lang) },
+    { key: "cpi", label: lang === "es" ? "IPC · índice" : "CPI · index", value: marketFormat(cpiWatch, lang), unit: "1982–84 = 100", date: observedDate(data, "cpi"), state: marketState(data, "cpi"), status: marketStateLabel(marketState(data, "cpi"), lang) },
+    { key: "unemployment", label: lang === "es" ? "Desempleo" : "Unemployment", value: unemploymentWatch == null ? "—" : `${marketFormat(unemploymentWatch, lang)}%`, unit: lang === "es" ? "población activa" : "labour force", date: observedDate(data, "unemployment"), state: marketState(data, "unemployment"), status: marketStateLabel(marketState(data, "unemployment"), lang) },
+    { key: "federalDebt", label: lang === "es" ? "Deuda" : "Debt", value: debt == null ? "—" : `$${marketFormat(debt / 1000, lang, 1)}`, unit: lang === "es" ? "billones USD" : "USD trillions", date: observedDate(data, debtSeriesKey), state: marketState(data, debtSeriesKey), status: marketStateLabel(marketState(data, debtSeriesKey), lang) },
+    { key: "bitcoin", label: "Bitcoin", value: btc == null ? "—" : `$${marketFormat(btc, lang, 0)}`, unit: "USD · spot", date: data.bitcoin.priceObservedAt?.slice(0, 10) ?? "—", state: bitcoinConsensus, status: marketStateLabel(bitcoinConsensus, lang) },
+  ];
+  const transmissionSteps = [
+    {
+      key: "monetary",
+      number: "01",
+      title: lang === "es" ? "Política monetaria" : "Monetary policy",
+      note: lang === "es"
+        ? "M2 y tipo real son el punto de partida. Fin del QT no equivale a un nuevo QE."
+        : "M2 and the real rate are the starting point. Ending QT does not equal a new QE.",
+      ready: Boolean(data.provenance.engineReady?.liquidity),
+      metrics: [
+        { label: "M2 · YoY", value: data.derived.changes.m2Growth, unit: "%", date: observedDate(data, "m2") },
+        { label: lang === "es" ? "Tipo real aprox." : "Approx. real rate", value: data.derived.ratios.realRate, unit: "%", date: data.derived.ratioEvidence?.realRate?.observationMonth ?? observedDate(data, "cpi") },
+      ],
+    },
+    {
+      key: "credit",
+      number: "02",
+      title: lang === "es" ? "Mercados de crédito" : "Credit markets",
+      note: lang === "es"
+        ? "Curva y diferenciales revelan la transmisión. Tipos bajos no garantizan crédito accesible."
+        : "The curve and spreads reveal transmission. Lower rates do not guarantee accessible credit.",
+      ready: Boolean(data.provenance.engineReady?.credit),
+      metrics: [
+        { label: "BAA–10Y", value: latestValue(data, "creditSpread"), unit: " pp", date: observedDate(data, "creditSpread") },
+        { label: "10Y–2Y", value: latestValue(data, "yieldCurve"), unit: " pp", date: observedDate(data, "yieldCurve") },
+      ],
+    },
+    {
+      key: "real-economy",
+      number: "03",
+      title: lang === "es" ? "Economía real" : "Real economy",
+      note: lang === "es"
+        ? "Producción y empleo comprueban si llega a Main Street; suelen confirmar con retraso."
+        : "Production and employment test whether it reaches Main Street; they often confirm with a lag.",
+      ready: Boolean(data.provenance.engineReady?.realEconomy),
+      metrics: [
+        { label: "INDPRO · YoY", value: data.derived.changes.industrialGrowth, unit: "%", date: observedDate(data, "industrialProduction") },
+        { label: lang === "es" ? "Δ desempleo · 1A" : "Unemployment Δ · 1Y", value: data.derived.changes.unemploymentChange, unit: " pp", date: observedDate(data, "unemployment") },
+      ],
+    },
+  ].map((step) => {
+    const availableMetrics = step.metrics.filter((metric) => Number.isFinite(metric.value)).length;
+    const state = step.ready ? "verified" : availableMetrics > 0 ? "partial" : "unavailable";
+    const status = state === "verified"
+      ? (lang === "es" ? "PILAR VERIFICADO" : "PILLAR VERIFIED")
+      : state === "partial"
+        ? (lang === "es" ? "COBERTURA PARCIAL" : "PARTIAL COVERAGE")
+        : (lang === "es" ? "SIN DATOS" : "NO DATA");
+    return { ...step, availableMetrics, state, status };
+  });
+  const verifiedTransmissionSteps = transmissionSteps.filter((step) => step.state === "verified").length;
+  const evidenceFor = (key: string): RatioEvidence => data.derived.ratioEvidence?.[key] ?? {
+    status: "insufficient", observationMonth: null, numerator: null, denominator: null,
+    numeratorObservations: 0, denominatorObservations: 0,
+  };
+  const ratioStatus = (evidence: RatioEvidence) => evidence.status === "available"
+    ? `${lang === "es" ? "MES COMÚN" : "COMMON MONTH"} · ${evidence.observationMonth ? formatComparatorMonth(evidence.observationMonth, lang) : "—"}`
+    : evidence.status === "stale"
+      ? `${lang === "es" ? "RETENIDO" : "WITHHELD"} · ${evidence.observationMonth ? formatComparatorMonth(evidence.observationMonth, lang) : "—"}`
+      : (lang === "es" ? "SIN PERIODO COMÚN" : "NO COMMON PERIOD");
+  const btcGoldEvidence = evidenceFor("bitcoinGoldOunces");
+  const alignedBitcoinGold = btcGoldEvidence.status === "available" && Number.isFinite(data.derived.ratios.bitcoinGoldOunces)
+    ? data.derived.ratios.bitcoinGoldOunces
+    : null;
+  const alignedBitcoinGoldMonth = btcGoldEvidence.observationMonth
+    ? formatComparatorMonth(btcGoldEvidence.observationMonth, lang)
+    : "—";
+  const goldStockToFlow2025 = 219_891 / 3_671.6;
+  const spGoldEvidence = evidenceFor("sp500Gold");
+  const debtM2Evidence = evidenceFor("debtToM2");
+  const realRateEvidence = evidenceFor("realRate");
+  const ratioCards = [
+    {
+      key: "bitcoin-gold", label: lang === "es" ? "BTC / ORO" : "BTC / GOLD",
+      value: btcGoldEvidence.status === "available" ? `${marketFormat(data.derived.ratios.bitcoinGoldOunces, lang, 1)} oz` : "—",
+      state: btcGoldEvidence.status, status: ratioStatus(btcGoldEvidence),
+      fact: btcGoldEvidence.status === "available"
+        ? (lang === "es" ? `Media mensual de BTC (${marketFormat(btcGoldEvidence.numerator, lang, 0)} USD) dividida por la media mensual del oro (${marketFormat(btcGoldEvidence.denominator, lang, 0)} USD/oz) en ${formatComparatorMonth(btcGoldEvidence.observationMonth!, lang)}.` : `Monthly average BTC price (${marketFormat(btcGoldEvidence.numerator, lang, 0)} USD) divided by monthly average gold (${marketFormat(btcGoldEvidence.denominator, lang, 0)} USD/oz) in ${formatComparatorMonth(btcGoldEvidence.observationMonth!, lang)}.`)
+        : (lang === "es" ? "No existe un mes común reciente con datos verificables de ambos activos; el ratio se retiene." : "There is no recent shared month with verifiable data for both assets; the ratio is withheld."),
+      interpretation: lang === "es" ? "Expresa cuántas onzas de oro equivalen al precio medio de un bitcoin durante el mismo mes. No es una valoración fundamental." : "It expresses how many gold ounces equal the average price of one bitcoin in the same month. It is not fundamental valuation.",
+      watch: lang === "es" ? "Comparar su evolución mensual, no el nivel aislado, y recordar que volatilidad y horarios de mercado difieren." : "Compare its monthly path, not an isolated level, and remember that volatility and market hours differ.",
+    },
+    {
+      key: "sp500-gold", label: lang === "es" ? "S&P 500 / ORO" : "S&P 500 / GOLD",
+      value: spGoldEvidence.status === "available" ? marketFormat(data.derived.ratios.sp500Gold, lang, 2) : "—",
+      state: spGoldEvidence.status, status: ratioStatus(spGoldEvidence),
+      fact: spGoldEvidence.status === "available"
+        ? (lang === "es" ? `Nivel medio mensual del S&P 500 (${marketFormat(spGoldEvidence.numerator, lang, 0)} puntos) dividido por el precio medio mensual del oro (${marketFormat(spGoldEvidence.denominator, lang, 0)} USD/oz) en ${formatComparatorMonth(spGoldEvidence.observationMonth!, lang)}.` : `Average monthly S&P 500 level (${marketFormat(spGoldEvidence.numerator, lang, 0)} points) divided by average monthly gold (${marketFormat(spGoldEvidence.denominator, lang, 0)} USD/oz) in ${formatComparatorMonth(spGoldEvidence.observationMonth!, lang)}.`)
+        : (lang === "es" ? "No existe un mes común reciente para calcular la relación sin mezclar fechas." : "There is no recent common month for calculating the relationship without mixing dates."),
+      interpretation: lang === "es" ? "Sirve como indicador de rendimiento relativo entre un índice nominal y el oro. No representa una cantidad directamente comprable ni un múltiplo monetario homogéneo." : "It tracks relative performance between a nominal index and gold. It is neither a directly purchasable quantity nor a homogeneous monetary multiple.",
+      watch: lang === "es" ? "Una subida puede proceder de acciones más fuertes, oro más débil o ambos; hay que inspeccionar los componentes." : "A rise can come from stronger equities, weaker gold or both; inspect the components.",
+    },
+    {
+      key: "debt-m2", label: lang === "es" ? "DEUDA / M2" : "DEBT / M2",
+      value: debtM2Evidence.status === "available" ? `${marketFormat(data.derived.ratios.debtToM2, lang, 2)}×` : "—",
+      state: debtM2Evidence.status, status: ratioStatus(debtM2Evidence),
+      fact: debtM2Evidence.status === "available"
+        ? (lang === "es" ? `Deuda federal y M2, ambas en miles de millones de USD, alineadas en ${formatComparatorMonth(debtM2Evidence.observationMonth!, lang)}.` : `Federal debt and M2, both in USD billions, aligned in ${formatComparatorMonth(debtM2Evidence.observationMonth!, lang)}.`)
+        : debtM2Evidence.status === "stale"
+          ? (lang === "es" ? `El último mes común es ${formatComparatorMonth(debtM2Evidence.observationMonth!, lang)}. La fuente fiscal está demasiado desactualizada para combinarla con el M2 actual, por lo que no se publica el cociente.` : `The latest shared month is ${formatComparatorMonth(debtM2Evidence.observationMonth!, lang)}. The fiscal source is too stale to combine with current M2, so the ratio is not published.`)
+          : (lang === "es" ? "No hay observaciones contemporáneas suficientes de deuda y M2." : "There are not enough contemporaneous debt and M2 observations."),
+      interpretation: lang === "es" ? "Compara dos stocks monetarios en la misma unidad; no mide por sí solo solvencia, sostenibilidad fiscal ni capacidad de servicio de la deuda." : "It compares two monetary stocks in the same unit; it does not by itself measure solvency, fiscal sustainability or debt-service capacity.",
+      watch: lang === "es" ? "Esperar una publicación fiscal reciente antes de reactivar la lectura." : "Wait for a recent fiscal release before restoring the reading.",
+    },
+    {
+      key: "real-rate", label: lang === "es" ? "TIPO REAL APROX." : "APPROX. REAL RATE",
+      value: realRateEvidence.status === "available" ? `${marketFormat(data.derived.ratios.realRate, lang, 2)}%` : "—",
+      state: realRateEvidence.status, status: ratioStatus(realRateEvidence),
+      fact: realRateEvidence.status === "available"
+        ? (lang === "es" ? `Fondos federales medios (${marketFormat(realRateEvidence.numerator, lang, 2)}%) menos inflación interanual del IPC (${marketFormat(realRateEvidence.denominator, lang, 2)}%) para ${formatComparatorMonth(realRateEvidence.observationMonth!, lang)}.` : `Average federal funds rate (${marketFormat(realRateEvidence.numerator, lang, 2)}%) minus year-over-year CPI inflation (${marketFormat(realRateEvidence.denominator, lang, 2)}%) for ${formatComparatorMonth(realRateEvidence.observationMonth!, lang)}.`)
+        : (lang === "es" ? "No hay un mes común reciente con tipo oficial e IPC interanual verificables." : "There is no recent common month with a verifiable policy rate and year-over-year CPI."),
+      interpretation: lang === "es" ? "Es una aproximación retrospectiva de la postura monetaria. No equivale al tipo natural ni a una expectativa real ex ante." : "It is a backward-looking approximation of monetary stance. It is not the natural rate or an ex-ante real expectation.",
+      watch: lang === "es" ? "Revisar por separado cambios en el tipo nominal y en el IPC: el mismo resultado puede esconder mecanismos opuestos." : "Review nominal-rate and CPI changes separately: the same result can hide opposite mechanisms.",
+    },
+    {
+      key: "composite", label: lang === "es" ? "PRESIÓN COMPUESTA" : "COMPOSITE PRESSURE",
+      value: modelAvailable ? `${data.derived.scores.composite}/100` : "—",
+      state: engineCoverageState, status: `${engineCoverageLabel} · ${readySignalCount}/10 ${lang === "es" ? "SEÑALES" : "SIGNALS"}`,
+      fact: modelAvailable
+        ? (lang === "es" ? `Media ponderada de ${readySignalCount}/10 señales verificadas, con ${availableWeightPercent}% del peso base disponible. La redistribución provisional queda documentada en la metodología.` : `Weighted average of ${readySignalCount}/10 verified signals, with ${availableWeightPercent}% of base weight available. Provisional redistribution is documented in the methodology.`)
+        : (lang === "es" ? "La cobertura ponderada no alcanza el umbral de publicación; no se sustituye la ausencia por cero." : "Weighted coverage does not reach the publication threshold; missing inputs are not replaced with zero."),
+      interpretation: lang === "es" ? "Mide presión cíclica modelizada, no probabilidad de caída, riesgo de cartera ni señal operativa." : "It measures modeled cycle pressure, not crash probability, portfolio risk or a trading signal.",
+      watch: lang === "es" ? "Comprobar qué señal falta y si el resultado cambia cuando la cobertura vuelve a ser completa." : "Check which signal is missing and whether the result changes when coverage becomes complete.",
+    },
   ];
 
   return (
     <main>
-      <nav className="nav">
-        <a className="brand" href="#top"><span className="brand-mark">₿</span><span>ABCM</span></a>
+      <a className="skip-link" href="#dashboard">{lang === "es" ? "Saltar al panel" : "Skip to dashboard"}</a>
+      <nav className="nav" ref={navRef} aria-label={lang === "es" ? "Navegación principal" : "Primary navigation"}>
+        <a className="brand" href="#top" aria-label={lang === "es" ? "ABCM · volver al inicio" : "ABCM · back to top"} aria-current={activeSection === "top" ? "location" : undefined}><span className="brand-mark">₿</span><span>ABCM</span></a>
         <div className={`nav-links ${menu ? "open" : ""}`} id="primary-navigation">
-          {["dashboard", "liquidity", "hard-assets", "theory", "sources"].map((id, i) => <a key={id} href={`#${id}`} onClick={() => setMenu(false)}>{t.nav[i]}</a>)}
+          {["dashboard", "liquidity", "hard-assets", "theory", "sources"].map((id, i) => <a key={id} ref={i === 0 ? firstNavLinkRef : undefined} className={activeSection === id ? "active" : undefined} href={`#${id}`} aria-current={activeSection === id ? "location" : undefined} onClick={() => { setActiveSection(id); setMenu(false); }}>{t.nav[i]}</a>)}
           <a className="academy-nav" href={`/learn?lang=${lang}`} target="_blank" rel="noreferrer" onClick={() => setMenu(false)}>{lang === "es" ? "Aprende ↗" : "Learn ↗"}</a>
         </div>
         <div className="nav-controls">
-          <button className="lang" onClick={() => setLang(lang === "en" ? "es" : "en")} aria-label={lang === "es" ? "Cambiar idioma a inglés" : "Switch language to Spanish"}>{lang === "en" ? "ES" : "EN"}</button>
-          <button className="menu" onClick={() => setMenu(!menu)} aria-label={lang === "es" ? "Abrir navegación" : "Open navigation"} aria-expanded={menu} aria-controls="primary-navigation">☰</button>
+          <button className="lang" onClick={() => changeLanguage(lang === "en" ? "es" : "en")} aria-label={lang === "es" ? "Cambiar idioma a inglés" : "Switch language to Spanish"}>{lang === "en" ? "ES" : "EN"}</button>
+          <button className="menu" ref={menuButtonRef} onClick={() => setMenu(!menu)} aria-label={menu ? (lang === "es" ? "Cerrar navegación" : "Close navigation") : (lang === "es" ? "Abrir navegación" : "Open navigation")} aria-expanded={menu} aria-controls="primary-navigation">{menu ? "×" : "☰"}</button>
         </div>
       </nav>
 
@@ -833,13 +1509,13 @@ export default function Monitor() {
         <div className="eyebrow"><span className={`live-dot ${loading ? "pulse" : ""}`} /> {t.live} · {data.provenance.mode === "live" ? (lang === "es" ? "AL DÍA" : "CURRENT") : data.provenance.mode === "stale-persisted" ? (lang === "es" ? "ÚLTIMO DATO VÁLIDO" : "LAST VALID DATA") : (lang === "es" ? "ESPERANDO FUENTES" : "AWAITING SOURCES")}</div>
         <div className="hero-grid">
           <div>
-            <h1>{t.title}</h1><h2>{t.subtitle}</h2>
+            <h1>{t.title}</h1><p className="hero-thesis">{t.subtitle}</p>
             <p className="lede">{t.intro}</p>
             <div className="actions">
-              <a className="primary" href="#dashboard">{t.nav[0]} <span>↓</span></a>
-              <button className="secondary" onClick={() => load(true)} disabled={loading || !refreshUnlocked} title={!refreshUnlocked ? (lang === "es" ? `Disponible en ${refreshCountdown}` : `Available in ${refreshCountdown}`) : undefined}>{loading ? "···" : "↻"} {refreshUnlocked ? t.refresh : refreshCountdown}</button>
+              <a className="primary" href="#dashboard">{lang === "es" ? "Explorar el panel" : "Explore dashboard"} <span>↓</span></a>
+              <button className="secondary" onClick={() => load(true)} disabled={loading || !refreshUnlocked} aria-busy={loading} aria-describedby="snapshot-status" title={!refreshUnlocked ? (lang === "es" ? `Disponible en ${refreshCountdown}` : `Available in ${refreshCountdown}`) : undefined}>{loading ? (lang === "es" ? "Cargando datos" : "Loading data") : refreshUnlocked ? `↻ ${t.refresh}` : refreshCountdown}</button>
             </div>
-            <div className={`snapshot-status ${snapshotNeedsRefresh ? "needs-refresh" : "current"}`} role="status" aria-live="polite">
+            <div className={`snapshot-status ${snapshotNeedsRefresh ? "needs-refresh" : "current"}`} id="snapshot-status" aria-label={lang === "es" ? "Estado de la edición de datos" : "Data edition status"}>
               <div>
                 <span>{lang === "es" ? "INSTANTÁNEA COMPARTIDA ACTUAL" : "CURRENT SHARED SNAPSHOT"}</span>
                 <strong>{snapshotTimestamp} · {lang === "es" ? "hora de Madrid" : "Madrid time"}</strong>
@@ -855,15 +1531,15 @@ export default function Monitor() {
                   ? (lang === "es" ? `La edición diaria tiene ${Math.floor(snapshotAgeMinutes / 60)} h. La próxima lectura solicitará una edición nueva; mientras tanto se conserva esta copia verificada.` : `The daily edition is ${Math.floor(snapshotAgeMinutes / 60)} h old. The next read will request a new edition; this verified copy remains available meanwhile.`)
                   : (lang === "es" ? `Edición diaria generada hace ${snapshotAgeMinutes} min. Se sirve al instante a todos los visitantes; una actualización manual solo se habilita cada 15 minutos.` : `Daily edition generated ${snapshotAgeMinutes} min ago. It is served instantly to every visitor; manual refresh unlocks only every 15 minutes.`)}</p>
             </div>
-            {refreshNotice && <div className={`refresh-notice ${refreshNotice.includes("failed") || refreshNotice.includes("No se") ? "error" : ""}`}>{refreshNotice}</div>}
+            {refreshNotice && <div className={`refresh-notice ${refreshNotice.includes("failed") || refreshNotice.includes("No se") ? "error" : ""}`} role="status" aria-live="polite">{refreshNotice}</div>}
           </div>
           <article className="regime-card">
-            <div className="card-top"><span>{t.regime}</span><span className="status">{data.derived.regime.replaceAll("-", " ").toUpperCase()}</span></div>
+            <div className="card-top"><span>{t.regime}</span><span className="status">{regimeStatus}</span></div>
             <div className="score-row">
-              <button className="score-ring" type="button" onClick={() => document.getElementById("cycle-methodology")?.scrollIntoView({ behavior: "smooth", block: "start" })} style={{"--risk": `${modelAvailable ? cycleScore * 3.6 : 0}deg`} as React.CSSProperties} aria-label={lang === "es" ? "Abrir la metodología del índice" : "Open index methodology"}><strong>{modelAvailable ? cycleScore : "—"}</strong></button>
+              <button className="score-ring" type="button" onClick={openCycleMethodology} style={{"--risk": `${modelAvailable ? cycleScore * 3.6 : 0}deg`} as React.CSSProperties} aria-label={lang === "es" ? "Abrir la metodología del índice" : "Open index methodology"} aria-describedby="regime-summary"><strong>{modelAvailable ? cycleScore : "—"}</strong></button>
               <div><span>{t.risk}</span><b>{t.confidence}: {data.provenance.modelInputsAvailable ?? 0}/{data.provenance.modelInputsTotal ?? 14} {lang === "es" ? "ENTRADAS" : "INPUTS"}</b></div>
             </div>
-            <div className="score-adaptive">
+            <div className="score-adaptive" id="regime-summary">
               <span>{modelAvailable ? `${cycle.range} · ${cycle.title}${modelProvisional ? " · PROVISIONAL" : ""}` : (lang === "es" ? "MODELO NO CALCULADO" : "MODEL NOT CALCULATED")}</span>
               <p>{modelAvailable
                 ? modelProvisional
@@ -871,8 +1547,8 @@ export default function Monitor() {
                   : cycle.body
                 : (lang === "es" ? "No hay cobertura suficiente para una lectura responsable. Los paneles con datos verificados siguen disponibles y los huecos quedan identificados." : "Coverage is too low for a responsible reading. Panels with verified data remain available and gaps are identified.")}</p>
               <div className="method-cta-row">
-                <button type="button" onClick={() => document.getElementById("cycle-methodology")?.scrollIntoView({ behavior: "smooth", block: "start" })}>{lang === "es" ? "Ver cálculo, pesos y fuentes" : "See calculation, weights & sources"} ↓</button>
-                <a href="/api/data-manifest" target="_blank" rel="noreferrer">{lang === "es" ? "Metodología directa" : "Direct methodology"} ↗</a>
+                <button type="button" onClick={openCycleMethodology}>{lang === "es" ? "Ver cálculo, pesos y fuentes" : "See calculation, weights & sources"} ↓</button>
+                <a href="/api/data-manifest" target="_blank" rel="noreferrer" aria-label={lang === "es" ? "Abrir metodología directa en una pestaña nueva" : "Open direct methodology in a new tab"}>{lang === "es" ? "Metodología directa" : "Direct methodology"} ↗</a>
               </div>
             </div>
             <small>{t.updated}: {snapshotDate ? `${snapshotDate.toISOString().replace("T"," ").slice(0,19)} UTC` : "—"} · {data.provenance.fredAvailable ?? 0}/{data.provenance.fredTotal ?? 0} {lang === "es" ? "SERIES MACRO" : "MACRO SERIES"}</small>
@@ -880,13 +1556,18 @@ export default function Monitor() {
         </div>
       </section>
 
-      <section className="market-tape-wrap" aria-label={lang === "es" ? "Datos de mercado y fuentes" : "Market data and sources"}>
+      <section className="market-tape-wrap" aria-labelledby="market-tape-title">
+        <div className="market-tape-heading">
+          <div><span>{lang === "es" ? "PULSO DE MERCADO · 6 SERIES" : "MARKET PULSE · 6 SERIES"}</span><h2 id="market-tape-title">{lang === "es" ? "Última observación verificada" : "Latest verified observation"}</h2></div>
+          <p>{lang === "es" ? "Las fechas no están sincronizadas: cada tarjeta declara su propia vigencia, frecuencia y fuente." : "Dates are not synchronized: every card declares its own freshness, frequency and source."}</p>
+        </div>
         <div className="market-tape">
-          {tape.map((item) => <a href={item.url} target="_blank" rel="noreferrer" key={item.name} title={lang === "es" ? `Abrir fuente: ${item.source}` : `Open source: ${item.source}`}>
+          {tape.map((item) => <a href={item.url} target="_blank" rel="noreferrer" key={item.name} aria-label={lang === "es" ? `${item.name}: ${item.value}; ${item.status}; observado ${item.date}; fuente ${item.source}. Abrir evidencia en una pestaña nueva.` : `${item.name}: ${item.value}; ${item.status}; observed ${item.date}; source ${item.source}. Open evidence in a new tab.`}>
             <span>{item.name}</span>
             <strong>{item.value}</strong>
             <small className="tape-unit">{item.unit}</small>
-            <small className="tape-source">{item.source} · {item.date} ↗</small>
+            <div className="tape-meta"><small className={`tape-state ${item.state}`}>{item.status}</small><time dateTime={item.date === "—" ? undefined : item.date}>{item.date}</time></div>
+            <small className="tape-source">{item.source} <i aria-hidden="true">↗</i></small>
           </a>)}
         </div>
         <div className="market-definitions">
@@ -896,11 +1577,14 @@ export default function Monitor() {
           <p><b>WTI</b> {lang === "es"
             ? "significa West Texas Intermediate: crudo ligero de referencia en Estados Unidos. Su cotización se expresa en dólares por barril."
             : "means West Texas Intermediate: a benchmark light crude oil price in the United States, quoted in dollars per barrel."}</p>
+          <p><b>{lang === "es" ? "DEUDA: DATO Y ESTIMACIÓN NO SON LO MISMO." : "DEBT: OBSERVATION AND ESTIMATE ARE NOT THE SAME."}</b> {lang === "es"
+            ? "Se prioriza la cifra diaria del Tesoro; cuando no está disponible, el respaldo del Banco Mundial estima anualmente deuda pública sobre PIB nominal y queda marcado como tal."
+            : "The daily Treasury figure is preferred; when unavailable, the World Bank fallback annually estimates public debt from its debt ratio and nominal GDP, and is labelled accordingly."}</p>
         </div>
-        <div className={`bitcoin-consensus ${bitcoinConsensus}`} role="status" aria-live="polite">
+        <div className={`bitcoin-consensus ${bitcoinConsensus}`} aria-labelledby="bitcoin-quality-title">
           <div>
             <span>{lang === "es" ? "BITCOIN · CALIDAD DEL PRECIO" : "BITCOIN · PRICE QUALITY"}</span>
-            <strong>{bitcoinConsensus === "confirmed"
+            <strong id="bitcoin-quality-title">{bitcoinConsensus === "confirmed"
               ? (lang === "es" ? "CONFIRMADO POR DOS MERCADOS" : "CONFIRMED BY TWO VENUES")
               : bitcoinConsensus === "divergent"
                 ? (lang === "es" ? "MERCADOS DIVERGENTES" : "VENUES DIVERGE")
@@ -915,7 +1599,7 @@ export default function Monitor() {
               : bitcoinConsensus === "single-source"
                 ? (lang === "es" ? "El precio es utilizable, pero aún no tiene confirmación independiente." : "The price is usable but does not yet have independent confirmation.")
                 : (lang === "es" ? "No inventamos ni reciclamos una cotización como si fuera actual." : "No quote is invented or recycled as if it were current.")}</p>
-          <div className="provider-health"><span>{lang === "es" ? "PROVEEDORES" : "PROVIDERS"}</span><b>{upstreamReady} {lang === "es" ? "ACTIVOS" : "READY"} · {upstreamCooling} {lang === "es" ? "EN PAUSA" : "COOLING"}</b><a href="/api/health" target="_blank" rel="noreferrer">{lang === "es" ? "Ver estado" : "Inspect"} ↗</a></div>
+          <div className="provider-health"><span>{lang === "es" ? "PROVEEDORES" : "PROVIDERS"}</span><b>{upstreamReady} {lang === "es" ? "ACTIVOS" : "READY"} · {upstreamCooling} {lang === "es" ? "EN PAUSA" : "COOLING"}</b><div className="provider-links"><a href="https://docs.cdp.coinbase.com/api-reference/exchange-api/rest-api/products/get-product-ticker" target="_blank" rel="noreferrer">Coinbase ↗</a><a href="https://docs.kraken.com/api-reference/market-data/get-ticker-information" target="_blank" rel="noreferrer">Kraken ↗</a><a href="/api/health" target="_blank" rel="noreferrer">{lang === "es" ? "Estado técnico" : "Technical status"} ↗</a></div></div>
         </div>
       </section>
 
@@ -931,13 +1615,21 @@ export default function Monitor() {
         </div>
         <div className="return-grid">
           <article className="visit-brief">
-            <div className="visit-title"><span>{lang === "es" ? "BRIEFING DE 60 SEGUNDOS" : "60-SECOND BRIEFING"}</span><b>{visitAgeHours == null ? (lang === "es" ? "PRIMERA VISITA" : "FIRST VISIT") : visitAgeHours < 1 ? (lang === "es" ? "< 1 HORA" : "< 1 HOUR") : `${visitAgeHours}H`}</b></div>
-            <div className="change-cells">
-              <div><span>{lang === "es" ? "RÉGIMEN" : "REGIME"}</span><strong>{regimeChanged ? (lang === "es" ? "CAMBIÓ" : "CHANGED") : visitBaseline ? (lang === "es" ? "SIN CAMBIO" : "UNCHANGED") : "—"}</strong><small>{regime.title}</small></div>
-              <div><span>{lang === "es" ? "ÍNDICE" : "INDEX"}</span><strong>{compositeDelta == null ? "—" : `${compositeDelta >= 0 ? "+" : ""}${compositeDelta}`}</strong><small>{modelAvailable ? `${cycleScore}/100` : (lang === "es" ? "No calculado" : "Withheld")}</small></div>
-              <div><span>{lang === "es" ? "NUEVAS PUBLICACIONES" : "NEW RELEASES"}</span><strong>{releasedSinceVisit ?? "—"}</strong><small>{lang === "es" ? "Fechas de serie distintas" : "Changed series dates"}</small></div>
-              <div><span>BITCOIN</span><strong>{bitcoinDelta == null ? "—" : `${bitcoinDelta >= 0 ? "+" : ""}${format(bitcoinDelta)}%`}</strong><small>{lang === "es" ? "Desde el punto guardado" : "Since saved checkpoint"}</small></div>
+            <div className="visit-title">
+              <span>{lang === "es" ? "BRIEFING DE 60 SEGUNDOS" : "60-SECOND BRIEFING"}</span>
+              <div className="visit-meta"><b>{visitStatusLabel}</b>{visitBaseline && baselineDateLabel && <time dateTime={visitBaseline.capturedAt}>{lang === "es" ? "Base" : "Baseline"}: {baselineDateLabel}</time>}</div>
             </div>
+            <div className="change-cells" role="list" aria-label={lang === "es" ? "Cambios desde el punto de comparación" : "Changes since the comparison baseline"}>
+              <div role="listitem"><span>{lang === "es" ? "RÉGIMEN" : "REGIME"}</span><strong>{regimeChanged ? (lang === "es" ? "CAMBIÓ" : "CHANGED") : visitBaseline ? (lang === "es" ? "SIN CAMBIO" : "UNCHANGED") : "—"}</strong><small>{regime.title}</small></div>
+              <div role="listitem"><span>{lang === "es" ? "ÍNDICE" : "INDEX"}</span><strong>{compositeDelta == null ? "—" : `${compositeDelta >= 0 ? "+" : ""}${compositeDelta}`}</strong><small>{modelAvailable ? `${cycleScore}/100` : (lang === "es" ? "No calculado" : "Withheld")}</small></div>
+              <div role="listitem"><span>{lang === "es" ? "NUEVAS PUBLICACIONES" : "NEW RELEASES"}</span><strong>{releasedSinceVisit ?? "—"}</strong><small>{lang === "es" ? "Series con una fecha nueva" : "Series with a new date"}</small></div>
+              <div role="listitem"><span>BITCOIN</span><strong>{bitcoinDelta == null ? "—" : `${bitcoinDelta >= 0 ? "+" : ""}${marketFormat(bitcoinDelta, lang)}%`}</strong><small>{lang === "es" ? "Desde el punto guardado" : "Since saved baseline"}</small></div>
+            </div>
+            {!visitBaseline && <p className={`baseline-note ${baselineSavedThisVisit ? "saved" : ""}`} role="status" aria-live="polite">{baselineSavedThisVisit
+              ? (lang === "es" ? "Punto de comparación guardado en este dispositivo. Los cambios aparecerán aquí cuando regreses." : "Comparison baseline saved on this device. Changes will appear here when you return.")
+              : loading
+                ? (lang === "es" ? "Preparando el primer punto de comparación con datos verificados…" : "Preparing the first comparison baseline with verified data…")
+                : (lang === "es" ? "No se pudo guardar un punto de comparación en este dispositivo; el monitor sigue funcionando sin memoria local." : "A comparison baseline could not be saved on this device; the monitor still works without local memory.")}</p>}
             <div className="brief-reading">
               <b>{lang === "es" ? "LECTURA CONDICIONAL ACTUAL" : "CURRENT CONDITIONAL READING"}</b>
               <p>{modelAvailable
@@ -948,11 +1640,19 @@ export default function Monitor() {
             </div>
             <div className="return-actions"><button type="button" onClick={() => load(true)} disabled={loading || !refreshUnlocked}>↻ {refreshUnlocked ? t.refresh : refreshCountdown}</button><a href={`/learn?lang=${lang}`}>{lang === "es" ? "Comprender la lectura" : "Understand the reading"} →</a></div>
           </article>
-          <aside className="personal-watch">
-            <div><span>{lang === "es" ? "MI RADAR · EN ESTE DISPOSITIVO" : "MY RADAR · ON THIS DEVICE"}</span><b>{watchlist.length}/4</b></div>
+          <aside className="personal-watch" aria-labelledby="watch-title">
+            <div><span id="watch-title">{lang === "es" ? "MI RADAR · EN ESTE DISPOSITIVO" : "MY RADAR · ON THIS DEVICE"}</span><b>{watchlist.length}/4</b></div>
             <p>{lang === "es" ? "Elige hasta cuatro variables para encontrarlas juntas cuando vuelvas." : "Choose up to four variables to find together when you return."}</p>
-            <div className="watch-picker">{watchChoices.map((item) => <button type="button" className={watchlist.includes(item.key) ? "active" : ""} onClick={() => toggleWatch(item.key)} key={item.key} aria-pressed={watchlist.includes(item.key)}>{watchlist.includes(item.key) ? "✓ " : "+ "}{item.label}</button>)}</div>
-            <div className="watch-values">{watchChoices.filter((item) => watchlist.includes(item.key)).map((item) => <div key={item.key}><span>{item.label}</span><strong>{item.value}</strong><small>{item.date}</small></div>)}</div>
+            <div className="watch-picker" role="group" aria-labelledby="watch-title" aria-describedby="watch-limit">{watchChoices.map((item) => {
+              const selected = watchlist.includes(item.key);
+              return <button type="button" className={selected ? "active" : ""} onClick={() => toggleWatch(item.key)} key={item.key} aria-pressed={selected} disabled={!selected && watchlist.length >= 4}>{selected ? "✓ " : "+ "}{item.label}</button>;
+            })}</div>
+            <p className={`watch-limit ${watchlist.length >= 4 ? "full" : ""}`} id="watch-limit" role="status" aria-live="polite">{watchlist.length >= 4
+              ? (lang === "es" ? "Límite alcanzado: desmarca una variable para añadir otra." : "Limit reached: deselect one variable to add another.")
+              : (lang === "es" ? `${4 - watchlist.length} ${4 - watchlist.length === 1 ? "hueco disponible" : "huecos disponibles"}.` : `${4 - watchlist.length} ${4 - watchlist.length === 1 ? "slot" : "slots"} available.`)}</p>
+            <div className={`watch-values count-${watchlist.length}`} role="list" aria-label={lang === "es" ? "Variables seleccionadas" : "Selected variables"}>{watchChoices.filter((item) => watchlist.includes(item.key)).map((item) => <div key={item.key} role="listitem">
+              <span>{item.label}</span><strong>{item.value}</strong><small>{item.unit}</small><div className="watch-observation"><span className={`watch-state ${item.state}`}>{item.status}</span><time dateTime={item.date === "—" ? undefined : item.date}>{item.date}</time></div>
+            </div>)}</div>
             <small>{lang === "es" ? "Las fechas corresponden a cada fuente; no todas las series se publican diariamente." : "Dates belong to each source; not every series is released daily."}</small>
           </aside>
         </div>
@@ -964,98 +1664,225 @@ export default function Monitor() {
           <p>{lang === "es" ? "ABCM enseña su cadena de suministro, los huecos de datos y cómo reproducir el resultado. Un fallo visible es preferible a una cifra convincente pero inventada." : "ABCM exposes its supply chain, data gaps and reproducibility path. A visible failure is better than a convincing invented number."}</p>
         </div>
         <div className="proof-grid">
-          <a href="/api/health" target="_blank" rel="noreferrer"><span>01 · {lang === "es" ? "ESTADO DE FUENTES" : "SOURCE HEALTH"}</span><strong>{data.provenance.fredAvailable ?? 0}/{data.provenance.fredTotal ?? 0}</strong><p>{lang === "es" ? `${upstreamReady} proveedores listos · ${upstreamCooling} en enfriamiento.` : `${upstreamReady} providers ready · ${upstreamCooling} cooling down.`}</p><b>{lang === "es" ? "Comprobar" : "Inspect"} ↗</b></a>
-          <a href="/api/data-manifest" target="_blank" rel="noreferrer"><span>02 · {lang === "es" ? "CONTRATO DE DATOS" : "DATA CONTRACT"}</span><strong>v1.1</strong><p>{lang === "es" ? "Entradas, fórmulas, pesos y límites." : "Inputs, formulas, weights and limits."}</p><b>{lang === "es" ? "Auditar" : "Audit"} ↗</b></a>
-          <a href="/api/data" target="_blank" rel="noreferrer"><span>03 · {lang === "es" ? "SALIDA PORTABLE" : "PORTABLE OUTPUT"}</span><strong>JSON</strong><p>{lang === "es" ? "Salida reutilizable y legible por máquinas." : "Reusable machine-readable output."}</p><b>{lang === "es" ? "Abrir datos" : "Open data"} ↗</b></a>
-          <a href="https://github.com/JimBLogic/AustrianBusinessCycleMonitor" target="_blank" rel="noreferrer"><span>04 · {lang === "es" ? "COMPILACIÓN REPRODUCIBLE" : "REPRODUCIBLE BUILD"}</span><strong>MIT</strong><p>{lang === "es" ? "Código, pruebas y ejecución local." : "Code, tests and local execution."}</p><b>{lang === "es" ? "Ver repositorio" : "Open repository"} ↗</b></a>
+          <a href="/api/health" target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? `Estado de fuentes: ${macroAvailable} de ${macroTotal} series macro disponibles. Abrir estado técnico en una pestaña nueva.` : `Source health: ${macroAvailable} of ${macroTotal} macro series available. Open technical status in a new tab.`}>
+            <div className="proof-card-head"><span>01 · {lang === "es" ? "ESTADO DE FUENTES" : "SOURCE HEALTH"}</span><i className={`proof-card-state ${sourceHealthState}`}>{sourceHealthState === "ok" ? (lang === "es" ? "COMPLETO" : "COMPLETE") : sourceHealthState === "partial" ? (lang === "es" ? "PARCIAL" : "PARTIAL") : (lang === "es" ? "SIN COBERTURA" : "NO COVERAGE")}</i></div>
+            <div className="proof-value"><strong>{macroAvailable}/{macroTotal}</strong><small>{lang === "es" ? "SERIES MACRO" : "MACRO SERIES"}</small></div>
+            <p>{lang === "es" ? `${upstreamReady}/${upstreamTotal} proveedores listos · ${upstreamRecovering} reintentando · ${upstreamCooling} en pausa.` : `${upstreamReady}/${upstreamTotal} providers ready · ${upstreamRecovering} retrying · ${upstreamCooling} cooling down.`}</p><b>{lang === "es" ? "Abrir estado" : "Open status"} ↗</b>
+          </a>
+          <a href="/api/data-manifest" target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? `Contrato de datos, esquema ${DATA_SCHEMA_VERSION}. Abrir contrato técnico en una pestaña nueva.` : `Data contract, schema ${DATA_SCHEMA_VERSION}. Open the technical contract in a new tab.`}>
+            <div className="proof-card-head"><span>02 · {lang === "es" ? "CONTRATO DE DATOS" : "DATA CONTRACT"}</span><i className="proof-card-state ok">{lang === "es" ? "VIGENTE" : "CURRENT"}</i></div>
+            <div className="proof-value"><strong>v{DATA_SCHEMA_VERSION}</strong><small>SCHEMA</small></div>
+            <p>{lang === "es" ? "Entradas, fórmulas, pesos, límites y reglas de publicación." : "Inputs, formulas, weights, limits and publication rules."}</p><b>{lang === "es" ? "Abrir contrato" : "Open contract"} ↗</b>
+          </a>
+          <a href="/api/data" target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? `Salida pública JSON, esquema ${DATA_SCHEMA_VERSION}. Abrir datos en una pestaña nueva.` : `Public JSON output, schema ${DATA_SCHEMA_VERSION}. Open data in a new tab.`}>
+            <div className="proof-card-head"><span>03 · {lang === "es" ? "SALIDA PORTABLE" : "PORTABLE OUTPUT"}</span><i className={`proof-card-state ${portableOutputState}`}>{portableOutputState === "ok" ? (lang === "es" ? "DISPONIBLE" : "AVAILABLE") : (lang === "es" ? "SIN DATOS" : "NO DATA")}</i></div>
+            <div className="proof-value"><strong>JSON</strong><small>v{DATA_SCHEMA_VERSION}</small></div>
+            <p>{lang === "es" ? "Instantánea reutilizable con observaciones, procedencia y cálculos." : "Reusable snapshot with observations, provenance and calculations."}</p><b>{lang === "es" ? "Abrir datos" : "Open data"} ↗</b>
+          </a>
+          <a href={`${SOURCE_MIRROR.repository}/tree/master/${SOURCE_MIRROR.path}`} target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? "Código fuente mantenido de ABCM, licencia MIT. Abrir repositorio en una pestaña nueva." : "Maintained ABCM source code, MIT licence. Open repository in a new tab."}>
+            <div className="proof-card-head"><span>04 · {lang === "es" ? "COMPILACIÓN REPRODUCIBLE" : "REPRODUCIBLE BUILD"}</span><i className="proof-card-state ok">{lang === "es" ? "CÓDIGO ABIERTO" : "OPEN SOURCE"}</i></div>
+            <div className="proof-value"><strong>MIT</strong><small>SITES-CURRENT</small></div>
+            <p>{lang === "es" ? "Código, pruebas y guía para ejecutar el mismo monitor localmente." : "Code, tests and guidance to run the same monitor locally."}</p><b>{lang === "es" ? "Abrir código" : "Open source"} ↗</b>
+          </a>
         </div>
+        <p className="proof-help">{lang === "es" ? "Los tres primeros enlaces abren respuestas JSON técnicas; el cuarto lleva directamente al código mantenido de esta versión." : "The first three links open technical JSON responses; the fourth goes directly to this version’s maintained source."}</p>
       </section>
 
-      <section className="engine-section" id="engine">
+      <section className="engine-section" id="engine" aria-labelledby="engine-title">
         <div className="section-head">
           <div>
             <span className="kicker">{lang === "es" ? "00 · MOTOR DE INTERPRETACIÓN ACTUAL" : "00 · LIVE INTERPRETATION ENGINE"}</span>
-            <h2>{lang === "es" ? "Los datos hablan entre sí." : "The data talks to itself."}</h2>
+            <h2 id="engine-title">{lang === "es" ? "Los datos hablan entre sí." : "The data speak to each other."}</h2>
             <p>{lang === "es" ? "Diez franjas separan dinero, tipos, crédito, curva, producción, empleo, precios, recursos y deuda. Cada cifra conduce a una lectura condicional; ninguna señal aislada pretende demostrar el ciclo." : "Ten bands separate money, rates, credit, the curve, production, labour, prices, resources and debt. Every figure leads to a conditional reading; no isolated signal claims to prove the cycle."}</p>
           </div>
-          <div className="engine-badge"><span>{lang === "es" ? "PUBLICACIÓN" : "PUBLICATION"}</span><b>{lang === "es" ? "EDICIÓN DIARIA · REFRESCO 15 MIN" : "DAILY EDITION · 15 MIN REFRESH"}</b></div>
+          <div className={`engine-badge ${engineCoverageState}`} role="status" aria-live="polite">
+            <span>{lang === "es" ? "COBERTURA DEL MOTOR" : "ENGINE COVERAGE"}</span>
+            <b>{readySignalCount}/{scoreComponents.length} {lang === "es" ? "SEÑALES" : "SIGNALS"} · {engineCoverageLabel}</b>
+            <small>{lang === "es" ? "EDICIÓN DIARIA · ACTUALIZACIÓN MANUAL CADA 15 MIN" : "DAILY EDITION · MANUAL UPDATE EVERY 15 MIN"}</small>
+          </div>
         </div>
-        <div className="score-strip">
-          {scoreComponents.map((item) => <button type="button" key={item.key} onClick={() => showSignal(item)}><div><span>{item.label}</span><b>{modelAvailable && item.ready ? item.score : "—"}</b></div><div className="engine-bar"><i style={{ width: `${modelAvailable && item.ready ? item.score : 0}%` }} /></div><small>{item.ready ? item.observed : (lang === "es" ? "Entradas incompletas" : "Incomplete inputs")}</small><em>{lang === "es" ? "Interpretar" : "Interpret"} ↗</em></button>)}
+        <div className="score-strip" role="group" aria-label={lang === "es" ? "Diez señales clicables del motor de interpretación" : "Ten clickable interpretation-engine signals"}>
+          {scoreComponents.map((item) => {
+            const signalReading = engineReading(item.parent, item.score, lang);
+            const weightLabel = `${format(item.weight * 100, 0)}%`;
+            const accessibleState = item.ready
+              ? (lang === "es" ? `Puntuación ${item.score} sobre 100. ${signalReading.range}.` : `Score ${item.score} out of 100. ${signalReading.range}.`)
+              : (lang === "es" ? `Sin cobertura. Requiere ${item.inputs}.` : `No coverage. Requires ${item.inputs}.`);
+            return <button
+              type="button"
+              key={item.key}
+              className={item.ready ? "ready" : "unavailable"}
+              onClick={(event) => showSignal(item, event.currentTarget)}
+              aria-haspopup="dialog"
+              aria-controls="detail-dialog"
+              aria-expanded={detail?.title === item.label}
+              aria-label={`${item.label}. ${accessibleState} ${lang === "es" ? `Peso base ${weightLabel}. Abrir explicación.` : `Base weight ${weightLabel}. Open explanation.`}`}
+            >
+              <div className="score-card-head"><span>{item.label}</span><b>{item.ready ? item.score : "—"}</b></div>
+              <div className="score-card-meta">
+                <span className={`score-card-state ${item.ready ? "ready" : "unavailable"}`}>{item.ready ? signalReading.range : (lang === "es" ? "SIN COBERTURA" : "NO COVERAGE")}</span>
+                <span>{weightLabel} {lang === "es" ? "PESO BASE" : "BASE WEIGHT"}</span>
+              </div>
+              <div className="engine-bar" aria-hidden="true"><i style={{ width: `${item.ready ? item.score : 0}%` }} /></div>
+              <small>{item.ready ? item.observed : `${lang === "es" ? "Requiere" : "Requires"}: ${item.inputs}`}</small>
+              <em>{item.ready ? (lang === "es" ? "Interpretar" : "Interpret") : (lang === "es" ? "Ver estado" : "View status")} ↗</em>
+            </button>;
+          })}
         </div>
-        <article className="cycle-methodology" id="cycle-methodology">
+        <article className="cycle-methodology" id="cycle-methodology" tabIndex={-1} aria-labelledby="cycle-methodology-title" aria-describedby="cycle-methodology-summary">
           <div className="method-head">
             <div>
-              <span className="kicker">{lang === "es" ? "METODOLOGÍA ABIERTA · V1.2" : "OPEN METHODOLOGY · V1.2"}</span>
-              <h3>{modelAvailable ? (lang === "es" ? `Por qué el índice marca ${cycleScore}/100` : `Why the index reads ${cycleScore}/100`) : (lang === "es" ? "Por qué el índice no publica una cifra" : "Why the index is withholding a score")}</h3>
-              <p>{modelAvailable
+              <span className="kicker">{lang === "es" ? `METODOLOGÍA ABIERTA · ESQUEMA ${DATA_SCHEMA_VERSION}` : `OPEN METHODOLOGY · SCHEMA ${DATA_SCHEMA_VERSION}`}</span>
+              <h3 id="cycle-methodology-title">{modelAvailable ? (lang === "es" ? `Por qué el índice marca ${cycleScore}/100` : `Why the index reads ${cycleScore}/100`) : (lang === "es" ? "Por qué el índice no publica una cifra" : "Why the index is withholding a score")}</h3>
+              <p id="cycle-methodology-summary">{modelAvailable
                 ? modelProvisional
-                  ? (lang === "es" ? `Estimación provisional con ${data.provenance.modelInputsAvailable ?? 0}/${data.provenance.modelInputsTotal ?? 14} entradas. Los pesos de los motores completos se normalizan al 100%; ninguna ausencia recibe valor cero.` : `Provisional estimate using ${data.provenance.modelInputsAvailable ?? 0}/${data.provenance.modelInputsTotal ?? 14} inputs. Complete-engine weights are normalized to 100%; no missing value is assigned zero.`)
+                  ? (lang === "es" ? `Estimación provisional: ${readySignalCount}/10 señales verificadas suman el ${availableWeightPercent}% del peso base. Solo esas señales se normalizan al 100%; ninguna ausencia recibe valor cero.` : `Provisional estimate: ${readySignalCount}/10 verified signals provide ${availableWeightPercent}% of base weight. Only those signals are normalized to 100%; no missing value is assigned zero.`)
                   : cycle.body
-                : (lang === "es" ? "No hay suficientes motores completos para publicar ni siquiera una estimación provisional." : "Too few complete engines are available even for a provisional estimate.")}</p>
+                : (lang === "es" ? `El cálculo se retiene: ${readySignalCount}/10 señales verificadas suman el ${availableWeightPercent}% del peso base y se exige al menos un 70%. Las señales disponibles siguen siendo auditables.` : `The calculation is withheld: ${readySignalCount}/10 verified signals provide ${availableWeightPercent}% of base weight, below the required 70%. Available signals remain auditable.`)}</p>
             </div>
-            <div className="method-warning">
-              <b>{lang === "es" ? "QUÉ NO ES" : "WHAT IT IS NOT"}</b>
-              <span>{lang === "es" ? "No es una probabilidad de recesión, una señal de compra/venta ni una fecha de crash. Es una puntuación experimental de presión cíclica." : "It is not a recession probability, a buy/sell signal or a crash timer. It is an experimental cycle-pressure score."}</span>
+            <div className="method-aside">
+              <div className={`method-status ${engineCoverageState}`} role="status">
+                <span>{lang === "es" ? "REGLA DE PUBLICACIÓN" : "PUBLICATION RULE"}</span>
+                <strong>{engineCoverageState === "complete"
+                  ? (lang === "es" ? "100% · COMPLETO" : "100% · COMPLETE")
+                  : engineCoverageState === "provisional"
+                    ? `${availableWeightPercent}% · ${lang === "es" ? "PROVISIONAL" : "PROVISIONAL"}`
+                    : `${availableWeightPercent}% < 70% · ${lang === "es" ? "RETENIDO" : "WITHHELD"}`}</strong>
+                <small>{readySignalCount}/10 {lang === "es" ? "señales" : "signals"} · {modelInputsAvailable}/{modelInputsTotal} {lang === "es" ? "entradas" : "inputs"}</small>
+              </div>
+              <div className="method-warning">
+                <b>{lang === "es" ? "QUÉ NO ES" : "WHAT IT IS NOT"}</b>
+                <span>{lang === "es" ? "No es una probabilidad de recesión, una señal de compra/venta ni una fecha de crash. Es una puntuación experimental de presión cíclica." : "It is not a recession probability, a buy/sell signal or a crash timer. It is an experimental cycle-pressure score."}</span>
+              </div>
             </div>
           </div>
-          <div className="score-equation">
-            {scoreComponents.map((item) => <div key={item.key}>
-              <div><span>{item.label}</span><b>{modelAvailable && item.ready ? item.score : "—"} × {modelAvailable && item.ready ? `${format(item.effectiveWeight * 100, 1)}%` : "—"}</b></div>
-              <small>{item.inputs}</small>
-              <div className="contribution"><i style={{ width: `${modelAvailable && item.ready ? item.score : 0}%` }} /><em>{modelAvailable && item.ready ? `+${format(item.score * item.effectiveWeight, 1)} pt` : (lang === "es" ? "EXCLUIDO" : "WITHHELD")}</em></div>
-            </div>)}
+          <div className="score-equation" role="list" aria-label={lang === "es" ? "Cálculo de las diez señales y sus pesos" : "Ten-signal calculation and weights"}>
+            {scoreComponents.map((item) => {
+              const appliedWeight = modelAvailable && modelProvisional && item.ready ? item.effectiveWeight : item.weight;
+              const included = modelAvailable && item.ready;
+              const componentState = !item.ready
+                ? (lang === "es" ? "SIN COBERTURA" : "NO COVERAGE")
+                : included
+                  ? (lang === "es" ? "INCLUIDA" : "INCLUDED")
+                  : (lang === "es" ? "VERIFICADA · ÍNDICE RETENIDO" : "VERIFIED · INDEX WITHHELD");
+              return <div className={item.ready ? "available" : "unavailable"} key={item.key} role="listitem">
+                <div className="equation-head"><span>{item.label}</span><b>{format(item.weight * 100, 0)}% {lang === "es" ? "BASE" : "BASE"}</b></div>
+                <small>{lang === "es" ? "Entradas" : "Inputs"}: {item.inputs}</small>
+                <div className="equation-math"><strong>{item.ready ? item.score : "—"}</strong><span>× {format(appliedWeight * 100, 1)}%</span></div>
+                <div className="contribution" aria-hidden="true"><i style={{ width: `${item.ready ? item.score : 0}%` }} /></div>
+                <div className="equation-state"><em>{componentState}</em><span>{included ? `+${format(item.score * appliedWeight, 1)} pt` : "—"}</span></div>
+              </div>;
+            })}
           </div>
-          <div className="formula-total">
-            <code>{modelProvisional
-              ? (lang === "es" ? "IDC provisional = Σ(motor disponible × peso reponderado)" : "Provisional CDI = Σ(available engine × reweighted share)")
-              : "IDC = MONEY×.14 + STANCE×.13 + RISK×.13 + CURVE×.10 + PROD×.12 + LAB×.08 + CPI×.09 + RES×.06 + BURDEN×.09 + FISC×.06"}</code>
-            <strong>= {modelAvailable ? `${cycleScore}/100` : "—"}</strong>
+          <div className={`formula-total ${engineCoverageState}`} role="status" aria-label={lang === "es" ? "Resultado del índice compuesto" : "Composite index result"}>
+            <div><span>{lang === "es" ? "RESULTADO COMPUESTO" : "COMPOSITE RESULT"}</span><code>{!modelAvailable
+              ? (lang === "es" ? `IDC retenido · ${availableWeightPercent}% de peso verificable < 70% requerido` : `CDI withheld · ${availableWeightPercent}% verified weight < 70% required`)
+              : modelProvisional
+                ? (lang === "es" ? "IDC provisional = Σ(señal disponible × peso reponderado)" : "Provisional CDI = Σ(available signal × reweighted share)")
+                : lang === "es"
+                  ? "IDC = MONEY×.14 + STANCE×.13 + RISK×.13 + CURVE×.10 + PROD×.12 + LAB×.08 + CPI×.09 + RES×.06 + BURDEN×.09 + FISC×.06"
+                  : "CDI = MONEY×.14 + STANCE×.13 + RISK×.13 + CURVE×.10 + PROD×.12 + LAB×.08 + CPI×.09 + RES×.06 + BURDEN×.09 + FISC×.06"}</code></div>
+            <strong>{modelAvailable ? `= ${cycleScore}/100` : (lang === "es" ? "NO PUBLICADO" : "NOT PUBLISHED")}</strong>
           </div>
           <div className="pillar-lineage">
             <b>{lang === "es" ? "MARCO OPERATIVO DE ABCM" : "ABCM OPERATIONAL FRAMEWORK"}</b>
             <p>{lang === "es"
               ? "Política monetaria → Mercados de crédito → Economía real. ABCM usa esta agrupación como estructura analítica propia e incorpora inflación y fiscalidad como capas transversales. No atribuimos su autoría, la fórmula ni el índice a José Luis Cava ni a ninguna de las influencias citadas."
               : "Monetary policy → Credit markets → Real economy. ABCM uses this grouping as its own analytical structure and adds inflation and fiscal conditions as cross-cutting layers. We do not attribute its authorship, formula or index to José Luis Cava or any cited influence."}</p>
-            <a href="https://github.com/JimBLogic/AustrianBusinessCycleMonitor/commit/0acc1a2deb695d167e302c81966344056fb75189" target="_blank" rel="noreferrer">{lang === "es" ? "Ver historial de la metodología ABCM" : "See ABCM methodology history"} ↗</a>
+            <a href="https://github.com/JimBLogic/AustrianBusinessCycleMonitor/commit/0acc1a2deb695d167e302c81966344056fb75189" target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? "Abrir la versión original del marco ABCM en una pestaña nueva" : "Open the original ABCM framework version in a new tab"}>{lang === "es" ? "Ver versión original del marco" : "See original framework version"} ↗</a>
           </div>
-          <div className="band-scale">
+          <div className="band-scale" role="list" aria-label={lang === "es" ? "Bandas de interpretación del índice" : "Index interpretation bands"}>
             {cycle.bands.map((band) => {
               const copy = band[lang];
-              const active = band.range === cycle.range;
-              return <div className={active ? "active" : ""} key={band.range}><b>{band.range}</b><span>{copy[0]}</span></div>;
+              const active = modelAvailable && band.range === cycle.range;
+              return <div className={active ? "active" : ""} key={band.range} role="listitem" aria-current={active ? "true" : undefined}><b>{band.range}</b><span>{copy[0]}</span></div>;
             })}
           </div>
+          <p className={`band-caption ${modelAvailable ? "published" : "withheld"}`}>{modelAvailable
+            ? (lang === "es" ? `${modelProvisional ? "Banda provisional" : "Banda activa"}: ${cycle.range} · ${cycle.title}.` : `${modelProvisional ? "Provisional band" : "Active band"}: ${cycle.range} · ${cycle.title}.`)
+            : (lang === "es" ? "Ninguna banda se activa hasta que el índice cumple la regla de publicación." : "No band becomes active until the index meets the publication rule.")}</p>
           <div className="method-links">
-            <a href="/api/data-manifest" target="_blank" rel="noreferrer">{lang === "es" ? "Manifiesto técnico" : "Technical manifest"} ↗</a>
+            <a href="/api/data-manifest" target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? "Abrir el manifiesto técnico en una pestaña nueva" : "Open the technical manifest in a new tab"}>{lang === "es" ? "Manifiesto técnico" : "Technical manifest"} ↗</a>
+            <a href={`${SOURCE_MIRROR.repository}/commits/master/${SOURCE_MIRROR.path}`} target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? "Abrir el historial mantenido de la metodología en una pestaña nueva" : "Open the maintained methodology history in a new tab"}>{lang === "es" ? "Historial mantenido" : "Maintained history"} ↗</a>
             <a href="#sources">{lang === "es" ? "Fuentes de cada variable" : "Sources for every input"} ↓</a>
           </div>
         </article>
+        <article className="discrimination-test" aria-labelledby="discrimination-title" aria-describedby="discrimination-summary discrimination-scope">
+          <div className="test-heading">
+            <div><span className="kicker">{lang === "es" ? "MATRIZ CONTRAFACTUAL · 4 CASOS" : "COUNTERFACTUAL MATRIX · 4 CASES"}</span><h3 id="discrimination-title">{lang === "es" ? "Cuatro shocks. Cuatro respuestas esperadas." : "Four shocks. Four expected responses."}</h3><p id="discrimination-summary">{lang === "es" ? "La matriz mantiene constantes las demás familias y cambia una cada vez. Comprueba si la metodología declarada distingue la capa afectada, explica la transmisión y define qué evidencia refutaría cada lectura." : "The matrix holds other families constant and changes one at a time. It checks whether the documented methodology distinguishes the affected layer, explains transmission and defines what evidence would falsify each reading."}</p></div>
+            <div className="test-verdict"><span>{lang === "es" ? "ESTADO" : "STATUS"}</span><strong>{lang === "es" ? "MATRIZ DOCUMENTADA" : "DOCUMENTED MATRIX"}</strong><small>{lang === "es" ? "4 escenarios · sin ejecución automática" : "4 scenarios · no automated execution"}</small></div>
+          </div>
+          <div className="test-scope" id="discrimination-scope"><b>{lang === "es" ? "ALCANCE" : "SCOPE"}</b><span>{lang === "es" ? "Es una prueba conceptual de consistencia, no evidencia causal ni un backtest estadístico. El PPI se usa como contraste aguas arriba, pero todavía no forma parte de las diez señales calculadas por el índice." : "This is a conceptual consistency test, not causal evidence or a statistical backtest. PPI is used as an upstream contrast, but it is not currently one of the index’s ten calculated signals."}</span></div>
+          <div className="test-tabs" role="tablist" aria-label={lang === "es" ? "Escenarios de prueba" : "Test scenarios"}>
+            {discriminationScenarios.map((scenario, index) => <button
+              ref={(element) => { diagnosticTabRefs.current[index] = element; }}
+              id={`diagnostic-tab-${scenario.key}`}
+              key={scenario.key}
+              type="button"
+              role="tab"
+              aria-selected={diagnosticScenario === index}
+              aria-controls="diagnostic-panel"
+              tabIndex={diagnosticScenario === index ? 0 : -1}
+              className={diagnosticScenario === index ? "active" : ""}
+              onClick={() => setDiagnosticScenario(index)}
+              onKeyDown={(event) => handleDiagnosticTabKey(event, index)}
+            ><span>0{index + 1}</span><b>{scenario.short}</b><small>{scenario.title[lang === "en" ? 0 : 1]}</small></button>)}
+          </div>
+          {(() => { const scenario = discriminationScenarios[diagnosticScenario]; const i = lang === "en" ? 0 : 1; return <div className="test-output" id="diagnostic-panel" role="tabpanel" aria-labelledby={`diagnostic-tab-${scenario.key}`} aria-live="polite" tabIndex={0}>
+            <div className="test-case-meta"><span>{lang === "es" ? `CASO 0${diagnosticScenario + 1} DE 04` : `CASE 0${diagnosticScenario + 1} OF 04`}</span><b>{scenario.layer[i]}</b><em>{lang === "es" ? "CRITERIO DOCUMENTADO" : "DOCUMENTED EXPECTATION"}</em></div>
+            <div className="test-input"><span>{lang === "es" ? "ENTRADA CONTROLADA" : "CONTROLLED INPUT"}</span><strong>{scenario.input[i]}</strong><small>{lang === "es" ? "Las demás familias permanecen constantes para aislar el mecanismo." : "Other families remain constant to isolate the mechanism."}</small></div>
+            <div className="test-diagnosis"><div><span>{lang === "es" ? "CLASIFICACIÓN ESPERADA" : "EXPECTED CLASSIFICATION"}</span><strong>{scenario.classification[i]}</strong><b>{lang === "es" ? "ESPERADO" : "EXPECTED"}</b></div><p>{scenario.mechanism[i]}</p></div>
+            <div className="test-checks"><div><span>{lang === "es" ? "SECUENCIA / RETARDO" : "SEQUENCE / LAG"}</span><p>{scenario.lag[i]}</p></div><div><span>{lang === "es" ? "QUÉ LO REFUTARÍA" : "WHAT WOULD FALSIFY IT"}</span><p>{scenario.falsifier[i]}</p></div><div><span>{lang === "es" ? "NO CONFUNDIR CON" : "DO NOT CONFUSE WITH"}</span><p>{scenario.notThis[i]}</p></div></div>
+          </div>; })()}
+          <div className="test-rule"><b>{lang === "es" ? "REGLA DE EVALUACIÓN" : "EVALUATION RULE"}</b><span>{lang === "es" ? "La metodología no supera este criterio si dos escenarios desembocan en la misma narración o en una simple dirección de mercado, aunque la puntuación compuesta coincida." : "The methodology does not meet this criterion if two scenarios collapse into the same narrative or a simple market direction, even when the composite score matches."}</span></div>
+        </article>
         <div className="engine-grid">
-          <article className="mix-panel">
-            <div className="panel-title"><div><span className="kicker">{lang === "es" ? "COMPARADOR NORMALIZADO" : "NORMALIZED COMPARATOR"}</span><h3>{lang === "es" ? "Liquidez, activos y dinero duro" : "Liquidity, assets & hard money"}</h3></div><b>BASE 100</b></div>
-            <div className="mix-controls">{Object.keys(mixMeta).map((key) => <button key={key} className={selectedMix.includes(key) ? "active" : ""} onClick={() => setSelectedMix((current) => current.includes(key) ? (current.length > 1 ? current.filter((item) => item !== key) : current) : [...current, key])}><i style={{ background: mixMeta[key].color }} />{mixMeta[key][lang]}</button>)}</div>
+          <article className="mix-panel" aria-labelledby="normalized-title">
+            <div className="panel-title"><div><span className="kicker">{lang === "es" ? "COMPARADOR NORMALIZADO" : "NORMALIZED COMPARATOR"}</span><h3 id="normalized-title">{lang === "es" ? "Liquidez, activos y dinero duro" : "Liquidity, assets & hard money"}</h3></div><b>{lang === "es" ? "MES COMÚN · BASE 100" : "COMMON MONTH · BASE 100"}</b></div>
+            <p className="mix-intro" id="mix-controls-help">{lang === "es" ? "Activa las series que quieras contrastar. La última serie activa se mantiene para evitar un gráfico sin referencia." : "Choose the series to compare. The final active series stays selected so the chart always retains a reference."}</p>
+            <div className="mix-controls" role="group" aria-label={lang === "es" ? "Series del comparador" : "Comparator series"} aria-describedby="mix-controls-help">{Object.keys(mixMeta).map((key) => {
+              const active = selectedMix.includes(key);
+              const isLast = active && selectedMix.length === 1;
+              return <button key={key} type="button" className={active ? "active" : ""} aria-pressed={active} disabled={isLast} onClick={() => setSelectedMix((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key])}><i style={{ background: mixMeta[key].color }} aria-hidden="true" />{mixMeta[key][lang]}</button>;
+            })}</div>
             <NormalizedChart data={data} selected={selectedMix} lang={lang} />
           </article>
-          <aside className="transmission">
-            <span className="kicker">{lang === "es" ? "CADENA DE TRANSMISIÓN" : "TRANSMISSION CHAIN"}</span>
-            <h3>{regime.title}</h3>
-            <div className="chain">
-              <div><b>01</b><span>M2 {format(data.derived.changes.m2Growth)}% YoY</span></div>
-              <em>→</em>
-              <div><b>02</b><span>{lang === "es" ? "Tipo real" : "Real rate"} {format(data.derived.ratios.realRate)}%</span></div>
-              <em>→</em>
-              <div><b>03</b><span>{lang === "es" ? "Oro / BTC / S&P" : "Gold / BTC / S&P"}</span></div>
-              <em>→</em>
-              <div><b>04</b><span>CPI + {lang === "es" ? "economía real" : "real economy"}</span></div>
+          <aside className="transmission" aria-labelledby="transmission-title" aria-describedby="transmission-summary">
+            <header className="transmission-head">
+              <div><span className="kicker">{lang === "es" ? "CADENA DE TRANSMISIÓN" : "TRANSMISSION CHAIN"}</span><b>{verifiedTransmissionSteps}/3 {lang === "es" ? "PILARES" : "PILLARS"}</b></div>
+              <h3 id="transmission-title">{lang === "es" ? "Dinero → Main Street." : "Money → Main Street."}</h3>
+              <p id="transmission-summary">{lang === "es" ? "Secuencia diagnóstica condicional: organiza qué observar primero, después y al final; no demuestra por sí sola una relación causal." : "A conditional diagnostic sequence: it organizes what to observe first, next and last; it does not prove causation by itself."}</p>
+            </header>
+            <ol className="chain" aria-label={lang === "es" ? "Tres pilares de la transmisión" : "Three transmission pillars"}>
+              {transmissionSteps.map((step) => <li className={`transmission-step ${step.state}`} key={step.key}>
+                <div className="transmission-step-head">
+                  <b aria-hidden="true">{step.number}</b>
+                  <h4>{step.title}</h4>
+                  <em>{step.status}</em>
+                </div>
+                <p>{step.note}</p>
+                <dl>{step.metrics.map((metric) => {
+                  const available = Number.isFinite(metric.value);
+                  return <div key={metric.label} className={available ? "available" : "unavailable"}>
+                    <dt>{metric.label}</dt>
+                    <dd><strong>{available ? `${marketFormat(metric.value, lang)}${metric.unit}` : "—"}</strong><small>{metric.date === "—" ? (lang === "es" ? "sin fecha" : "no date") : `${lang === "es" ? "observado" : "observed"} ${metric.date}`}</small></dd>
+                  </div>;
+                })}</dl>
+              </li>)}
+            </ol>
+            <div className="transmission-response"><b>{lang === "es" ? "CAPA DE RESPUESTA · NO ES UN CUARTO PILAR" : "RESPONSE LAYER · NOT A FOURTH PILLAR"}</b><span>{lang === "es" ? "Activos e IPC reaccionan con retardos distintos; no prueban que la liquidez haya llegado a los hogares." : "Assets and CPI react with different lags; they do not prove that liquidity reached households."}</span></div>
+            <div className={`transmission-reading ${engineCoverageState}`}>
+              <b>{lang === "es" ? "LECTURA CONDICIONAL ACTUAL" : "CURRENT CONDITIONAL READING"}</b>
+              <strong>{modelAvailable ? regime.title : (lang === "es" ? "Lectura retenida" : "Reading withheld")}</strong>
+              <p>{modelAvailable ? regime.body : (lang === "es" ? "No se publica un régimen hasta alcanzar la cobertura mínima del modelo; los pilares disponibles siguen visibles." : "No regime is published until the model reaches minimum coverage; available pillars remain visible.")}</p>
+              <span className="transmission-confirmation"><b>{lang === "es" ? "CONFIRMACIÓN" : "CONFIRMATION"}</b>{lang === "es" ? "Liquidez, crédito y producción deben coincidir; si divergen, la lectura se retiene." : "Liquidity, credit and production must agree; divergence withholds the reading."}</span>
+              <a href="#theory">{lang === "es" ? "Ver el marco de los tres pilares" : "See the three-pillar framework"} ↓</a>
             </div>
-            <p>{regime.body}</p>
-            <div className="engine-watch"><b>{lang === "es" ? "Confirmación necesaria" : "Confirmation needed"}</b><span>{lang === "es" ? "Que liquidez, crédito y producción giren en la misma dirección. Si divergen, el régimen sigue siendo frágil." : "Liquidity, credit and production must turn in the same direction. If they diverge, the regime remains fragile."}</span></div>
           </aside>
         </div>
-        <div className="correlation-block">
-          <div className="correlation-intro"><span className="kicker">{lang === "es" ? "CORRELACIONES MÓVILES" : "ROLLING CORRELATIONS"}</span><h3>{lang === "es" ? "Relación, no causalidad." : "Relationship, not causation."}</h3><p>{lang === "es" ? "Pearson sobre variaciones mensuales compartidas, hasta 60 observaciones. +1 se mueve junto; −1, en dirección contraria." : "Pearson on shared monthly returns, up to 60 observations. +1 moves together; −1 moves opposite."}</p></div>
-          <div className="correlation-grid">
+        <section className="correlation-block" aria-labelledby="correlation-title" aria-describedby="correlation-summary">
+          <div className="correlation-intro"><span className="kicker">{lang === "es" ? "CORRELACIONES MÓVILES" : "ROLLING CORRELATIONS"}</span><h3 id="correlation-title">{lang === "es" ? "Relación, no causalidad." : "Relationship, not causation."}</h3><p id="correlation-summary">{lang === "es" ? "Pearson sobre variaciones intermensuales de meses consecutivos compartidos: mínimo 24 y máximo 60 pares. −1 indica dirección opuesta; +1, dirección conjunta." : "Pearson on month-over-month changes over shared consecutive months: minimum 24 and maximum 60 pairs. −1 indicates opposite direction; +1, joint direction."}</p></div>
+          <ul className="correlation-grid" aria-label={lang === "es" ? "Pares de correlación disponibles" : "Available correlation pairs"}>
             {[
               ["m2_sp500", "M2 ↔ S&P 500"],
               ["dollar_gold", lang === "es" ? "Dólar ↔ Oro" : "Dollar ↔ Gold"],
@@ -1065,59 +1892,80 @@ export default function Monitor() {
               ["sp500_gold", lang === "es" ? "S&P 500 ↔ Oro" : "S&P 500 ↔ Gold"],
             ].map(([key, label]) => {
               const value = data.derived.correlations[key];
-              const strength = value == null ? 0 : Math.abs(value) * 100;
-              const strengthLabel = value == null ? (lang === "es" ? "Datos insuficientes" : "Insufficient overlap") : strength >= 60 ? (lang === "es" ? "Fuerte" : "Strong") : strength >= 30 ? (lang === "es" ? "Moderada" : "Moderate") : (lang === "es" ? "Débil" : "Weak");
-              return <button type="button" className="correlation-cell" key={key} onClick={() => setDetail({
+              const evidence = data.derived.correlationEvidence?.[key] ?? { observations: 0, startMonth: null, endMonth: null };
+              const available = Number.isFinite(value) && evidence.observations >= MIN_CORRELATION_OBSERVATIONS;
+              const numericValue = available ? Number(value) : null;
+              const magnitude = numericValue == null ? 0 : Math.min(1, Math.abs(numericValue));
+              const meterWidth = magnitude * 50;
+              const meterLeft = numericValue != null && numericValue < 0 ? 50 - meterWidth : 50;
+              const strengthLabel = correlationStrengthLabel(numericValue, lang);
+              const directionLabel = numericValue == null ? "" : correlationDirectionLabel(numericValue, lang);
+              const period = evidence.startMonth && evidence.endMonth
+                ? `${formatComparatorMonth(evidence.startMonth, lang)}–${formatComparatorMonth(evidence.endMonth, lang)}`
+                : "—";
+              const sampleLabel = available
+                ? `${evidence.observations}/60 · ${period}`
+                : `${evidence.observations}/${MIN_CORRELATION_OBSERVATIONS} ${lang === "es" ? "mín." : "min."}`;
+              return <li key={key}><button type="button" className={`correlation-cell ${available ? "available" : "unavailable"}`} aria-haspopup="dialog" aria-controls="detail-dialog" aria-label={available
+                ? `${lang === "es" ? "Abrir detalle" : "Open details"}: ${label}, ${numericValue! >= 0 ? "+" : ""}${numericValue!.toFixed(2)}, ${strengthLabel.toLowerCase()} ${directionLabel}`
+                : `${lang === "es" ? "Abrir detalle" : "Open details"}: ${label}, ${strengthLabel.toLowerCase()}`
+              } onClick={(event) => {
+                detailReturnFocusRef.current = event.currentTarget;
+                setDetail({
                 eyebrow: lang === "es" ? "CORRELACIÓN MÓVIL · NO CAUSALIDAD" : "ROLLING CORRELATION · NOT CAUSATION",
                 title: String(label),
-                value: value == null ? "—" : `${value >= 0 ? "+" : ""}${value.toFixed(2)} · ${strengthLabel}`,
-                fact: lang === "es" ? "Coeficiente de Pearson calculado sobre variaciones mensuales coincidentes, con un máximo de 60 observaciones." : "Pearson coefficient on overlapping monthly percentage changes, using up to 60 observations.",
-                interpretation: value == null ? (lang === "es" ? "No existe solapamiento suficiente para una lectura responsable." : "There is not enough overlap for a responsible reading.") : (lang === "es" ? `${value > 0 ? "Las series tendieron a moverse en la misma dirección" : "Las series tendieron a moverse en direcciones opuestas"}, pero esta relación no identifica causa, mecanismo ni estabilidad futura.` : `${value > 0 ? "The series tended to move in the same direction" : "The series tended to move in opposite directions"}, but this relationship identifies neither cause, mechanism nor future stability.`),
-                watch: lang === "es" ? "Vigilar si el signo y la intensidad persisten al cambiar el horizonte; una correlación inestable no debe sostener una tesis causal." : "Watch whether sign and strength persist across horizons; an unstable correlation should not support a causal thesis.",
+                value: numericValue == null ? "—" : `${numericValue >= 0 ? "+" : ""}${numericValue.toFixed(2)}`,
+                fact: available
+                  ? (lang === "es" ? `${evidence.observations} variaciones intermensuales emparejadas entre ${period}. Solo se comparan meses consecutivos presentes en ambas series.` : `${evidence.observations} paired month-over-month changes from ${period}. Only consecutive months present in both series are compared.`)
+                  : (lang === "es" ? `Hay ${evidence.observations} pares válidos; se exigen al menos ${MIN_CORRELATION_OBSERVATIONS}. El coeficiente se retiene en lugar de publicar una muestra frágil.` : `There are ${evidence.observations} valid pairs; at least ${MIN_CORRELATION_OBSERVATIONS} are required. The coefficient is withheld rather than publishing a fragile sample.`),
+                interpretation: numericValue == null
+                  ? (lang === "es" ? "No hay evidencia temporal suficiente para clasificar la relación lineal." : "There is not enough time evidence to classify the linear relationship.")
+                  : (lang === "es" ? `La relación lineal observada es ${strengthLabel.toLowerCase()} y ${directionLabel}. Describe co-movimiento en esta ventana; no identifica causa, mecanismo ni estabilidad futura.` : `The observed linear relationship is ${strengthLabel.toLowerCase()} and ${directionLabel}. It describes co-movement in this window; it identifies neither cause, mechanism nor future stability.`),
+                watch: lang === "es" ? "Comprobar si el signo y la intensidad persisten cuando entra un nuevo mes. Cambios de régimen, valores extremos o revisiones pueden alterar el coeficiente." : "Check whether sign and strength persist when a new month enters. Regime changes, outliers or revisions can alter the coefficient.",
                 sourceLabel: lang === "es" ? "Metodología de correlaciones" : "Correlation methodology",
                 sourceUrl: "/api/data-manifest",
-              })}><span>{label}</span><strong>{value == null ? "—" : `${value >= 0 ? "+" : ""}${value.toFixed(2)}`}</strong><div><i className={value != null && value < 0 ? "negative" : ""} style={{ width: `${strength}%` }} /></div><small>{strengthLabel} · {lang === "es" ? "ABRIR" : "OPEN"} ↗</small></button>;
+              });
+              }}><span className="correlation-label">{label}</span><strong>{numericValue == null ? "—" : `${numericValue >= 0 ? "+" : ""}${numericValue.toFixed(2)}`}</strong><div className="correlation-meter" aria-hidden="true"><span /><i className={numericValue != null && numericValue < 0 ? "negative" : "positive"} style={{ left: `${meterLeft}%`, width: `${meterWidth}%` }} /></div><div className="correlation-card-meta"><small>{numericValue == null ? strengthLabel : `${strengthLabel} · ${directionLabel}`}</small><small>{sampleLabel}</small></div><em>{lang === "es" ? "VER DETALLE" : "VIEW DETAILS"} →</em></button></li>;
             })}
-          </div>
-        </div>
-        <div className="ratio-strip">
-          {[
-            ["BTC / GOLD", `${format(data.derived.ratios.bitcoinGoldOunces, 1)} oz`, lang === "es" ? "Onzas de oro equivalentes al precio de un bitcoin. Es una comparación de poder adquisitivo relativo, no una valoración fundamental." : "Gold ounces equivalent to one bitcoin’s price. It is a relative purchasing-power comparison, not fundamental valuation.", bitcoinSourceUrl(data)],
-            ["S&P 500 / GOLD", `${format(data.derived.ratios.sp500Gold, 2)}×`, lang === "es" ? "Nivel del índice dividido por el precio de una onza de oro. Muestra rendimiento relativo entre activos nominales y dinero duro." : "Index level divided by the price of one ounce of gold. It shows relative performance between nominal assets and hard money.", seriesSourceUrl(data, "sp500")],
-            ["DEBT / M2", `${format(data.derived.ratios.debtToM2, 2)}×`, lang === "es" ? "Deuda federal bruta dividida por M2. Es una relación de escalas monetarias, no una medida de solvencia por sí sola." : "Gross federal debt divided by M2. It compares monetary scales; it is not a standalone solvency measure.", debtSourceUrl(data)],
-            [lang === "es" ? "TIPO REAL APROX." : "APPROX. REAL RATE", `${format(data.derived.ratios.realRate, 2)}%`, lang === "es" ? "Fondos federales menos inflación interanual del IPC. Es una aproximación retrospectiva, no el tipo natural ni una expectativa real ex ante." : "Federal funds rate minus year-over-year CPI inflation. It is a backward-looking approximation, not the natural rate or an ex-ante real expectation.", seriesSourceUrl(data, "fedFunds")],
-            [lang === "es" ? "RIESGO COMPUESTO" : "COMPOSITE RISK", modelAvailable ? `${data.derived.scores.composite}/100` : "—", lang === "es" ? "Media ponderada transparente de diez franjas. Mide presión cíclica modelizada, no probabilidad de caída ni señal operativa." : "Transparent weighted average of ten bands. It measures modeled cyclical pressure, not crash probability or a trading signal.", "/api/data-manifest"],
-          ].map(([label, value, explanation, url]) => <button type="button" key={label} onClick={() => setDetail({
-            eyebrow: lang === "es" ? "RATIO · DEFINICIÓN Y LÍMITES" : "RATIO · DEFINITION AND LIMITS",
-            title: String(label), value: String(value), fact: String(explanation),
-            interpretation: lang === "es" ? "La lectura útil procede de su dirección, persistencia y relación con los demás motores; un nivel aislado no demuestra causalidad." : "Useful interpretation comes from direction, persistence and relation to other engines; an isolated level does not prove causality.",
-            watch: lang === "es" ? "Comparar siempre fechas de observación y frecuencia de las series antes de extraer conclusiones." : "Always compare observation dates and series frequencies before drawing conclusions.",
-            sourceLabel: lang === "es" ? "Abrir fuente o metodología" : "Open source or methodology", sourceUrl: String(url),
-          })}><span>{label}</span><b>{value}</b><em>{lang === "es" ? "Explicar" : "Explain"} ↗</em></button>)}
-        </div>
+          </ul>
+        </section>
+        <section className="ratio-panel" aria-labelledby="ratio-title" aria-describedby="ratio-summary">
+          <div className="ratio-heading"><div><span className="kicker">{lang === "es" ? "RELACIONES ALINEADAS · ESTADO DEL MODELO" : "ALIGNED RATIOS · MODEL STATUS"}</span><h3 id="ratio-title">{lang === "es" ? "Mismo periodo, lectura honesta." : "Same period, honest reading."}</h3></div><p id="ratio-summary">{lang === "es" ? "Cada cociente exige un mes común. Si una fuente está atrasada, se retiene el valor en lugar de mezclar fechas." : "Every ratio requires a shared month. If a source is stale, the value is withheld instead of mixing dates."}</p></div>
+          <ul className="ratio-strip">
+            {ratioCards.map((card) => <li key={card.key}><button type="button" className={`ratio-card ${card.state}`} aria-haspopup="dialog" aria-controls="detail-dialog" aria-label={`${lang === "es" ? "Abrir detalle" : "Open details"}: ${card.label}, ${card.value}, ${card.status}`} onClick={(event) => {
+              detailReturnFocusRef.current = event.currentTarget;
+              setDetail({
+                eyebrow: card.key === "composite" ? (lang === "es" ? "MODELO · COBERTURA Y LÍMITES" : "MODEL · COVERAGE AND LIMITS") : (lang === "es" ? "RELACIÓN · CÁLCULO Y LÍMITES" : "RATIO · CALCULATION AND LIMITS"),
+                title: card.label, value: card.value, fact: card.fact,
+                interpretation: card.interpretation, watch: card.watch,
+                sourceLabel: lang === "es" ? "Auditar cálculo y fuentes" : "Audit calculation and sources", sourceUrl: "/api/data-manifest",
+              });
+            }}><span>{card.label}</span><b>{card.value}</b><small>{card.status}</small><em>{lang === "es" ? "VER DETALLE" : "VIEW DETAILS"} →</em></button></li>)}
+          </ul>
+        </section>
         <div className="backend-grid">
-          <article className="scenario-panel">
+          <article className="scenario-panel" aria-labelledby="cycle-reading-title">
             <div className="backend-title">
-              <div><span className="kicker">{lang === "es" ? "DIAGNÓSTICO MULTIDIMENSIONAL" : "MULTIDIMENSIONAL DIAGNOSIS"}</span><h3>{lang === "es" ? "Lectura actual del ciclo" : "Current cycle reading"}</h3></div>
+              <div><span className="kicker">{lang === "es" ? "DIAGNÓSTICO MULTIDIMENSIONAL" : "MULTIDIMENSIONAL DIAGNOSIS"}</span><h3 id="cycle-reading-title">{lang === "es" ? "Lectura actual del ciclo" : "Current cycle reading"}</h3></div>
               <span>{modelProvisional ? (lang === "es" ? "PROVISIONAL" : "PROVISIONAL") : (lang === "es" ? "NO ES ASESORÍA" : "NOT ADVICE")}</span>
             </div>
-            <p>{modelAvailable
+            <p>{modelAvailable && strongest && weakest
               ? (lang === "es"
-                ? `${regime.body} El motor dominante es ${strongest.label.toLowerCase()} (${strongest.score}/100); la menor presión aparece en ${weakest.label.toLowerCase()} (${weakest.score}/100). La dispersión entre motores es de ${divergence} puntos.`
-                : `${regime.body} The dominant engine is ${strongest.label.toLowerCase()} (${strongest.score}/100); the lowest pressure is ${weakest.label.toLowerCase()} (${weakest.score}/100). Cross-engine dispersion is ${divergence} points.`)
+                ? `${regime.body} Lectura basada en ${availableEngineAssessments.length}/${engineAssessments.length} motores con cobertura. Entre ellos, domina ${strongest.label.toLowerCase()} (${strongest.score}/100) y la menor presión aparece en ${weakest.label.toLowerCase()} (${weakest.score}/100); la dispersión es de ${divergence} puntos.`
+                : `${regime.body} Reading based on ${availableEngineAssessments.length}/${engineAssessments.length} engines with coverage. Among them, ${strongest.label.toLowerCase()} dominates (${strongest.score}/100), while the lowest pressure is in ${weakest.label.toLowerCase()} (${weakest.score}/100); dispersion is ${divergence} points.`)
               : (lang === "es" ? "No existe cobertura suficiente para un diagnóstico compuesto. Las lecturas parciales se mantienen visibles sin rellenar huecos." : "Coverage is insufficient for a composite diagnosis. Partial readings remain visible without filling gaps.")}</p>
             <div className="assessment-disclaimer"><b>{lang === "es" ? "LECTURA, NO RECOMENDACIÓN" : "READING, NOT A RECOMMENDATION"}</b><span>{lang === "es" ? "Describe condiciones observadas y una interpretación teórica condicionada. No recomienda comprar, vender, mantener ni asignar capital." : "Describes observed conditions and a conditional theoretical interpretation. It does not recommend buying, selling, holding or allocating capital."}</span></div>
             <div className="scenario-grid assessment-grid">
-              {engineAssessments.map((assessment) => <button type="button" className="scenario active" key={assessment.key} onClick={() => showEngine(assessment.key, assessment.score)}>
-                <div><b>{modelAvailable ? assessment.score : "—"}</b><span>{modelAvailable ? assessment.range : (lang === "es" ? "SIN COBERTURA" : "NO COVERAGE")}</span></div>
-                <h4>{modelAvailable ? assessment.title : (lang === "es" ? "Lectura suspendida" : "Reading withheld")}</h4><code>{assessment.label.toUpperCase()}</code><p>{modelAvailable ? assessment.fact : (lang === "es" ? "Faltan entradas verificables; el motor no convierte ausencia en una señal neutral." : "Verifiable inputs are missing; the engine does not convert absence into a neutral signal.")}</p><em>{lang === "es" ? "Abrir evidencia, lente y señales" : "Open evidence, lens and signals"} ↗</em>
+              {engineAssessments.map((assessment) => <button type="button" className={`scenario ${assessment.available ? "active" : "withheld"}`} key={assessment.key} aria-haspopup="dialog" aria-controls="detail-dialog" aria-label={`${lang === "es" ? "Abrir evidencia" : "Open evidence"}: ${assessment.label}, ${assessment.available ? `${assessment.score}/100, ${assessment.range}` : (lang === "es" ? "sin cobertura" : "no coverage")}`} onClick={(event) => showEngine(assessment.key, assessment.score, event.currentTarget)}>
+                <div><b>{assessment.available ? assessment.score : "—"}</b><span>{assessment.available ? assessment.range : (lang === "es" ? "SIN COBERTURA" : "NO COVERAGE")}</span></div>
+                <h4>{assessment.available ? assessment.title : (lang === "es" ? "Lectura suspendida" : "Reading withheld")}</h4><code>{assessment.label.toUpperCase()}</code><p>{assessment.available ? assessment.fact : (lang === "es" ? "Faltan entradas verificables; el motor no convierte ausencia en una señal neutral." : "Verifiable inputs are missing; the engine does not convert absence into a neutral signal.")}</p><em>{lang === "es" ? "Abrir evidencia, lente y señales" : "Open evidence, lens and signals"} ↗</em>
               </button>)}
             </div>
           </article>
-          <article className="freshness-panel">
+          <article className="freshness-panel" aria-labelledby="source-status-title">
             <div className="backend-title">
-              <div><span className="kicker">{lang === "es" ? `MOTOR ${ENGINE_VERSION} · SITES V${SITE_RELEASE}` : `ENGINE ${ENGINE_VERSION} · SITES V${SITE_RELEASE}`}</span><h3>{lang === "es" ? "Estado de las fuentes" : "Source status"}</h3></div>
-              <span className="backend-live">● {lang === "es" ? "ACTIVO" : "LIVE"}</span>
+              <div><span className="kicker">{lang === "es" ? `MOTOR ${ENGINE_VERSION} · SITES V${SITE_RELEASE}` : `ENGINE ${ENGINE_VERSION} · SITES V${SITE_RELEASE}`}</span><h3 id="source-status-title">{lang === "es" ? "Estado de las fuentes" : "Source status"}</h3></div>
+              <span className={`backend-live ${sourceHealthState}`}><i aria-hidden="true" />{sourceHealthState === "ok" ? (lang === "es" ? "AL DÍA" : "CURRENT") : sourceHealthState === "partial" ? (lang === "es" ? "COBERTURA PARCIAL" : "PARTIAL COVERAGE") : (lang === "es" ? "SIN DATOS ACTUALES" : "NO CURRENT DATA")}</span>
             </div>
             <p>{lang === "es"
               ? "Todos los visitantes comparten una instantánea de 15 minutos. El servidor reintenta fallos transitorios, conserva el último dato válido y marca cada serie como actual, desactualizada o no disponible."
@@ -1126,129 +1974,195 @@ export default function Monitor() {
               <div><span>{lang === "es" ? "SALIDA DE DATOS" : "DATA ENDPOINT"}</span><code>/api/data</code></div>
               <div><span>{lang === "es" ? "SOLICITUD" : "REQUEST"}</span><b>{data.provenance.mode === "fallback" ? "—" : `${data.requestedAt.slice(0, 19).replace("T", " ")} UTC`}</b></div>
               <div><span>BITCOIN</span><b>{data.bitcoin.priceObservedAt?.slice(0, 19).replace("T", " ") ?? "—"} UTC</b></div>
-              <div><span>{lang === "es" ? "PROVEEDORES" : "PROVIDERS"}</span><b>{data.provenance.bitcoinPrice} · {data.provenance.federalDebt ?? "FRED"}</b></div>
-              <div><span>{lang === "es" ? "MODELO" : "MODEL"}</span><b>{modelStatus.toUpperCase()} · {data.provenance.modelInputsAvailable ?? 0}/{data.provenance.modelInputsTotal ?? 14}</b></div>
+              <div><span>{lang === "es" ? "SERIES MACRO ACTUALES" : "CURRENT MACRO SERIES"}</span><b>{macroAvailable}/{macroTotal}</b></div>
+              <div><span>{lang === "es" ? "MODELO" : "MODEL"}</span><b>{modelStatus.toUpperCase()} · {modelInputsAvailable}/{modelInputsTotal} · {availableWeightPercent}% {lang === "es" ? "PESO" : "WEIGHT"}</b></div>
+            </div>
+            <div className="freshness-legend" aria-label={lang === "es" ? "Resumen de vigencia de las fuentes" : "Source freshness summary"}>
+              <span className="live">{lang === "es" ? "AL DÍA" : "CURRENT"} <b>{freshnessCounts.live}</b></span>
+              <span className="backup">{lang === "es" ? "VERIFICADO" : "VERIFIED"} <b>{freshnessCounts.lastKnownGood}</b></span>
+              <span className="stale">{lang === "es" ? "DESACTUALIZADO" : "STALE"} <b>{freshnessCounts.stale}</b></span>
+              <span className="unavailable">{lang === "es" ? "SIN DATO" : "NO DATA"} <b>{freshnessCounts.unavailable}</b></span>
             </div>
             <div className="backend-links"><a href="/api/health" target="_blank" rel="noreferrer">{lang === "es" ? "Estado técnico" : "Health"} ↗</a><a href="/api/data-manifest" target="_blank" rel="noreferrer">{lang === "es" ? "Manifiesto de datos" : "Data manifest"} ↗</a></div>
-            <div className="freshness-list">
-              {data.freshness.length ? data.freshness.map((source) => <a href={`https://fred.stlouisfed.org/series/${source.id}`} target="_blank" rel="noreferrer" key={source.id}>
-                <span><i className={source.status === "live" ? "ok" : source.status === "last-known-good" || source.status === "stale" ? "backup" : "fail"} />{source.id} · {seriesSource(data, source.key)}{source.status === "last-known-good" ? " · BACKUP" : source.status === "stale" ? ` · ${lang === "es" ? "DESACTUALIZADO" : "STALE"}` : ""}</span>
-                <b>{source.observedAt ?? (lang === "es" ? "NO DISPONIBLE" : "UNAVAILABLE")}</b>
-              </a>) : <p>{lang === "es" ? "El snapshot de respaldo no incluye fechas por serie. Pulsa Actualizar para consultar el backend." : "The fallback snapshot has no per-series dates. Press Refresh to query the backend."}</p>}
-            </div>
+            <ul className="freshness-list">
+              {data.freshness.length ? data.freshness.map((source) => {
+                const statusLabel = sourceStatusLabel(source.status, lang);
+                const observedLabel = source.observedAt ?? (lang === "es" ? "SIN FECHA" : "NO DATE");
+                return <li key={source.id}><a href={seriesSourceUrl(data, source.key)} target="_blank" rel="noreferrer" aria-label={`${source.id}: ${statusLabel.toLowerCase()}; ${lang === "es" ? "observado" : "observed"} ${observedLabel}; ${lang === "es" ? "fuente" : "source"} ${seriesSource(data, source.key)}. ${lang === "es" ? "Abrir evidencia en una pestaña nueva" : "Open evidence in a new tab"}.`}>
+                  <span className="freshness-source"><span><i className={source.status === "live" ? "ok" : source.status === "last-known-good" ? "backup" : source.status === "stale" ? "stale" : "fail"} />{source.id} · {seriesSource(data, source.key)}</span><small className={source.status}>{statusLabel}</small></span>
+                  <time dateTime={source.observedAt ?? undefined}>{observedLabel}</time>
+                </a></li>;
+              }) : <li className="freshness-empty">{lang === "es" ? "El snapshot de respaldo no incluye fechas por serie. Pulsa Actualizar para consultar el backend." : "The fallback snapshot has no per-series dates. Press Refresh to query the backend."}</li>}
+            </ul>
           </article>
         </div>
       </section>
 
       <section className="dashboard-section" id="dashboard">
-        <div className="section-head"><div><span className="kicker">01 · {t.terminal.toUpperCase()}</span><h2>{t.terminal}</h2><p>{t.terminalSub}</p></div><a className="source-link" href={meta.source === "BLOCKCHAIN" ? "https://www.blockchain.com/explorer/charts/market-price" : `https://fred.stlouisfed.org/series/${meta.source}`} target="_blank" rel="noreferrer">{meta.source} ↗</a></div>
+        <div className="section-head"><div><span className="kicker">01 · {t.terminal.toUpperCase()}</span><h2>{t.terminal}</h2><p>{t.terminalSub}</p></div><a className="source-link" href={chartSourceUrl} target="_blank" rel="noreferrer" aria-label={`${lang === "es" ? "Abrir fuente de la serie" : "Open series source"}: ${chartSource}`}>{chartSource} ↗</a></div>
         <div className="terminal">
-          <div className="series-tabs">{(Object.keys(seriesMeta) as (keyof typeof seriesMeta)[]).map((key) => <button key={key} className={seriesKey === key ? "active" : ""} onClick={() => setSeriesKey(key)}><i style={{background: seriesMeta[key].color}} />{seriesMeta[key][lang]}</button>)}</div>
-          <div className="chart-toolbar"><div><span>{meta[lang]}</span><b>{meta.source}</b></div><div className="range">{[[12,"1Y"],[60,"5Y"],[0,"MAX"]].map(([value,label]) => <button key={label} className={horizon === value ? "active" : ""} onClick={() => setHorizon(Number(value))}>{label}</button>)}</div></div>
-          <LineChart points={points.length ? points : fallback.series[seriesKey] ?? []} color={meta.color} unit={meta.unit} horizon={horizon}/>
+          <div className="series-tabs" role="tablist" aria-label={lang === "es" ? "Series del gráfico" : "Chart series"}>{chartSeriesKeys.map((key, index) => <button ref={(element) => { seriesTabRefs.current[index] = element; }} id={`series-tab-${key}`} role="tab" aria-selected={seriesKey === key} aria-controls="macro-chart-panel" tabIndex={seriesKey === key ? 0 : -1} key={key} className={seriesKey === key ? "active" : ""} onClick={() => setSeriesKey(key)} onKeyDown={(event) => handleSeriesTabKey(event, index)}><i style={{background: seriesMeta[key].color}} aria-hidden="true" />{seriesMeta[key][lang]}</button>)}</div>
+          <div className="chart-toolbar"><div><span>{meta[lang]}</span><b>{meta.source} · {chartStatus} · {formatChartDate(points.at(-1)?.date, lang)}</b></div><div className="range" role="group" aria-label={lang === "es" ? "Horizonte temporal" : "Time horizon"}>{[[1,lang === "es" ? "1A" : "1Y"],[5,lang === "es" ? "5A" : "5Y"],[0,lang === "es" ? "MÁX" : "MAX"]].map(([value,label]) => <button type="button" key={label} className={horizon === value ? "active" : ""} aria-pressed={horizon === value} onClick={() => setHorizon(Number(value))}>{label}</button>)}</div></div>
+          <div id="macro-chart-panel" role="tabpanel" aria-labelledby={`series-tab-${seriesKey}`}><LineChart key={`${seriesKey}:${horizon}`} points={points} color={meta.color} unit={meta.unit[lang]} horizon={horizon} lang={lang} status={chartStatus} state={chartState}/></div>
         </div>
       </section>
 
-      <section className="signal-section" id="liquidity">
-        <div className="section-head"><div><span className="kicker">{lang === "es" ? "02 · SEÑALES MACRO" : "02 · MACRO SIGNALS"}</span><h2>{t.indicators}</h2><p>{t.indicatorsSub}</p></div><div className="lens-toggle"><button className={lens === "facts" ? "active" : ""} onClick={() => setLens("facts")}>{t.objective}</button><button className={lens === "thesis" ? "active" : ""} onClick={() => setLens("thesis")}>{t.austrian}</button></div></div>
+      <section className="signal-section" id="liquidity" aria-labelledby="signal-board-title">
+        <div className="section-head"><div><span className="kicker">{lang === "es" ? "02 · SEÑALES MACRO" : "02 · MACRO SIGNALS"}</span><h2 id="signal-board-title">{t.indicators}</h2><p>{t.indicatorsSub}</p></div><div className="lens-toggle" role="group" aria-label={lang === "es" ? "Tipo de lectura del indicador" : "Indicator reading type"}><button type="button" className={lens === "facts" ? "active" : ""} aria-pressed={lens === "facts"} onClick={() => setLens("facts")}>{t.objective}</button><button type="button" className={lens === "thesis" ? "active" : ""} aria-pressed={lens === "thesis"} onClick={() => setLens("thesis")}>{t.austrian}</button></div></div>
         <div className="signal-layout">
-          <div className="metric-grid">
-            {metrics.map((metric) => <button key={metric.key} className={`metric-card ${selectedMetric.key === metric.key ? "selected" : ""}`} onClick={() => setSelectedMetric(metric)}>
-              <span><i className={metric.risk > 70 ? "red" : metric.risk > 45 ? "amber" : "green"} />{metric.label[lang === "en" ? 0 : 1]}</span>
-              <strong>{metric.key === "federalDebt" ? (latestValue(data, metric.key) == null ? "—" : `$${format(latestValue(data, metric.key)!/1000,1)}T`) : format(latestValue(data, metric.key))}</strong>
-              <small>{seriesSource(data, metric.key)} · {metric.source}</small><div className="risk-bar"><i style={{width:`${metric.risk}%`}} /></div>
-            </button>)}
+          <div className="metric-grid" role="tablist" aria-label={lang === "es" ? "Indicadores macroeconómicos" : "Macroeconomic indicators"}>
+            {metrics.map((metric, index) => {
+              const value = latestValue(data, metric.key);
+              const available = value != null && data.provenance.mode !== "fallback";
+              const state = marketState(data, metric.key);
+              const status = marketStateLabel(state, lang);
+              const signalReady = data.provenance.mode !== "fallback" && data.provenance.signalReady?.[metric.signal] !== false && Number.isFinite(data.derived.scores[metric.signal]);
+              const pressure = signalReady ? data.derived.scores[metric.signal] : null;
+              const shownValue = metric.key === "federalDebt" && value != null ? `$${marketFormat(value / 1000, lang, metric.digits)} T` : marketFormat(value, lang, metric.digits);
+              return <button ref={(element) => { metricTabRefs.current[index] = element; }} id={`metric-tab-${metric.key}`} role="tab" aria-selected={selectedMetric.key === metric.key} aria-controls="signal-inspector" tabIndex={selectedMetric.key === metric.key ? 0 : -1} type="button" key={metric.key} className={`metric-card ${selectedMetric.key === metric.key ? "selected" : ""} ${available ? "has-data" : "no-data"}`} onClick={() => setSelectedMetric(metric)} onKeyDown={(event) => handleMetricTabKey(event, index)}>
+                <span className="metric-title"><i className={`metric-source-dot ${state}`} aria-hidden="true" />{metric.label[lang === "en" ? 0 : 1]}</span>
+                <span className="metric-reading"><strong>{shownValue}</strong><small>{available ? metric.unit[lang === "en" ? 0 : 1] : (lang === "es" ? "sin observación verificable" : "no verifiable observation")}</small></span>
+                <span className="metric-provenance"><span className={`metric-status ${state}`}>{status}</span><time dateTime={available ? observedDate(data, metric.key) : undefined}>{available ? formatChartDate(observedDate(data, metric.key), lang) : "—"}</time></span>
+                <small className="metric-source">{seriesSource(data, metric.key)} · {metric.source}</small>
+                <span className="metric-pressure"><span>{lang === "es" ? "PRESIÓN DEL MODELO" : "MODEL PRESSURE"}</span><b>{pressure == null ? (lang === "es" ? "RETENIDA" : "WITHHELD") : `${pressure}/100`}</b></span>
+                <span className={`risk-bar ${pressure == null ? "withheld" : ""}`} aria-hidden="true"><i style={{width:`${pressure ?? 0}%`}} /></span>
+              </button>;
+            })}
           </div>
-          <aside className="inspector">
-            <span className="kicker">{lens === "facts" ? t.facts : t.thesis}</span>
-            <h3>{selectedMetric.label[lang === "en" ? 0 : 1]}</h3>
-            <div className="inspector-value"><span>{t.value}</span><strong>{format(latestValue(data, selectedMetric.key))}</strong></div>
-            <p>{(lens === "facts" ? selectedMetric.fact : selectedMetric.thesis)[lang === "en" ? 0 : 1]}</p>
-            <div className="watch"><span>{t.watch}</span><p>{selectedMetric.watch[lang === "en" ? 0 : 1]}</p></div>
-            <a href={`https://fred.stlouisfed.org/series/${selectedMetric.source}`} target="_blank" rel="noreferrer">{t.source}: {selectedMetric.source} ↗</a>
-          </aside>
+          {(() => {
+            const value = latestValue(data, selectedMetric.key);
+            const available = value != null && data.provenance.mode !== "fallback";
+            const state = marketState(data, selectedMetric.key);
+            const status = marketStateLabel(state, lang);
+            const signalReady = data.provenance.mode !== "fallback" && data.provenance.signalReady?.[selectedMetric.signal] !== false && Number.isFinite(data.derived.scores[selectedMetric.signal]);
+            const pressure = signalReady ? data.derived.scores[selectedMetric.signal] : null;
+            const shownValue = selectedMetric.key === "federalDebt" && value != null ? `$${marketFormat(value / 1000, lang, selectedMetric.digits)} T` : marketFormat(value, lang, selectedMetric.digits);
+            const sourceUrl = selectedMetric.key === "federalDebt" ? debtSourceUrl(data) : seriesSourceUrl(data, selectedMetric.key);
+            return <aside className="inspector" id="signal-inspector" role="tabpanel" aria-labelledby={`metric-tab-${selectedMetric.key}`} tabIndex={0}>
+              <div className="inspector-heading"><span className="kicker">{lens === "facts" ? t.facts : t.thesis}</span><span className={`inspector-state ${state}`}>{status}</span></div>
+              <h3>{selectedMetric.label[lang === "en" ? 0 : 1]}</h3>
+              <div className="inspector-value"><span>{t.value}<small>{available ? formatChartDate(observedDate(data, selectedMetric.key), lang) : (lang === "es" ? "SIN FECHA" : "NO DATE")}</small></span><strong>{shownValue}<small>{selectedMetric.unit[lang === "en" ? 0 : 1]}</small></strong></div>
+              <div className={`inspector-pressure ${pressure == null ? "withheld" : ""}`}><span>{lang === "es" ? "PRESIÓN MODELIZADA" : "MODELED PRESSURE"}</span><b>{pressure == null ? (lang === "es" ? "RETENIDA POR COBERTURA" : "WITHHELD FOR COVERAGE") : `${pressure}/100`}</b></div>
+              <p>{available
+                ? (lens === "facts" ? selectedMetric.fact : selectedMetric.thesis)[lang === "en" ? 0 : 1]
+                : (lang === "es" ? "No existe una observación verificable para interpretar este indicador. Se conserva su definición, pero no se asigna un cero ni una lectura neutral." : "There is no verifiable observation to interpret for this indicator. Its definition remains available, but no zero or neutral reading is assigned.")}</p>
+              <div className="watch"><span>{t.watch}</span><p>{available ? selectedMetric.watch[lang === "en" ? 0 : 1] : (lang === "es" ? "Revisar la fuente y esperar una observación válida antes de extraer conclusiones." : "Check the source and wait for a valid observation before drawing conclusions.")}</p></div>
+              <a href={sourceUrl} target="_blank" rel="noopener noreferrer" aria-label={`${t.source}: ${seriesSource(data, selectedMetric.key)} · ${selectedMetric.source}. ${lang === "es" ? "Abrir evidencia en una pestaña nueva" : "Open evidence in a new tab"}.`}>{t.source}: {seriesSource(data, selectedMetric.key)} · {selectedMetric.source} ↗</a>
+            </aside>;
+          })()}
         </div>
       </section>
 
-      <section className="hard-assets" id="hard-assets">
-        <div className="section-head light"><div><span className="kicker">{lang === "es" ? "03 · LABORATORIO DE DINERO DURO" : "03 · SOUND MONEY LAB"}</span><h2>{t.scarcity}</h2><p>{t.scarcitySub}</p></div></div>
+      <section className="hard-assets" id="hard-assets" aria-labelledby="hard-assets-title">
+        <div className="section-head light"><div><span className="kicker">{lang === "es" ? "03 · LABORATORIO DE DINERO DURO" : "03 · SOUND MONEY LAB"}</span><h2 id="hard-assets-title">{t.scarcity}</h2><p>{t.scarcitySub}</p></div></div>
         <div className="asset-grid">
-          <article className="btc-card">
-            <div className="asset-title"><span className="coin">₿</span><div><span>BITCOIN</span><strong>${format(btc, 0)}</strong></div></div>
-            <div className="asset-stats"><div><span>{t.s2f}</span><b>{data.bitcoin.supply ? `${format(data.bitcoin.stockToFlow, 1)}×` : "—"}</b></div><div><span>{t.supply}</span><b>{data.bitcoin.supply ? `${format(data.bitcoin.supply/1e6, 2)}M` : "—"}</b></div><div><span>{t.block}</span><b>{format(data.bitcoin.blockHeight, 0)}</b></div><div><span>{t.fees}</span><b>{data.bitcoin.feeFast == null ? "—" : `${format(data.bitcoin.feeFast, 0)} sat/vB`}</b></div></div>
+          <article className="btc-card" aria-labelledby="bitcoin-asset-title">
+            <div className="asset-title"><span className="coin" aria-hidden="true">₿</span><div><span>BITCOIN · USD</span><h3 id="bitcoin-asset-title"><span className="sr-only">Bitcoin: </span>{bitcoinPriceAvailable ? `$${marketFormat(btc, lang, 0)}` : "—"}</h3><small className={`asset-state ${bitcoinConsensus}`}>{bitcoinPriceStatus} · {data.bitcoin.priceObservedAt ? formatChartDate(data.bitcoin.priceObservedAt.slice(0, 10), lang) : (lang === "es" ? "SIN FECHA" : "NO DATE")}</small></div></div>
+            <dl className="asset-stats"><div><dt>{t.s2f}</dt><dd>{bitcoinSupplyAvailable ? `${marketFormat(data.bitcoin.stockToFlow, lang, 1)}×` : "—"}</dd></div><div><dt>{t.supply}</dt><dd>{bitcoinSupplyAvailable ? `${marketFormat(data.bitcoin.supply / 1e6, lang, 2)} M BTC` : "—"}</dd></div><div><dt>{t.block}</dt><dd>{bitcoinNetworkAvailable ? marketFormat(data.bitcoin.blockHeight, lang, 0) : "—"}</dd></div><div><dt>{t.fees}</dt><dd>{bitcoinNetworkAvailable && data.bitcoin.feeFast != null ? `${marketFormat(data.bitcoin.feeFast, lang, 0)} sat/vB` : "—"}</dd></div></dl>
             <p>{lang === "en" ? "Stock-to-flow describes programmed scarcity; it is not a reliable standalone price model. Bitcoin’s supply schedule is auditable, its custody can be sovereign, and its settlement resists permission." : "El stock-to-flow describe la escasez programada; no es un modelo de precio fiable por sí solo. La oferta de Bitcoin es auditable, su custodia puede ser soberana y su liquidación resiste permisos."}</p>
+            <div className="asset-evidence"><a href={bitcoinSourceUrl(data)} target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? `Abrir precio de Bitcoin: ${bitcoinPriceStatus}, en una pestaña nueva` : `Open Bitcoin price: ${bitcoinPriceStatus}, in a new tab`}>{lang === "es" ? "Precio · dos mercados" : "Price · two venues"} ↗</a><a href="https://mempool.space/" target="_blank" rel="noopener noreferrer">Mempool.space ↗</a><a href="https://www.blockchain.com/explorer/charts/total-bitcoins" target="_blank" rel="noopener noreferrer">Blockchain.com ↗</a></div>
           </article>
-          <article className="ratio-card">
+          <article className="hard-ratio-card" aria-labelledby="scarcity-ratios-title">
             <span className="kicker">{lang === "es" ? "VALORACIÓN RELATIVA" : "RELATIVE VALUATION"}</span>
-            <h3>{lang === "en" ? "What does one bitcoin buy?" : "¿Qué compra un bitcoin?"}</h3>
-            <div className="ratio"><span><b>{format(btc && gold ? btc/gold : null, 1)}</b> {lang === "en" ? "oz gold" : "oz de oro"}</span><i style={{width:"72%"}} /></div>
-            <div className="ratio"><span><b>{format(btc ? 1e6/btc : null, 1)}</b> BTC / $1M</span><i style={{width:"48%"}} /></div>
-            <div className="ratio"><span><b>~60×</b> Gold S2F</span><i style={{width:"35%"}} /></div>
-            <div className="ratio"><span><b>{data.bitcoin.supply ? `${format(data.bitcoin.stockToFlow,0)}×` : "—"}</b> Bitcoin S2F</span><i style={{width:data.bitcoin.supply ? "78%" : "0%"}} /></div>
-            <small>{lang === "en" ? "Gold S2F is an industry estimate; Bitcoin S2F uses current supply ÷ annual subsidy flow." : "El S2F del oro es una estimación sectorial; el de Bitcoin usa oferta actual ÷ flujo anual del subsidio."}</small>
+            <h3 id="scarcity-ratios-title">{lang === "en" ? "Scarcity and purchasing-power ratios" : "Ratios de escasez y poder adquisitivo"}</h3>
+            <dl className="hard-ratio-list">
+              <div><dt>BTC / {lang === "es" ? "ORO" : "GOLD"}</dt><dd>{alignedBitcoinGold == null ? "—" : `${marketFormat(alignedBitcoinGold, lang, 1)} oz`}</dd><small>{alignedBitcoinGold == null ? (lang === "es" ? "RETENIDO · SIN MES COMÚN" : "WITHHELD · NO COMMON MONTH") : `${alignedBitcoinGoldMonth} · ${btcGoldEvidence.numeratorObservations} BTC / ${btcGoldEvidence.denominatorObservations} ${lang === "es" ? "ORO" : "GOLD"}`}</small></div>
+              <div><dt>BTC / 1 M USD</dt><dd>{bitcoinPriceAvailable ? marketFormat(1_000_000 / btc!, lang, 1) : "—"}</dd><small>{bitcoinPriceAvailable ? `${bitcoinPriceStatus} · SPOT` : (lang === "es" ? "SIN PRECIO VERIFICADO" : "NO VERIFIED PRICE")}</small></div>
+              <div><dt>{lang === "es" ? "ORO S2F" : "GOLD S2F"}</dt><dd>{marketFormat(goldStockToFlow2025, lang, 1)}×</dd><small>{lang === "es" ? "ESTIMACIÓN 2025 · STOCK / PRODUCCIÓN MINERA" : "2025 ESTIMATE · STOCK / MINE OUTPUT"}</small></div>
+              <div><dt>BITCOIN S2F</dt><dd>{bitcoinSupplyAvailable ? `${marketFormat(data.bitcoin.stockToFlow, lang, 1)}×` : "—"}</dd><small>{bitcoinSupplyAvailable ? (lang === "es" ? "OFERTA / SUBSIDIO ANUAL ACTUAL" : "SUPPLY / CURRENT ANNUAL SUBSIDY") : (lang === "es" ? "SIN DATOS DE RED" : "NO NETWORK DATA")}</small></div>
+            </dl>
+            <p className="ratio-caveat">{lang === "en" ? "Ratios describe quantities; they do not establish fair value, expected return or portfolio suitability." : "Los ratios describen cantidades; no establecen valor razonable, rentabilidad esperada ni idoneidad para una cartera."}</p>
+            <div className="asset-evidence"><a href="/api/data-manifest" target="_blank" rel="noopener noreferrer">{lang === "es" ? "Cálculo BTC/oro" : "BTC/gold calculation"} ↗</a><a href="https://www.gold.org/goldhub/data/how-much-gold" target="_blank" rel="noopener noreferrer">World Gold Council ↗</a></div>
           </article>
-          <article className="monetary-map">
-            <span className="kicker">{lang === "es" ? "COMPETENCIA MONETARIA" : "MONETARY COMPETITION"}</span><h3>{lang === "en" ? "Trust spectrum" : "Espectro de confianza"}</h3>
-            {[["Bitcoin","Rules / self-custody",92],["Gold","Physical scarcity",78],["Dollar","Issuer credibility",48],["Sovereign debt","Future taxation",31]].map(([name,desc,width]) => <div className="trust" key={name}><span><b>{name}</b><small>{desc}</small></span><i><em style={{width:`${width}%`}} /></i></div>)}
+          <article className="monetary-map" aria-labelledby="dependency-map-title">
+            <span className="kicker">{lang === "es" ? "COMPETENCIA MONETARIA" : "MONETARY COMPETITION"}</span><h3 id="dependency-map-title">{lang === "en" ? "Dependency map" : "Mapa de dependencias"}</h3>
+            <p className="dependency-intro">{lang === "es" ? "Qué debe verificar o confiar el usuario para poseer y transferir cada activo." : "What a user must verify or trust to own and transfer each asset."}</p>
+            <ul className="dependency-list">
+              {[
+                ["Bitcoin", lang === "es" ? "Reglas del protocolo · consenso de red · custodia" : "Protocol rules · network consensus · custody"],
+                [lang === "es" ? "Oro" : "Gold", lang === "es" ? "Autenticidad física · custodia · transporte" : "Physical authenticity · custody · transport"],
+                [lang === "es" ? "Dólar" : "Dollar", lang === "es" ? "Emisor · red bancaria · marco legal" : "Issuer · banking rails · legal framework"],
+                [lang === "es" ? "Deuda soberana" : "Sovereign debt", lang === "es" ? "Emisor · fiscalidad futura · régimen monetario" : "Issuer · future taxation · monetary regime"],
+              ].map(([name, dependencies], index) => <li key={name}><span>0{index + 1}</span><div><b>{name}</b><small>{dependencies}</small></div></li>)}
+            </ul>
+            <p className="dependency-note">{lang === "es" ? "Mapa cualitativo, no puntuación de seguridad, rentabilidad ni riesgo. Hace visibles dependencias distintas; no declara un ganador." : "Qualitative map, not a security, return or risk score. It exposes different dependencies; it does not declare a winner."}</p>
+            <a className="dependency-link" href={`/learn/bitcoin-sovereignty?lang=${lang}`}>{lang === "es" ? "Explorar verificación y custodia" : "Explore verification and custody"} →</a>
           </article>
         </div>
       </section>
 
-      <section className="pillars" id="theory">
-        <div className="section-head"><div><span className="kicker">{lang === "es" ? "04 · MARCO DE LA TEORÍA AUSTRIACA DEL CICLO" : "04 · ABCT FRAMEWORK"}</span><h2>{t.pillars}</h2></div></div>
-        <div className="pillar-grid">
-          {[
-            ["MONETARY POLICY", lang === "en" ? "Monetary policy" : "Política monetaria", data.derived.scores.liquidity, lang === "en" ? "Central-bank rates, money growth and the gap between administered conditions and real saving." : "Tipos del banco central, crecimiento monetario y distancia entre condiciones administradas y ahorro real."],
-            ["CREDIT MARKETS", lang === "en" ? "Credit markets" : "Mercados de crédito", data.derived.scores.credit, lang === "en" ? "Spreads, the yield curve and stress reveal where financing is becoming fragile." : "Diferenciales, curva de tipos y estrés revelan dónde se vuelve frágil la financiación."],
-            ["REAL ECONOMY", lang === "en" ? "Real economy" : "Economía real", data.derived.scores.realEconomy, lang === "en" ? "Production, employment and capacity test whether the financial boom has real confirmation." : "Producción, empleo y capacidad comprueban si el auge financiero tiene confirmación real."],
-          ].map(([code,title,score,body], i) => {
-            const key = (["liquidity", "credit", "realEconomy"] as const)[i];
-            const engineAvailable = modelAvailable && data.provenance.engineReady?.[key] !== false;
-            return <button type="button" key={String(code)} onClick={() => showEngine(key, Number(score))}><span>0{i+1} · {code}</span><div className="pillar-score"><strong>{engineAvailable ? score : "—"}</strong><small>/100</small></div><h3>{title}</h3><p>{body}</p><div className="pillar-bar"><i style={{width:`${engineAvailable ? score : 0}%`}} /></div><em>{lang === "es" ? "Interpretar pilar" : "Interpret pillar"} ↗</em></button>;
-          })}
+      <section className="pillars" id="theory" aria-labelledby="pillars-title" aria-describedby="pillars-summary">
+        <div className="section-head">
+          <div>
+            <span className="kicker">{lang === "es" ? "04 · MARCO DE LA TEORÍA AUSTRIACA DEL CICLO" : "04 · ABCT FRAMEWORK"}</span>
+            <h2 id="pillars-title">{t.pillars}</h2>
+            <p id="pillars-summary">{lang === "es"
+              ? "La Fed crea el marco monetario; los mercados de crédito determinan cómo circula el dinero; la economía real comprueba si llega a la población. Es una cadena de transmisión condicional: la coincidencia entre capas refuerza la lectura, pero no demuestra causalidad por sí sola."
+              : "The Fed creates the monetary framework; credit markets determine how money circulates; the real economy tests whether it reaches the population. This is a conditional transmission chain: agreement across layers strengthens the reading but does not prove causality by itself."}</p>
+          </div>
         </div>
-        <div className="process">
-          {[["01",lang === "en" ? "Observe" : "Observar",lang === "en" ? "Primary data and release dates." : "Datos primarios y fechas."],["02",lang === "en" ? "Connect" : "Conectar",lang === "en" ? "Money → credit → capital structure." : "Dinero → crédito → estructura."],["03",lang === "en" ? "Interpret" : "Interpretar",lang === "en" ? "Apply ABCT, label assumptions." : "Aplicar ABCT y declarar supuestos."],["04",lang === "en" ? "Falsify" : "Refutar",lang === "en" ? "Define what would change the view." : "Definir qué cambiaría la tesis."]].map(([n,h,p]) => <div key={n}><b>{n}</b><h4>{h}</h4><p>{p}</p></div>)}
-        </div>
+        <ol className="pillar-grid">
+          {pillarCards.map((pillar, index) => <li key={pillar.key}><article className={`pillar-card ${pillar.state}`} aria-labelledby={`pillar-${pillar.key}-title`}>
+            <div className="pillar-card-head"><span>0{index + 1} · {pillar.code}</span><small className={`pillar-state ${pillar.state}`}>{pillar.status}</small></div>
+            <div className={`pillar-score ${pillar.available ? "available" : "withheld"}`}><strong>{pillar.available ? pillar.score : "—"}</strong><small>{pillar.available ? "/100" : (lang === "es" ? "SIN PUNTUACIÓN" : "NO SCORE")}</small></div>
+            <h3 id={`pillar-${pillar.key}-title`}>{pillar.title}</h3>
+            <p>{pillar.body}</p>
+            <div className={`pillar-bar ${pillar.available ? "available" : "withheld"}`} aria-hidden="true">{pillar.available && <i style={{width:`${pillar.score}%`}} />}</div>
+            <button type="button" aria-haspopup="dialog" aria-controls="detail-dialog" onClick={(event) => showEngine(pillar.key, pillar.score, event.currentTarget)}>{lang === "es" ? "Interpretar pilar" : "Interpret pillar"} ↗</button>
+          </article></li>)}
+        </ol>
+        <p className="pillar-scale-note">{lang === "es"
+          ? "El valor /100 expresa presión dentro del modelo experimental ABCM; no mide la salud, la rentabilidad ni la importancia del pilar. Sin cobertura suficiente, la lectura se retiene y nunca se sustituye por cero."
+          : "The /100 value expresses pressure inside ABCM’s experimental model; it does not measure the pillar’s health, return or importance. Without sufficient coverage, the reading is withheld and never replaced by zero."}</p>
+        <ol className="process" aria-label={lang === "es" ? "Proceso de interpretación en cuatro pasos" : "Four-step interpretation process"}>
+          {[["01",lang === "en" ? "Observe" : "Observar",lang === "en" ? "Primary data and release dates." : "Datos primarios y fechas."],["02",lang === "en" ? "Connect" : "Conectar",lang === "en" ? "Monetary framework → credit → Main Street." : "Marco monetario → crédito → Main Street."],["03",lang === "en" ? "Interpret" : "Interpretar",lang === "en" ? "Apply ABCT, label assumptions." : "Aplicar ABCT y declarar supuestos."],["04",lang === "en" ? "Falsify" : "Refutar",lang === "en" ? "Define what would change the view." : "Definir qué cambiaría la tesis."]].map(([n,h,p]) => <li key={n}><b>{n}</b><h4>{h}</h4><p>{p}</p></li>)}
+        </ol>
       </section>
 
-      <section className="cava-credit">
-        <div className="cava-index">JLC<br/>→</div>
+      <section className="cava-credit" aria-labelledby="cava-title" aria-describedby="cava-summary cava-independence">
+        <div className="cava-index" aria-hidden="true">JLC<br/>→</div>
         <div className="cava-copy">
           <span className="kicker">{lang === "en" ? "FEATURED EDUCATIONAL INFLUENCE" : "INFLUENCIA DIVULGATIVA DESTACADA"}</span>
-          <h2>José Luis Cava</h2>
-          <p>{lang === "en"
-            ? "ABCM is especially inspired by José Luis Cava’s ability to explain macroeconomics and market interpretation through his publicly available content. This mention recognizes his educational work and its editorial influence on the project."
-            : "ABCM se inspira especialmente en la capacidad de José Luis Cava para divulgar macroeconomía e interpretación de mercados mediante su contenido público. Esta mención reconoce su labor educativa y su influencia editorial en el proyecto."}</p>
-          <p>{lang === "en"
+          <h2 id="cava-title">José Luis Cava</h2>
+          <p id="cava-summary">{lang === "en"
+            ? "ABCM is inspired by José Luis Cava’s public way of connecting monetary policy, credit transmission and Main Street: looking beyond index highs to ask whether liquidity reaches employment, housing and household purchasing power."
+            : "ABCM se inspira en la forma pública de José Luis Cava de conectar política monetaria, transmisión del crédito y Main Street: mirar más allá de los máximos bursátiles para comprobar si la liquidez llega al empleo, la vivienda y el poder adquisitivo de los hogares."}</p>
+          <p id="cava-independence">{lang === "en"
             ? "We do not attribute the dashboard, its index, formulas or three-pillar operating structure to him. ABCM is an independent open-source prototype—not an official José Luis Cava or HOPLA product, collaboration or endorsement."
             : "No le atribuimos la autoría del dashboard, del índice, de sus fórmulas ni de la estructura operativa de tres pilares. ABCM es un prototipo open source independiente; no es un producto oficial, una colaboración ni un respaldo de José Luis Cava o HOPLA."}</p>
           <div className="cava-links">
-            <a href="https://hopla.finance/home" target="_blank" rel="noreferrer">HOPLA Finance ↗</a>
-            <a href="https://www.youtube.com/@JoseLuisCavatv" target="_blank" rel="noreferrer">{lang === "en" ? "José Luis Cava on YouTube" : "José Luis Cava en YouTube"} ↗</a>
-            <a href="https://github.com/JimBLogic/AustrianBusinessCycleMonitor/commit/0acc1a2deb695d167e302c81966344056fb75189" target="_blank" rel="noreferrer">{lang === "en" ? "ABCM methodology history" : "Historial de metodología ABCM"} ↗</a>
+            <button type="button" aria-haspopup="dialog" aria-controls="detail-dialog" aria-label={lang === "es" ? "Abrir el contexto de los tres pilares y el vídeo que inspiró ABCM" : "Open the context behind ABCM’s three pillars and inspiring video"} onClick={(event) => showCavaContext(event.currentTarget)}>{lang === "es" ? "Los tres pilares y el vídeo que inspiró ABCM" : "The three pillars and the video behind ABCM"} →</button>
+            <a href="https://hopla.finance/home" target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? "Abrir el sitio público de HOPLA Finance en una pestaña nueva" : "Open HOPLA Finance’s public website in a new tab"}>HOPLA Finance ↗</a>
+            <a href="https://www.youtube.com/@JoseLuisCavatv" target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? "Abrir el canal público de José Luis Cava en YouTube en una pestaña nueva" : "Open José Luis Cava’s public YouTube channel in a new tab"}>{lang === "en" ? "José Luis Cava on YouTube" : "José Luis Cava en YouTube"} ↗</a>
+            <a href="https://github.com/JimBLogic/AustrianBusinessCycleMonitor/commit/0acc1a2deb695d167e302c81966344056fb75189" target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? "Abrir el historial de metodología de ABCM en una pestaña nueva" : "Open ABCM’s methodology history in a new tab"}>{lang === "en" ? "ABCM methodology history" : "Historial de metodología ABCM"} ↗</a>
           </div>
         </div>
-        <aside className="cava-pitch">
-          <span>{lang === "en" ? "WHY THIS EXISTS" : "POR QUÉ EXISTE"}</span>
+        <aside className="cava-pitch" aria-labelledby="cava-pitch-title">
+          <span id="cava-pitch-title">{lang === "en" ? "WHY IT INSPIRES" : "POR QUÉ INSPIRA"}</span>
+          <div className="cava-pitch-flow" aria-label={lang === "es" ? "Cadena de los tres pilares" : "Three-pillar chain"}>
+            <div><b>01</b><em>{lang === "es" ? "Política monetaria" : "Monetary policy"}</em><i>→</i></div>
+            <div><b>02</b><em>{lang === "es" ? "Mercados de crédito" : "Credit markets"}</em><i>→</i></div>
+            <div><b>03</b><em>{lang === "es" ? "Economía real" : "Real economy"}</em><i>✓</i></div>
+          </div>
           <strong>{lang === "en" ? "Inspiration is not authorship." : "Inspiración no es autoría."}</strong>
           <p>{lang === "en"
-            ? "Public market education inspired the editorial lens. ABCM’s code, formulas, pillar grouping and conclusions remain independently documented and open to criticism."
-            : "La divulgación pública de mercados inspira la mirada editorial. El código, las fórmulas, la agrupación de pilares y las conclusiones de ABCM se documentan de forma independiente y están abiertas a crítica."}</p>
+            ? "José Luis Cava’s public market education inspired the editorial question. ABCM answers it with independently documented code, formulas, pillar grouping and conclusions that remain open to criticism."
+            : "La divulgación pública de José Luis Cava inspiró la pregunta editorial. ABCM la responde con código, fórmulas, agrupación de pilares y conclusiones propias, documentadas y abiertas a crítica."}</p>
+          <small className="cava-boundary">{lang === "es" ? "Referencia editorial · sin afiliación · sin autoría" : "Editorial reference · no affiliation · no authorship"}</small>
         </aside>
       </section>
 
-      <section className="influence-library">
+      <section className="influence-library" aria-labelledby="influence-title" aria-describedby="influence-summary">
         <div className="influence-heading">
           <div>
             <span className="kicker">{lang === "es" ? "BIBLIOGRAFÍA ABIERTA · VOCES DIVERSAS" : "OPEN BIBLIOGRAPHY · DIVERSE VOICES"}</span>
-            <h2>{lang === "es" ? "Mapa de influencias" : "Influence map"}</h2>
+            <h2 id="influence-title">{lang === "es" ? "Mapa de influencias" : "Influence map"}</h2>
           </div>
-          <p>{lang === "es"
+          <p id="influence-summary">{lang === "es"
             ? "Autores y constructores reconocidos que ayudan a contrastar economía austriaca, historia monetaria, Bitcoin y soberanía. Sus ideas no equivalen a hechos de protocolo ni los convierten en autores o avalistas de ABCM."
             : "Recognized authors and builders used to contrast Austrian economics, monetary history, Bitcoin and sovereignty. Their ideas are not protocol facts and do not make them authors or endorsers of ABCM."}</p>
         </div>
-        <div className="influence-grid">
+        <ul className="influence-grid" aria-label={lang === "es" ? "Fuentes públicas del mapa de influencias" : "Public sources in the influence map"}>
           {[
             ["Saifedean Ammous", lang === "es" ? "ECONOMÍA AUSTRIACA" : "AUSTRIAN ECONOMICS", lang === "es" ? "Dinero duro, preferencia temporal y la tesis monetaria de Bitcoin." : "Hard money, time preference and Bitcoin’s monetary thesis.", "https://saifedean.com/tbs"],
             ["Lyn Alden", lang === "es" ? "ANÁLISIS MONETARIO" : "MONETARY ANALYSIS", lang === "es" ? "Historia del dinero, sistemas de liquidación y Bitcoin como bien monetario." : "Monetary history, settlement systems and Bitcoin as a monetary good.", "https://www.lynalden.com/what-is-money/"],
@@ -1258,48 +2172,48 @@ export default function Monitor() {
             ["Hal Finney", lang === "es" ? "DINERO DIGITAL" : "DIGITAL CASH", lang === "es" ? "RPOW y la evolución temprana de pruebas de trabajo reutilizables." : "RPOW and the early evolution of reusable proofs of work.", "https://nakamotoinstitute.org/finney/rpow/"],
             ["Jameson Lopp", lang === "es" ? "SOBERANÍA TÉCNICA" : "TECHNICAL SOVEREIGNTY", lang === "es" ? "Recursos prácticos sobre nodos, autocustodia, privacidad y seguridad." : "Practical resources on nodes, self-custody, privacy and security.", "https://www.lopp.net/bitcoin-information.html"],
             ["Ludwig von Mises", lang === "es" ? "DINERO Y CICLO ECONÓMICO" : "MONEY & BUSINESS CYCLES", lang === "es" ? "Teoría monetaria, medios fiduciarios y fundamentos del mecanismo austriaco del ciclo." : "Monetary theory, fiduciary media and foundations of the Austrian cycle mechanism.", "https://mises.org/library/book/theory-money-and-credit"],
-          ].map(([name, category, body, url]) => <a href={url} target="_blank" rel="noreferrer" key={name}>
-            <span>{category}</span>
-            <h3>{name}</h3>
-            <p>{body}</p>
-            <b>{lang === "es" ? "Leer fuente pública" : "Read public source"} ↗</b>
-          </a>)}
-        </div>
+          ].map(([name, category, body, url]) => <li key={name}><a href={url} target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? `Abrir la fuente pública de ${name} en una pestaña nueva` : `Open ${name}’s public source in a new tab`}>
+              <span>{category}</span>
+              <h3>{name}</h3>
+              <p>{body}</p>
+              <b>{lang === "es" ? "Leer fuente pública" : "Read public source"} ↗</b>
+            </a></li>)}
+        </ul>
       </section>
 
-      <section className="ammous-lens">
+      <section className="ammous-lens" aria-labelledby="ammous-title" aria-describedby="ammous-summary">
         <div className="ammous-intro">
           <span className="kicker">{lang === "es" ? "LECTURA CONTRASTADA · DINERO DURO" : "CONTRASTED READING · HARD MONEY"}</span>
-          <h2>Saifedean Ammous</h2>
-          <p>{lang === "es"
+          <h2 id="ammous-title">Saifedean Ammous</h2>
+          <p id="ammous-summary">{lang === "es"
             ? "Su trabajo aporta una tesis potente sobre dureza monetaria, preferencia temporal y Bitcoin. ABCM lo usa como marco argumental, no como autoridad incuestionable: protocolo, teoría y evidencia de mercado se muestran por separado."
             : "His work offers a powerful thesis on monetary hardness, time preference and Bitcoin. ABCM uses it as an argumentative framework, not unquestionable authority: protocol, theory and market evidence remain separate."}</p>
-          <div className="ammous-links">
-            <a href="https://saifedean.com/tbs" target="_blank" rel="noreferrer">The Bitcoin Standard ↗</a>
-            <a href="https://saifedean.com/poe" target="_blank" rel="noreferrer">Principles of Economics ↗</a>
-            <a href="https://www.sciencedirect.com/science/article/pii/S1062976917300777" target="_blank" rel="noreferrer">{lang === "es" ? "Artículo académico" : "Academic paper"} ↗</a>
-          </div>
+          <ul className="ammous-links" aria-label={lang === "es" ? "Obras y publicación académica de Saifedean Ammous" : "Works and academic publication by Saifedean Ammous"}>
+            <li><a href="https://saifedean.com/tbs" target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? "Abrir The Bitcoin Standard en una pestaña nueva" : "Open The Bitcoin Standard in a new tab"}>The Bitcoin Standard ↗</a></li>
+            <li><a href="https://saifedean.com/poe" target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? "Abrir Principles of Economics en una pestaña nueva" : "Open Principles of Economics in a new tab"}>Principles of Economics ↗</a></li>
+            <li><a href="https://www.sciencedirect.com/science/article/pii/S1062976917300777" target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? "Abrir el artículo Can cryptocurrencies fulfil the functions of money en una pestaña nueva" : "Open Can cryptocurrencies fulfil the functions of money in a new tab"}>Can cryptocurrencies fulfil the functions of money? ↗</a></li>
+          </ul>
         </div>
-        <div className="ammous-grid">
-          <article>
+        <ol className="ammous-grid" aria-label={lang === "es" ? "Tres capas de la lectura contrastada" : "Three layers of the contrasted reading"}>
+          <li><article aria-labelledby="ammous-fact-title">
             <span>01 · {lang === "es" ? "HECHO VERIFICABLE" : "VERIFIABLE FACT"}</span>
-            <h3>{lang === "es" ? "La emisión es auditable" : "Issuance is auditable"}</h3>
+            <h3 id="ammous-fact-title">{lang === "es" ? "La emisión es auditable" : "Issuance is auditable"}</h3>
             <p>{lang === "es" ? "La oferta y el subsidio de bloque se derivan de reglas que valida la red. El S2F mostrado es stock actual dividido por nueva emisión anualizada." : "Supply and block subsidy follow rules validated by the network. The displayed S2F is current stock divided by annualized new issuance."}</p>
-            <a href="https://developer.bitcoin.org/devguide/block_chain.html" target="_blank" rel="noreferrer">Bitcoin Developer Guide ↗</a>
-          </article>
-          <article>
+            <a href="https://developer.bitcoin.org/devguide/block_chain.html" target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? "Abrir la guía pública de Bitcoin sobre la cadena de bloques en una pestaña nueva" : "Open Bitcoin’s public block-chain guide in a new tab"}>Bitcoin Developer Guide ↗</a>
+          </article></li>
+          <li><article aria-labelledby="ammous-thesis-title">
             <span>02 · {lang === "es" ? "TESIS DE AMMOUS" : "AMMOUS THESIS"}</span>
-            <h3>{lang === "es" ? "Dureza y vendibilidad temporal" : "Hardness & salability across time"}</h3>
+            <h3 id="ammous-thesis-title">{lang === "es" ? "Dureza y vendibilidad temporal" : "Hardness & salability across time"}</h3>
             <p>{lang === "es" ? "Una oferta difícil de ampliar puede proteger mejor el ahorro a largo plazo y favorecer una menor preferencia temporal. Es una explicación económica, no una identidad contable." : "A supply that is difficult to expand may better protect long-term saving and encourage lower time preference. This is an economic explanation, not an accounting identity."}</p>
-            <a href="https://saifedean.com/tbs" target="_blank" rel="noreferrer">{lang === "es" ? "Fuente del autor" : "Author source"} ↗</a>
-          </article>
-          <article>
+            <a href="https://saifedean.com/tbs" target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? "Abrir la fuente de Saifedean Ammous para esta tesis en una pestaña nueva" : "Open Saifedean Ammous’s source for this thesis in a new tab"}>{lang === "es" ? "Fuente del autor" : "Author source"} ↗</a>
+          </article></li>
+          <li><article aria-labelledby="ammous-limit-title">
             <span>03 · {lang === "es" ? "LÍMITE Y CONTRASTE" : "LIMIT & COUNTERPOINT"}</span>
-            <h3>{lang === "es" ? "Escasez no equivale a precio" : "Scarcity is not price"}</h3>
+            <h3 id="ammous-limit-title">{lang === "es" ? "Escasez no equivale a precio" : "Scarcity is not price"}</h3>
             <p>{lang === "es" ? "El S2F mide escasez de flujo; no demuestra causalidad ni predice por sí solo la demanda, la liquidez o el precio. Por eso ABCM lo cruza con M2, dólar, oro, crédito y condiciones reales." : "S2F measures flow scarcity; it does not prove causality or independently predict demand, liquidity or price. ABCM therefore crosses it with M2, the dollar, gold, credit and real conditions."}</p>
-            <a href="https://mises.org/mises-wire/critique-bitcoin-stock-flow-model" target="_blank" rel="noreferrer">{lang === "es" ? "Crítica desde la Escuela Austriaca" : "Austrian-school critique"} ↗</a>
-          </article>
-        </div>
+            <a href="https://mises.org/mises-wire/critique-bitcoin-stock-flow-model" target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? "Abrir la crítica austriaca del modelo stock-to-flow en una pestaña nueva" : "Open the Austrian critique of the stock-to-flow model in a new tab"}>{lang === "es" ? "Crítica desde la Escuela Austriaca" : "Austrian-school critique"} ↗</a>
+          </article></li>
+        </ol>
       </section>
 
       <section className="quotes">
@@ -1337,15 +2251,15 @@ export default function Monitor() {
       </section>
       <footer><span>{lang === "es" ? "ABCM · CONTEXTO HOY. MEJORES DECISIONES MAÑANA." : "ABCM · CONTEXT TODAY. BETTER DECISIONS TOMORROW."}</span><span>SITES V{SITE_RELEASE} · DATA {DATA_SCHEMA_VERSION} · <a href="/api/health" target="_blank" rel="noreferrer">{lang === "es" ? "Integridad ↗" : "Integrity ↗"}</a> · <a href={`/learn?lang=${lang}`} target="_blank" rel="noreferrer">{lang === "es" ? "Aprende ↗" : "Learn ↗"}</a> · JimBLogic · 2026 · <a href="https://github.com/JimBLogic/AustrianBusinessCycleMonitor">GitHub ↗</a></span></footer>
       {detail&&<div className="detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetail(null); }}>
-        <article className="detail-dialog" role="dialog" aria-modal="true" aria-labelledby="detail-title">
-          <button className="detail-close" type="button" onClick={() => setDetail(null)} aria-label={lang === "es" ? "Cerrar explicación" : "Close explanation"}>×</button>
+        <article id="detail-dialog" className="detail-dialog" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+          <button ref={detailCloseRef} className="detail-close" type="button" onClick={() => setDetail(null)} aria-label={lang === "es" ? "Cerrar explicación" : "Close explanation"}>×</button>
           <span className="kicker">{detail.eyebrow}</span>
           <div className="detail-head"><h2 id="detail-title">{detail.title}</h2><strong>{detail.value}</strong></div>
-          <div className="detail-layer fact"><b>{lang === "es" ? "QUÉ DICE EL DATO" : "WHAT THE DATA SAYS"}</b><p>{detail.fact}</p></div>
-          <div className="detail-layer lens"><b>{lang === "es" ? "INTERPRETACIÓN AUSTRIACA CONDICIONAL" : "CONDITIONAL AUSTRIAN INTERPRETATION"}</b><p>{detail.interpretation}</p></div>
-          <div className="detail-layer watch"><b>{lang === "es" ? "QUÉ PODRÍA CONFIRMAR O INVALIDAR LA LECTURA" : "WHAT COULD CONFIRM OR INVALIDATE THE READING"}</b><p>{detail.watch}</p></div>
+          <div className="detail-layer fact"><b>{detail.factLabel ?? (lang === "es" ? "QUÉ DICE EL DATO" : "WHAT THE DATA SAYS")}</b><p>{detail.fact}</p></div>
+          <div className="detail-layer lens"><b>{detail.interpretationLabel ?? (lang === "es" ? "INTERPRETACIÓN AUSTRIACA CONDICIONAL" : "CONDITIONAL AUSTRIAN INTERPRETATION")}</b><p>{detail.interpretation}</p></div>
+          <div className="detail-layer watch"><b>{detail.watchLabel ?? (lang === "es" ? "QUÉ PODRÍA CONFIRMAR O INVALIDAR LA LECTURA" : "WHAT COULD CONFIRM OR INVALIDATE THE READING")}</b><p>{detail.watch}</p></div>
           <div className="detail-disclaimer">{lang === "es" ? "Información educativa y análisis macroeconómico experimental. No constituye asesoramiento financiero, recomendación de inversión ni señal de compraventa." : "Educational information and experimental macro analysis. This is not financial advice, an investment recommendation or a trading signal."}</div>
-          <a className="detail-source" href={detail.sourceUrl} target="_blank" rel="noreferrer">{detail.sourceLabel} ↗</a>
+          <a className="detail-source" href={detail.sourceUrl} target="_blank" rel="noopener noreferrer">{detail.sourceLabel} ↗</a>
         </article>
       </div>}
       {disclaimerOpen && <div className="consent-overlay" role="presentation">

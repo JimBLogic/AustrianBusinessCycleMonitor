@@ -17,17 +17,17 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://austrian-business-cycle-monitor.jimblogic.chatgpt.site"),
-  title: { default: "Austrian Business Cycle Monitor · Verifiable macro intelligence", template: "%s · ABCM" },
-  description: "Official monetary, credit, production and hard-asset data with reproducible formulas, source-level provenance and an explicitly labelled Austrian interpretation.",
-  keywords: ["Austrian Business Cycle Theory", "ABCT", "FRED", "Bitcoin", "M2", "credit cycle", "macroeconomics"],
+  title: { default: "Austrian Business Cycle Monitor · Análisis macro verificable", template: "%s · ABCM" },
+  description: "Monitor verificable del ciclo económico: política monetaria, crédito, economía real y activos duros con fuentes públicas e interpretación austriaca separada de los datos.",
+  keywords: ["ciclo económico", "teoría austriaca del ciclo económico", "ABCT", "política monetaria", "mercados de crédito", "economía real", "FRED", "Bitcoin", "M2"],
   authors: [{ name: "JimBLogic", url: "https://github.com/JimBLogic" }],
   alternates: { canonical: "/" },
   openGraph: {
     type: "website", locale: "es_ES", alternateLocale: "en_US", url: "/",
-    siteName: "Austrian Business Cycle Monitor", title: "ABCM · The cycle, decoded",
-    description: "Official data, reproducible calculations and a clearly separated Austrian interpretation.",
+    siteName: "Austrian Business Cycle Monitor", title: "ABCM · El ciclo, descifrado",
+    description: "Datos oficiales, cálculos reproducibles e interpretación austriaca claramente separada de la evidencia.",
   },
-  twitter: { card: "summary", title: "Austrian Business Cycle Monitor", description: "Verifiable macro intelligence through an Austrian and cypherpunk lens." },
+  twitter: { card: "summary", title: "Austrian Business Cycle Monitor", description: "Análisis macro verificable con una lente austriaca y cypherpunk." },
   robots: { index: true, follow: true },
   other: {
     "codex-preview": "development",
@@ -54,7 +54,8 @@ export default function RootLayout({
           operatingSystem: "Web", url: "https://austrian-business-cycle-monitor.jimblogic.chatgpt.site",
           codeRepository: "https://github.com/JimBLogic/AustrianBusinessCycleMonitor",
           author: { "@type": "Person", name: "JimBLogic" }, isAccessibleForFree: true,
-          license: "https://opensource.org/licenses/MIT",
+          license: "https://opensource.org/licenses/MIT", inLanguage: ["es", "en"],
+          description: "Monitor verificable del ciclo económico con datos públicos e interpretación austriaca diferenciada.",
         }) }} />
         {children}
       </body>
