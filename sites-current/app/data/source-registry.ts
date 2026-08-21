@@ -14,6 +14,7 @@ export type SourceDefinition = {
 export const FRED_SERIES = {
   m2: "M2SL",
   fedFunds: "FEDFUNDS",
+  treasury10y: "DGS10",
   yieldCurve: "T10Y2Y",
   creditSpread: "BAA10Y",
   cpi: "CPIAUCSL",
@@ -28,6 +29,7 @@ export const FRED_SERIES = {
   industrialProduction: "INDPRO",
   capacityUtilization: "TCU",
   realGdpGrowth: "A191RL1Q225SBEA",
+  manufacturingSurvey: "CFSBCACTIVITYMFG",
 } as const;
 
 export type FredSeriesKey = keyof typeof FRED_SERIES;
@@ -35,6 +37,7 @@ export type FredSeriesKey = keyof typeof FRED_SERIES;
 export const MAX_OBSERVATION_AGE_DAYS: Record<FredSeriesKey, number> = {
   m2: 75,
   fedFunds: 75,
+  treasury10y: 14,
   yieldCurve: 14,
   creditSpread: 14,
   cpi: 75,
@@ -49,6 +52,7 @@ export const MAX_OBSERVATION_AGE_DAYS: Record<FredSeriesKey, number> = {
   industrialProduction: 75,
   capacityUtilization: 75,
   realGdpGrowth: 160,
+  manufacturingSurvey: 75,
 };
 
 export const SOURCE_REGISTRY: readonly SourceDefinition[] = [

@@ -1,5 +1,5 @@
 import { FRED_SERIES, SOURCE_REGISTRY } from "../../data/source-registry";
-import { DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "../../version";
+import { CONTEXT_MODEL_VERSION, DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "../../version";
 
 export async function GET() {
   return Response.json({
@@ -7,6 +7,7 @@ export async function GET() {
     build: {
       siteRelease: SITE_RELEASE,
       engineVersion: ENGINE_VERSION,
+      contextModelVersion: CONTEXT_MODEL_VERSION,
       sourceMirror: SOURCE_MIRROR,
     },
     methodology: {
@@ -28,6 +29,24 @@ export async function GET() {
         sp500Gold: "Average monthly S&P 500 index level divided by average monthly gold price. This is a dimensionless tracking ratio between index points and USD per ounce, not a directly purchasable multiple.",
         debtM2: "Gross federal debt in USD billions divided by M2 in USD billions for the same month; withheld when the latest common month is older than 160 days.",
         approximateRealRate: "Average federal funds rate minus CPI year-over-year inflation for the same calendar month; backward-looking, not an ex-ante real rate.",
+      },
+      sixForceContext: {
+        purpose: "A non-scored context layer that keeps Treasury yields, federal debt, oil, manufacturing conditions, the broad dollar and Bitcoin visible at the same time. It does not average contradictions into a positive or negative color.",
+        coverageRule: "All six forces produce a complete reading. Four or five produce an explicitly partial reading. Fewer than four withhold the synthesis.",
+        treasury: "10-year Treasury level, its 90-day change and the 10Y–2Y curve. Rising, falling and range-bound describe direction; they are not value judgments.",
+        debt: "Gross federal debt level and year-over-year growth. Above 5% is labeled accelerating, below 2% decelerating and the interval steady growth.",
+        oil: "WTI level and 90-day percentage change. Moves above +5% or below −5% are labeled rising or falling; the interval is range-bound.",
+        manufacturing: "Chicago Fed Survey of Economic Conditions Manufacturing Activity Index (CFSBCACTIVITYMFG). Values above +10 are labeled above trend, below −10 below trend and the interval near trend. Zero means average historical growth, not zero output growth.",
+        pmiBoundary: "This public build does not reproduce or relabel the proprietary ISM Manufacturing PMI. The Chicago Fed series is a regional survey proxy, is always identified as not ISM PMI, and remains outside the scored ten-signal composite.",
+        dollar: "Broad trade-weighted dollar level and 90-day percentage change; directional threshold ±2%.",
+        bitcoin: "Verified Bitcoin spot level and 90-day percentage change from public history; directional threshold ±5%.",
+        patterns: {
+          energyPressureBelowTrendManufacturing: "WTI rises more than 5% while the manufacturing survey is below −10.",
+          risingYieldsWithFiscalRefinancingPressure: "The 10-year yield rises more than 25 basis points over 90 days while federal debt grows more than 5% year over year.",
+          dollarLiquidityTightening: "The broad dollar rises more than 2% while Bitcoin falls more than 5% over 90 days.",
+          monetaryRepricing: "The broad dollar falls more than 2% while Bitcoin rises more than 5% over 90 days.",
+        },
+        caution: "These are conditional co-movements, not causal claims or investment signals. Divergence lowers confidence and remains visible.",
       },
       scores: {
         scale: "Every engine and the composite are clamped to 0–100. Higher means more modeled cycle pressure, not a probability.",

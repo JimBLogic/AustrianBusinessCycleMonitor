@@ -68,9 +68,10 @@ test("exposes the two lenses as pressed controls with visible focus", () => {
   assert.match(styles, /\.lens-toggle button:focus-visible\{outline:3px solid var\(--orange\)/);
 });
 
-test("keeps nine cards balanced at desktop, tablet and phone widths", () => {
+test("keeps ten cards balanced at desktop, tablet and phone widths", () => {
   assert.match(styles, /\.metric-grid\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
-  assert.match(styles, /max-width:760px\) and \(min-width:501px\)\{\.metric-card:last-child:nth-child\(odd\)\{grid-column:1\/-1/);
-  assert.match(styles, /max-width:500px\)\{\.metric-card:last-child:nth-child\(odd\)\{grid-column:auto/);
+  assert.match(styles, /\.metric-card:nth-child\(n\+10\)\{border-bottom:0\}/);
+  assert.match(styles, /max-width:760px\).*\.metric-card:nth-child\(n\+9\)\{border-bottom:0\}/);
+  assert.match(styles, /max-width:500px\).*\.metric-card:nth-child\(n\+9\)\{border-bottom:1px solid var\(--line\)\}/);
   assert.match(styles, /\.metric-card\{[^}]*min-width:0/);
 });

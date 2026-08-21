@@ -25,6 +25,13 @@ The frontend and backend are one deployable TypeScript application:
 - optional authenticated workspace routes;
 - official macroeconomic providers plus explicit fallback and freshness states.
 
+The public dashboard also includes a non-scored six-force context layer for
+Treasury yields, federal debt, WTI oil, manufacturing conditions, the broad
+dollar, and Bitcoin. It preserves agreement and contradiction instead of
+reducing the result to a positive/negative color. The manufacturing input is
+the Chicago Fed CFSEC regional survey proxy (`CFSBCACTIVITYMFG`), clearly
+labeled as not ISM PMI and kept outside the ten-signal composite.
+
 Public routes include `/`, `/learn`, `/api/data`, `/api/bitcoin`,
 `/api/data-manifest`, and `/api/health`. The authenticated `/workspace` route
 and its file/export APIs are intentionally absent from public navigation.
