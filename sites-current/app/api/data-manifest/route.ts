@@ -21,8 +21,14 @@ export async function GET() {
         },
         note: "The three-pillar grouping and its inflation and fiscal extensions are ABCM's operational methodology. Named educational influences are not presented as formal authors of this structure, formula or index.",
       },
-      correlations: "Pearson correlation on overlapping monthly percentage returns, maximum 60 observations.",
-      ratios: ["BTC / gold", "S&P 500 / gold", "US federal debt / M2", "fed funds minus CPI YoY"],
+      correlations: "Pearson correlation on month-over-month percentage returns over shared consecutive calendar months; minimum 24 and maximum 60 paired observations. Missing months are not bridged or compared across unequal intervals.",
+      ratios: {
+        alignment: "Every market ratio uses monthly averages from the latest shared calendar month. A stale common month is withheld rather than mixed with a newer denominator.",
+        bitcoinGold: "Average monthly BTC price divided by average monthly gold price; result in troy ounces of gold per BTC.",
+        sp500Gold: "Average monthly S&P 500 index level divided by average monthly gold price. This is a dimensionless tracking ratio between index points and USD per ounce, not a directly purchasable multiple.",
+        debtM2: "Gross federal debt in USD billions divided by M2 in USD billions for the same month; withheld when the latest common month is older than 160 days.",
+        approximateRealRate: "Average federal funds rate minus CPI year-over-year inflation for the same calendar month; backward-looking, not an ex-ante real rate.",
+      },
       scores: {
         scale: "Every engine and the composite are clamped to 0–100. Higher means more modeled cycle pressure, not a probability.",
         tenSignalModel: {
