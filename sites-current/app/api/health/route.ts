@@ -1,5 +1,5 @@
 import { ensureDatabase, getBindings, getRuntimeBindings } from "../../../db/runtime";
-import { DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "../../version";
+import { CONTEXT_MODEL_VERSION, DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "../../version";
 import { getUpstreamHealth } from "../../data/upstream";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +23,7 @@ export async function GET() {
     service: "austrian-business-cycle-monitor",
     siteRelease: SITE_RELEASE,
     engine: ENGINE_VERSION,
+    contextModel: CONTEXT_MODEL_VERSION,
     dataSchema: DATA_SCHEMA_VERSION,
     sourceMirror: SOURCE_MIRROR,
     runtime: "gpt-sites-temporary-backend",

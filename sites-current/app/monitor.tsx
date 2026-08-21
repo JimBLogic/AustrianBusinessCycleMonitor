@@ -1,13 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "./version";
+import { CONTEXT_MODEL_VERSION, DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "./version";
 
 type Lang = "en" | "es";
 type SignalKey = "money" | "monetaryStance" | "creditRisk" | "termStructure" | "production" | "labour" | "consumerPrices" | "resourcesFx" | "debtBurden" | "fiscalImpulse";
 const WATCH_KEYS = ["m2", "creditSpread", "cpi", "unemployment", "federalDebt", "bitcoin"] as const;
 type WatchKey = (typeof WATCH_KEYS)[number];
 type Point = { date: string; value: number };
+type SixForceKey = "treasury" | "debt" | "oil" | "manufacturing" | "dollar" | "bitcoin";
+type SixForceReading = { state: string; value: number | null; change: number | null; secondaryValue: number | null; observedAt: string | null; sourceKey: string; available: boolean };
+type SixForceContext = { modelVersion: string; status: "complete" | "partial" | "withheld"; available: number; total: 6; synthesis: string; activePatterns: string[]; divergences: string[]; forces: Record<SixForceKey, SixForceReading> };
 type CorrelationEvidence = { observations: number; startMonth: string | null; endMonth: string | null };
 type RatioEvidence = {
   status: "available" | "stale" | "insufficient";
@@ -63,6 +66,7 @@ type Data = {
     correlationEvidence?: Record<string, CorrelationEvidence>;
     ratios: { bitcoinGoldOunces: number | null; sp500Gold: number | null; debtToM2: number | null; realRate: number | null };
     ratioEvidence?: Record<string, RatioEvidence>;
+    sixForce: SixForceContext;
   };
   freshness: Array<{ key: string; id: string; observedAt: string | null; status: string; error: string | null; source?: string | null }>;
   upstreams?: Array<{ id: string; status: "ready" | "recovering" | "cooldown"; coolingUntil?: string | null }>;
@@ -91,14 +95,24 @@ const fallback: Data = {
     correlationEvidence: {},
     ratios: { bitcoinGoldOunces: null, sp500Gold: null, debtToM2: null, realRate: null },
     ratioEvidence: {},
+    sixForce: {
+      modelVersion: CONTEXT_MODEL_VERSION,
+      status: "withheld",
+      available: 0,
+      total: 6,
+      synthesis: "insufficient-evidence",
+      activePatterns: [],
+      divergences: [],
+      forces: Object.fromEntries(["treasury", "debt", "oil", "manufacturing", "dollar", "bitcoin"].map((key) => [key, { state: "unavailable", value: null, change: null, secondaryValue: null, observedAt: null, sourceKey: key, available: false }])) as Record<SixForceKey, SixForceReading>,
+    },
   },
   freshness: [],
-  provenance: { fred: "unavailable", bitcoinPrice: "unavailable", bitcoinNetwork: "unavailable", fredAvailable: 0, fredTotal: 16, modelReady: false, modelStatus: "withheld", modelInputsAvailable: 0, modelInputsTotal: 14, mode: "fallback" },
+  provenance: { fred: "unavailable", bitcoinPrice: "unavailable", bitcoinNetwork: "unavailable", fredAvailable: 0, fredTotal: 18, modelReady: false, modelStatus: "withheld", modelInputsAvailable: 0, modelInputsTotal: 14, mode: "fallback" },
 };
 
 const text = {
   en: {
-    nav: ["Dashboard", "Liquidity", "Hard assets", "Theory", "Sources"],
+    nav: ["Dashboard", "Liquidity", "Six forces", "Hard assets", "Theory", "Sources"],
     live: "VERIFIABLE MACRO MONITOR", title: "The cycle, decoded.", subtitle: "Official data. Austrian interpretation. Cypherpunk skepticism.",
     intro: "Track money, credit, production and hard assets in a verifiable economic-cycle monitor. Data and interpretation remain separate.",
     refresh: "Refresh data", updated: "Observed", regime: "CURRENT REGIME", regimeName: "Late expansion / liquidity return",
@@ -114,7 +128,7 @@ const text = {
     s2f: "Stock-to-flow", supply: "Circulating supply", block: "Block height", fees: "Priority fee",
   },
   es: {
-    nav: ["Panel", "Liquidez", "Activos duros", "Teoría", "Fuentes"],
+    nav: ["Panel", "Liquidez", "Seis fuerzas", "Activos duros", "Teoría", "Fuentes"],
     live: "MONITOR MACRO VERIFICABLE", title: "El ciclo, descifrado.", subtitle: "Datos oficiales. Interpretación austriaca. Escepticismo cypherpunk.",
     intro: "Dinero, crédito, producción y activos duros en un monitor verificable del ciclo económico. Los datos y la interpretación permanecen separados.",
     refresh: "Actualizar datos", updated: "Observado", regime: "RÉGIMEN ACTUAL", regimeName: "Expansión tardía / regreso de liquidez",
@@ -133,6 +147,7 @@ const text = {
 
 const seriesMeta = {
   m2: { en: "M2 money stock", es: "Masa monetaria M2", unit: { en: "USD bn", es: "miles de millones USD" }, source: "M2SL", color: "#c7ff18" },
+  treasury10y: { en: "10-year Treasury yield", es: "Rendimiento Treasury 10A", unit: { en: "percent", es: "porcentaje" }, source: "DGS10", color: "#72b7ff" },
   federalDebt: { en: "Federal debt", es: "Deuda federal", unit: { en: "USD bn", es: "miles de millones USD" }, source: "GFDEBTN", color: "#ff6b1a" },
   cpi: { en: "Consumer prices", es: "Precios al consumidor", unit: { en: "index points", es: "puntos de índice" }, source: "CPIAUCSL", color: "#bba4ff" },
   oil: { en: "WTI crude oil", es: "Petróleo WTI", unit: { en: "USD / barrel", es: "USD por barril" }, source: "DCOILWTICO", color: "#f0c85a" },
@@ -140,6 +155,7 @@ const seriesMeta = {
   sp500: { en: "S&P 500", es: "S&P 500", unit: { en: "index points", es: "puntos de índice" }, source: "SP500", color: "#63d9c7" },
   vix: { en: "VIX stress", es: "Estrés VIX", unit: { en: "index points", es: "puntos de índice" }, source: "VIXCLS", color: "#ff8c70" },
   industrialProduction: { en: "Industrial production", es: "Producción industrial", unit: { en: "index points", es: "puntos de índice" }, source: "INDPRO", color: "#8ec5ff" },
+  manufacturingSurvey: { en: "Manufacturing survey proxy", es: "Proxy de encuesta manufacturera", unit: { en: "diffusion index", es: "índice de difusión" }, source: "CFSBCACTIVITYMFG", color: "#c49cff" },
   bitcoin: { en: "Bitcoin", es: "Bitcoin", unit: { en: "USD", es: "USD" }, source: "BLOCKCHAIN", color: "#ff6417" },
 };
 
@@ -153,6 +169,7 @@ const metrics = [
   { key: "federalDebt", label: ["US federal debt", "Deuda federal de EE. UU."], source: "GFDEBTN", signal: "debtBurden", unit: ["USD trillion", "billones USD"], digits: 1, fact: ["Gross federal debt outstanding.", "Deuda federal bruta en circulación."], thesis: ["Persistent fiscal dominance increases pressure for financial repression or monetary accommodation.", "El dominio fiscal persistente aumenta la presión hacia represión financiera o acomodo monetario."], watch: ["Interest expense, maturity wall and debt-to-GDP.", "Intereses, vencimientos y deuda sobre PIB."] },
   { key: "dollar", label: ["Broad dollar index", "Índice amplio del dólar"], source: "DTWEXBGS", signal: "resourcesFx", unit: ["index points", "puntos de índice"], digits: 2, fact: ["Trade-weighted value of the dollar.", "Valor del dólar ponderado por comercio."], thesis: ["Reserve demand can mask domestic dilution for long periods.", "La demanda de reserva puede ocultar la dilución interna durante mucho tiempo."], watch: ["Dollar weakness alongside commodity strength.", "Debilidad del dólar junto a fortaleza de materias primas."] },
   { key: "oil", label: ["WTI crude oil", "Petróleo WTI"], source: "DCOILWTICO", signal: "resourcesFx", unit: ["USD per barrel", "USD por barril"], digits: 2, fact: ["Benchmark price for US crude oil.", "Precio de referencia del crudo estadounidense."], thesis: ["Energy prices expose real resource constraints that credit cannot print away.", "La energía revela restricciones reales que el crédito no puede imprimir."], watch: ["Oil rising while growth indicators weaken.", "Petróleo al alza mientras el crecimiento se debilita."] },
+  { key: "manufacturingSurvey", label: ["Manufacturing survey proxy", "Proxy de encuesta manufacturera"], source: "CFSBCACTIVITYMFG", signal: "production", contextOnly: true, unit: ["diffusion index · not ISM PMI", "índice de difusión · no es ISM PMI"], digits: 1, fact: ["Chicago Fed District 7 respondents report activity relative to their own long-run average; zero means trend growth.", "Los encuestados del Distrito 7 de la Fed de Chicago comparan la actividad con su propia media histórica; cero significa crecimiento tendencial."], thesis: ["Survey evidence can lead hard production data, but a regional diffusion index cannot stand in for the national economy.", "La encuesta puede adelantarse a la producción observada, pero un índice regional no representa por sí solo a toda la economía nacional."], watch: ["Confirmation or contradiction from industrial production and capacity utilization.", "Confirmación o contradicción de la producción industrial y la utilización de capacidad."] },
 ] as const;
 
 const quotes = [
@@ -178,6 +195,79 @@ function format(value: number | null | undefined, digits = 2) {
 function marketFormat(value: number | null | undefined, lang: Lang, digits = 2) {
   if (value == null || !Number.isFinite(value)) return "—";
   return new Intl.NumberFormat(lang === "es" ? "es-ES" : "en-US", { maximumFractionDigits: digits }).format(value);
+}
+
+function sixForceStateLabel(state: string, lang: Lang) {
+  const labels: Record<string, [string, string]> = {
+    "yields-rising": ["YIELDS RISING", "RENDIMIENTOS AL ALZA"],
+    "yields-falling": ["YIELDS FALLING", "RENDIMIENTOS A LA BAJA"],
+    "yields-range-bound": ["YIELDS RANGE-BOUND", "RENDIMIENTOS LATERALES"],
+    "debt-accelerating": ["DEBT ACCELERATING", "DEUDA ACELERANDO"],
+    "debt-decelerating": ["DEBT DECELERATING", "DEUDA DESACELERANDO"],
+    "debt-steady-growth": ["STEADY DEBT GROWTH", "CRECIMIENTO ESTABLE DE DEUDA"],
+    "oil-rising": ["OIL RISING", "PETRÓLEO AL ALZA"],
+    "oil-falling": ["OIL FALLING", "PETRÓLEO A LA BAJA"],
+    "oil-range-bound": ["OIL RANGE-BOUND", "PETRÓLEO LATERAL"],
+    "above-trend": ["ABOVE-TREND GROWTH", "CRECIMIENTO SOBRE TENDENCIA"],
+    "below-trend": ["BELOW-TREND GROWTH", "CRECIMIENTO BAJO TENDENCIA"],
+    "near-trend": ["NEAR-TREND GROWTH", "CRECIMIENTO CERCA DE TENDENCIA"],
+    "dollar-strengthening": ["DOLLAR STRENGTHENING", "DÓLAR FORTALECIÉNDOSE"],
+    "dollar-weakening": ["DOLLAR WEAKENING", "DÓLAR DEBILITÁNDOSE"],
+    "dollar-range-bound": ["DOLLAR RANGE-BOUND", "DÓLAR LATERAL"],
+    "bitcoin-rising": ["BITCOIN RISING", "BITCOIN AL ALZA"],
+    "bitcoin-falling": ["BITCOIN FALLING", "BITCOIN A LA BAJA"],
+    "bitcoin-range-bound": ["BITCOIN RANGE-BOUND", "BITCOIN LATERAL"],
+    "limited-history": ["LIMITED HISTORY", "HISTÓRICO LIMITADO"],
+    unavailable: ["UNAVAILABLE", "NO DISPONIBLE"],
+  };
+  return (labels[state] ?? labels.unavailable)[lang === "en" ? 0 : 1];
+}
+
+function sixForceSynthesis(key: string, lang: Lang) {
+  const copy: Record<string, { title: [string, string]; body: [string, string]; falsifier: [string, string] }> = {
+    "energy-pressure-below-trend-manufacturing": {
+      title: ["Energy pressure meets softer manufacturing", "Presión energética con manufactura más débil"],
+      body: ["Oil is rising while the survey sits below its historical growth trend. That combination can squeeze margins without proving general inflation or recession.", "El petróleo sube mientras la encuesta queda bajo su tendencia histórica de crecimiento. La combinación puede comprimir márgenes sin demostrar inflación general ni recesión."],
+      falsifier: ["Oil reverses or manufacturing returns above trend.", "El petróleo revierte o la manufactura vuelve sobre tendencia."],
+    },
+    "rising-yields-with-fiscal-refinancing-pressure": {
+      title: ["Yields and debt reinforce refinancing pressure", "Rendimientos y deuda refuerzan la presión de refinanciación"],
+      body: ["The 10-year yield is repricing upward while federal debt grows faster than 5% year over year. This raises a financing question; it does not predict a policy response.", "El Treasury a 10 años se repricia al alza mientras la deuda federal crece más de un 5% interanual. Plantea una cuestión de financiación; no predice la respuesta política."],
+      falsifier: ["Yields fall materially or debt growth slows below the declared threshold.", "Los rendimientos caen de forma material o la deuda se frena bajo el umbral declarado."],
+    },
+    "dollar-liquidity-tightening": {
+      title: ["Dollar strength coincides with Bitcoin weakness", "Fortaleza del dólar junto a debilidad de Bitcoin"],
+      body: ["The cross-market pair is consistent with tighter dollar liquidity, but it remains a co-movement—not proof of one-way causality.", "El par entre mercados es compatible con liquidez en dólares más restrictiva, pero sigue siendo un comovimiento, no prueba de causalidad unidireccional."],
+      falsifier: ["The dollar loses momentum or Bitcoin recovers despite persistent dollar strength.", "El dólar pierde impulso o Bitcoin se recupera pese a que persista su fortaleza."],
+    },
+    "monetary-repricing": {
+      title: ["A weaker dollar coincides with Bitcoin repricing", "Un dólar más débil coincide con la revalorización de Bitcoin"],
+      body: ["This pair is consistent with monetary-risk repricing. Debt, yields and manufacturing still determine whether the move is broad or asset-specific.", "El par es compatible con una repricing del riesgo monetario. Deuda, rendimientos y manufactura determinan si el movimiento es amplio o específico de activos."],
+      falsifier: ["The dollar rebounds or Bitcoin loses momentum without confirmation from the other forces.", "El dólar rebota o Bitcoin pierde impulso sin confirmación de las otras fuerzas."],
+    },
+    "compound-pressure": {
+      title: ["Several conditional patterns are active", "Hay varios patrones condicionales activos"],
+      body: ["More than one declared relationship is present. Read each force separately: overlap raises relevance, not certainty.", "Hay más de una relación declarada. Conviene leer cada fuerza por separado: la coincidencia eleva la relevancia, no la certeza."],
+      falsifier: ["One or more component thresholds stop being met.", "Uno o más umbrales componentes dejan de cumplirse."],
+    },
+    "cross-market-divergence": {
+      title: ["The forces contradict one another", "Las fuerzas se contradicen"],
+      body: ["Cross-market directions do not fit a single narrative. The dashboard preserves that disagreement instead of averaging it into a color.", "Las direcciones entre mercados no encajan en una sola narrativa. El panel conserva el desacuerdo en vez de promediarlo en un color."],
+      falsifier: ["The conflicting pairs converge over the next observations.", "Los pares en conflicto convergen en las próximas observaciones."],
+    },
+    "mixed-signals": {
+      title: ["No single force dominates", "Ninguna fuerza domina"],
+      body: ["The six observations do not activate a declared joint pattern. Mixed is an analytical result, not a neutral score.", "Las seis observaciones no activan un patrón conjunto declarado. Mixto es un resultado analítico, no una puntuación neutral."],
+      falsifier: ["A declared pair crosses its published thresholds.", "Un par declarado cruza sus umbrales publicados."],
+    },
+    "insufficient-evidence": {
+      title: ["Synthesis withheld", "Síntesis retenida"],
+      body: ["Fewer than four forces have verifiable observations. Missing evidence is not converted to zero or neutral.", "Menos de cuatro fuerzas tienen observaciones verificables. La evidencia ausente no se convierte en cero ni neutral."],
+      falsifier: ["At least four current forces become available.", "Pasan a estar disponibles al menos cuatro fuerzas actuales."],
+    },
+  };
+  const item = copy[key] ?? copy["mixed-signals"];
+  return { title: item.title[lang === "en" ? 0 : 1], body: item.body[lang === "en" ? 0 : 1], falsifier: item.falsifier[lang === "en" ? 0 : 1] };
 }
 
 function validTimestamp(value: string | null | undefined) {
@@ -247,12 +337,14 @@ const worldBankLinks: Record<string, string> = {
 
 const fredSeriesIds: Record<string, string> = {
   m2: "M2SL",
+  treasury10y: "DGS10",
   federalDebt: "GFDEBTN",
   oil: "DCOILWTICO",
   gold: "GOLDAMGBD228NLBM",
   dollar: "DTWEXBGS",
   sp500: "SP500",
   vix: "VIXCLS",
+  manufacturingSurvey: "CFSBCACTIVITYMFG",
 };
 
 function seriesSourceUrl(data: Data, key: string) {
@@ -908,7 +1000,7 @@ export default function Monitor() {
     };
   }, [detail]);
   useEffect(() => {
-    const sectionIds = ["top", "dashboard", "liquidity", "hard-assets", "theory", "sources"];
+    const sectionIds = ["top", "dashboard", "liquidity", "six-forces", "hard-assets", "theory", "sources"];
     let frame = 0;
     const updateActiveSection = () => {
       window.cancelAnimationFrame(frame);
@@ -1014,6 +1106,65 @@ export default function Monitor() {
   const chartStatus = seriesKey === "bitcoin" && points.length > 1
     ? (lang === "es" ? "HISTÓRICO DISPONIBLE" : "HISTORY AVAILABLE")
     : marketStateLabel(chartState, lang);
+  const sixForce = data.derived.sixForce ?? fallback.derived.sixForce;
+  const sixForceReading = sixForceSynthesis(sixForce.synthesis, lang);
+  const signed = (value: number | null, suffix: string, digits = 1) => value == null ? "—" : `${value > 0 ? "+" : ""}${marketFormat(value, lang, digits)}${suffix}`;
+  const sixForceCards: Array<{ key: SixForceKey; title: string; eyebrow: string; evidence: string; note: string; source: string; sourceUrl: string }> = [
+    {
+      key: "treasury",
+      title: lang === "es" ? "Rendimientos del Tesoro" : "Treasury yields",
+      eyebrow: "DGS10 + T10Y2Y",
+      evidence: `10Y ${marketFormat(sixForce.forces.treasury.value, lang, 2)}% · Δ90D ${signed(sixForce.forces.treasury.change, " pp", 2)} · 10Y–2Y ${signed(sixForce.forces.treasury.secondaryValue, " pp", 2)}`,
+      note: lang === "es" ? "Nivel, dirección a 90 días y forma de la curva; ninguno es bueno o malo por sí solo." : "Level, 90-day direction and curve shape; none is inherently good or bad.",
+      source: "FRED · U.S. Treasury",
+      sourceUrl: seriesSourceUrl(data, "treasury10y"),
+    },
+    {
+      key: "debt",
+      title: lang === "es" ? "Deuda federal" : "Federal debt",
+      eyebrow: "GFDEBTN / TREASURY",
+      evidence: `$${marketFormat(sixForce.forces.debt.value == null ? null : sixForce.forces.debt.value / 1000, lang, 2)} T · YoY ${signed(sixForce.forces.debt.change, "%")}`,
+      note: lang === "es" ? "El crecimiento de la deuda plantea presión de financiación; no determina por sí solo inflación ni impago." : "Debt growth raises a financing question; it does not by itself determine inflation or default.",
+      source: lang === "es" ? "Tesoro / FRED" : "Treasury / FRED",
+      sourceUrl: debtSourceUrl(data),
+    },
+    {
+      key: "oil",
+      title: lang === "es" ? "Petróleo WTI" : "WTI oil",
+      eyebrow: "DCOILWTICO",
+      evidence: `$${marketFormat(sixForce.forces.oil.value, lang, 2)} · 90D ${signed(sixForce.forces.oil.change, "%")}`,
+      note: lang === "es" ? "Señala restricciones energéticas y costes reales; la demanda y la oferta pueden moverlo en direcciones distintas." : "It reflects energy constraints and real costs; demand and supply can move it for different reasons.",
+      source: "FRED · EIA",
+      sourceUrl: seriesSourceUrl(data, "oil"),
+    },
+    {
+      key: "manufacturing",
+      title: lang === "es" ? "Pulso manufacturero" : "Manufacturing pulse",
+      eyebrow: "CFSEC · NOT ISM PMI",
+      evidence: `${marketFormat(sixForce.forces.manufacturing.value, lang, 1)} · Δ1M ${signed(sixForce.forces.manufacturing.change, " pt", 1)}`,
+      note: lang === "es" ? "Proxy regional: cero significa crecimiento medio histórico. No es el PMI nacional ni usa su umbral de 50." : "Regional proxy: zero means historical average growth. It is not the national PMI and does not use its 50 threshold.",
+      source: lang === "es" ? "Fed de Chicago vía FRED" : "Chicago Fed via FRED",
+      sourceUrl: seriesSourceUrl(data, "manufacturingSurvey"),
+    },
+    {
+      key: "dollar",
+      title: lang === "es" ? "Dólar amplio" : "Broad dollar",
+      eyebrow: "DTWEXBGS",
+      evidence: `${marketFormat(sixForce.forces.dollar.value, lang, 2)} · 90D ${signed(sixForce.forces.dollar.change, "%")}`,
+      note: lang === "es" ? "La dirección del dólar ayuda a leer las condiciones financieras globales sin asumir una relación mecánica." : "Dollar direction helps frame global financial conditions without assuming a mechanical relationship.",
+      source: "Federal Reserve · FRED",
+      sourceUrl: seriesSourceUrl(data, "dollar"),
+    },
+    {
+      key: "bitcoin",
+      title: "Bitcoin",
+      eyebrow: "BTC · TWO-VENUE SPOT",
+      evidence: `$${marketFormat(sixForce.forces.bitcoin.value, lang, 0)} · 90D ${signed(sixForce.forces.bitcoin.change, "%")}`,
+      note: lang === "es" ? "Activo monetario y de liquidez con alta volatilidad; una divergencia frente al dólar o los tipos se conserva como evidencia." : "A volatile monetary and liquidity asset; divergence from the dollar or yields remains visible as evidence.",
+      source: data.provenance.bitcoinPrice,
+      sourceUrl: bitcoinSourceUrl(data),
+    },
+  ];
   const engineAssessments = ([
     ["liquidity", data.derived.scores.liquidity],
     ["credit", data.derived.scores.credit],
@@ -1489,7 +1640,7 @@ export default function Monitor() {
       <nav className="nav" ref={navRef} aria-label={lang === "es" ? "Navegación principal" : "Primary navigation"}>
         <a className="brand" href="#top" aria-label={lang === "es" ? "ABCM · volver al inicio" : "ABCM · back to top"} aria-current={activeSection === "top" ? "location" : undefined}><span className="brand-mark">₿</span><span>ABCM</span></a>
         <div className={`nav-links ${menu ? "open" : ""}`} id="primary-navigation">
-          {["dashboard", "liquidity", "hard-assets", "theory", "sources"].map((id, i) => <a key={id} ref={i === 0 ? firstNavLinkRef : undefined} className={activeSection === id ? "active" : undefined} href={`#${id}`} aria-current={activeSection === id ? "location" : undefined} onClick={() => { setActiveSection(id); setMenu(false); }}>{t.nav[i]}</a>)}
+          {["dashboard", "liquidity", "six-forces", "hard-assets", "theory", "sources"].map((id, i) => <a key={id} ref={i === 0 ? firstNavLinkRef : undefined} className={activeSection === id ? "active" : undefined} href={`#${id}`} aria-current={activeSection === id ? "location" : undefined} onClick={() => { setActiveSection(id); setMenu(false); }}>{t.nav[i]}</a>)}
           <a className="academy-nav" href={`/learn?lang=${lang}`} target="_blank" rel="noreferrer" onClick={() => setMenu(false)}>{lang === "es" ? "Aprende ↗" : "Learn ↗"}</a>
         </div>
         <div className="nav-controls">
@@ -2016,7 +2167,8 @@ export default function Monitor() {
               const available = value != null && data.provenance.mode !== "fallback";
               const state = marketState(data, metric.key);
               const status = marketStateLabel(state, lang);
-              const signalReady = data.provenance.mode !== "fallback" && data.provenance.signalReady?.[metric.signal] !== false && Number.isFinite(data.derived.scores[metric.signal]);
+              const contextOnly = "contextOnly" in metric && metric.contextOnly;
+              const signalReady = !contextOnly && data.provenance.mode !== "fallback" && data.provenance.signalReady?.[metric.signal] !== false && Number.isFinite(data.derived.scores[metric.signal]);
               const pressure = signalReady ? data.derived.scores[metric.signal] : null;
               const shownValue = metric.key === "federalDebt" && value != null ? `$${marketFormat(value / 1000, lang, metric.digits)} T` : marketFormat(value, lang, metric.digits);
               return <button ref={(element) => { metricTabRefs.current[index] = element; }} id={`metric-tab-${metric.key}`} role="tab" aria-selected={selectedMetric.key === metric.key} aria-controls="signal-inspector" tabIndex={selectedMetric.key === metric.key ? 0 : -1} type="button" key={metric.key} className={`metric-card ${selectedMetric.key === metric.key ? "selected" : ""} ${available ? "has-data" : "no-data"}`} onClick={() => setSelectedMetric(metric)} onKeyDown={(event) => handleMetricTabKey(event, index)}>
@@ -2024,8 +2176,8 @@ export default function Monitor() {
                 <span className="metric-reading"><strong>{shownValue}</strong><small>{available ? metric.unit[lang === "en" ? 0 : 1] : (lang === "es" ? "sin observación verificable" : "no verifiable observation")}</small></span>
                 <span className="metric-provenance"><span className={`metric-status ${state}`}>{status}</span><time dateTime={available ? observedDate(data, metric.key) : undefined}>{available ? formatChartDate(observedDate(data, metric.key), lang) : "—"}</time></span>
                 <small className="metric-source">{seriesSource(data, metric.key)} · {metric.source}</small>
-                <span className="metric-pressure"><span>{lang === "es" ? "PRESIÓN DEL MODELO" : "MODEL PRESSURE"}</span><b>{pressure == null ? (lang === "es" ? "RETENIDA" : "WITHHELD") : `${pressure}/100`}</b></span>
-                <span className={`risk-bar ${pressure == null ? "withheld" : ""}`} aria-hidden="true"><i style={{width:`${pressure ?? 0}%`}} /></span>
+                <span className="metric-pressure"><span>{contextOnly ? (lang === "es" ? "CAPA DE CONTEXTO" : "CONTEXT LAYER") : (lang === "es" ? "PRESIÓN DEL MODELO" : "MODEL PRESSURE")}</span><b>{contextOnly ? (lang === "es" ? "NO PUNTÚA" : "NOT SCORED") : pressure == null ? (lang === "es" ? "RETENIDA" : "WITHHELD") : `${pressure}/100`}</b></span>
+                <span className={`risk-bar ${contextOnly || pressure == null ? "withheld" : ""}`} aria-hidden="true"><i style={{width:`${pressure ?? 0}%`}} /></span>
               </button>;
             })}
           </div>
@@ -2034,7 +2186,8 @@ export default function Monitor() {
             const available = value != null && data.provenance.mode !== "fallback";
             const state = marketState(data, selectedMetric.key);
             const status = marketStateLabel(state, lang);
-            const signalReady = data.provenance.mode !== "fallback" && data.provenance.signalReady?.[selectedMetric.signal] !== false && Number.isFinite(data.derived.scores[selectedMetric.signal]);
+            const contextOnly = "contextOnly" in selectedMetric && selectedMetric.contextOnly;
+            const signalReady = !contextOnly && data.provenance.mode !== "fallback" && data.provenance.signalReady?.[selectedMetric.signal] !== false && Number.isFinite(data.derived.scores[selectedMetric.signal]);
             const pressure = signalReady ? data.derived.scores[selectedMetric.signal] : null;
             const shownValue = selectedMetric.key === "federalDebt" && value != null ? `$${marketFormat(value / 1000, lang, selectedMetric.digits)} T` : marketFormat(value, lang, selectedMetric.digits);
             const sourceUrl = selectedMetric.key === "federalDebt" ? debtSourceUrl(data) : seriesSourceUrl(data, selectedMetric.key);
@@ -2042,7 +2195,7 @@ export default function Monitor() {
               <div className="inspector-heading"><span className="kicker">{lens === "facts" ? t.facts : t.thesis}</span><span className={`inspector-state ${state}`}>{status}</span></div>
               <h3>{selectedMetric.label[lang === "en" ? 0 : 1]}</h3>
               <div className="inspector-value"><span>{t.value}<small>{available ? formatChartDate(observedDate(data, selectedMetric.key), lang) : (lang === "es" ? "SIN FECHA" : "NO DATE")}</small></span><strong>{shownValue}<small>{selectedMetric.unit[lang === "en" ? 0 : 1]}</small></strong></div>
-              <div className={`inspector-pressure ${pressure == null ? "withheld" : ""}`}><span>{lang === "es" ? "PRESIÓN MODELIZADA" : "MODELED PRESSURE"}</span><b>{pressure == null ? (lang === "es" ? "RETENIDA POR COBERTURA" : "WITHHELD FOR COVERAGE") : `${pressure}/100`}</b></div>
+              <div className={`inspector-pressure ${contextOnly || pressure == null ? "withheld" : ""}`}><span>{contextOnly ? (lang === "es" ? "CAPA DE CONTEXTO" : "CONTEXT LAYER") : (lang === "es" ? "PRESIÓN MODELIZADA" : "MODELED PRESSURE")}</span><b>{contextOnly ? (lang === "es" ? "FUERA DEL ÍNDICE" : "OUTSIDE THE INDEX") : pressure == null ? (lang === "es" ? "RETENIDA POR COBERTURA" : "WITHHELD FOR COVERAGE") : `${pressure}/100`}</b></div>
               <p>{available
                 ? (lens === "facts" ? selectedMetric.fact : selectedMetric.thesis)[lang === "en" ? 0 : 1]
                 : (lang === "es" ? "No existe una observación verificable para interpretar este indicador. Se conserva su definición, pero no se asigna un cero ni una lectura neutral." : "There is no verifiable observation to interpret for this indicator. Its definition remains available, but no zero or neutral reading is assigned.")}</p>
@@ -2053,8 +2206,46 @@ export default function Monitor() {
         </div>
       </section>
 
+      <section className="six-force-section" id="six-forces" aria-labelledby="six-force-title" aria-describedby="six-force-summary">
+        <div className="section-head light">
+          <div>
+            <span className="kicker">{lang === "es" ? "03 · PRUEBA DE SEIS FUERZAS" : "03 · SIX-FORCE TEST"}</span>
+            <h2 id="six-force-title">{lang === "es" ? "Seis fuerzas. Una lectura condicional." : "Six forces. One conditional reading."}</h2>
+            <p id="six-force-summary">{lang === "es" ? "Rendimientos del Tesoro, deuda, petróleo, pulso manufacturero, dólar y Bitcoin pueden reforzarse o contradecirse. La contradicción reduce la confianza; no se promedia en un color." : "Treasury yields, debt, oil, the manufacturing pulse, the dollar and Bitcoin can reinforce or contradict one another. Contradiction lowers confidence; it is not averaged into a color."}</p>
+          </div>
+          <div className={`six-force-coverage ${sixForce.status}`}><span>{lang === "es" ? "COBERTURA" : "COVERAGE"}</span><strong>{sixForce.available}/{sixForce.total}</strong><small>{sixForce.status === "complete" ? (lang === "es" ? "LECTURA COMPLETA" : "COMPLETE READING") : sixForce.status === "partial" ? (lang === "es" ? "LECTURA PARCIAL" : "PARTIAL READING") : (lang === "es" ? "SÍNTESIS RETENIDA" : "SYNTHESIS WITHHELD")}</small></div>
+        </div>
+        <div className="six-force-layout">
+          <div className="six-force-grid">
+            {sixForceCards.map((item, index) => {
+              const reading = sixForce.forces[item.key];
+              return <article className={`six-force-card force-${item.key} ${reading.available ? "available" : "unavailable"}`} key={item.key} aria-labelledby={`six-force-${item.key}`}>
+                <header><span>{String(index + 1).padStart(2, "0")} · {item.eyebrow}</span><b>{sixForceStateLabel(reading.state, lang)}</b></header>
+                <h3 id={`six-force-${item.key}`}>{item.title}</h3>
+                <p className="six-force-value">{reading.available ? item.evidence : "—"}</p>
+                <time dateTime={reading.observedAt ?? undefined}>{reading.observedAt ? formatChartDate(reading.observedAt, lang) : (lang === "es" ? "SIN OBSERVACIÓN" : "NO OBSERVATION")}</time>
+                <p className="six-force-note">{item.note}</p>
+                <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer" aria-label={`${item.title}: ${item.source}. ${lang === "es" ? "Abrir evidencia en una pestaña nueva" : "Open evidence in a new tab"}.`}>{item.source} ↗</a>
+              </article>;
+            })}
+          </div>
+          <aside className={`six-force-synthesis ${sixForce.status}`} aria-labelledby="six-force-synthesis-title">
+            <span>{lang === "es" ? `SÍNTESIS · ${CONTEXT_MODEL_VERSION}` : `SYNTHESIS · ${CONTEXT_MODEL_VERSION}`}</span>
+            <h3 id="six-force-synthesis-title">{sixForceReading.title}</h3>
+            <p>{sixForceReading.body}</p>
+            <dl>
+              <div><dt>{lang === "es" ? "PATRONES ACTIVOS" : "ACTIVE PATTERNS"}</dt><dd>{sixForce.activePatterns.length}</dd></div>
+              <div><dt>{lang === "es" ? "DIVERGENCIAS" : "DIVERGENCES"}</dt><dd>{sixForce.divergences.length}</dd></div>
+            </dl>
+            <div className="six-force-falsifier"><b>{lang === "es" ? "QUÉ CAMBIARÍA LA LECTURA" : "WHAT WOULD CHANGE THE READING"}</b><p>{sixForceReading.falsifier}</p></div>
+            <p className="six-force-boundary">{lang === "es" ? "La versión pública usa el CFSEC manufacturero de la Fed de Chicago como proxy regional y no reproduce el ISM PMI. El proxy queda fuera del índice puntuado." : "The public build uses the Chicago Fed manufacturing CFSEC as a regional proxy and does not reproduce ISM PMI. The proxy stays outside the scored index."}</p>
+            <div className="six-force-links"><a href="https://fred.stlouisfed.org/series/CFSBCACTIVITYMFG" target="_blank" rel="noopener noreferrer">CFSEC / FRED ↗</a><a href="/api/data-manifest" target="_blank" rel="noopener noreferrer">{lang === "es" ? "Umbrales y método" : "Thresholds and method"} ↗</a></div>
+          </aside>
+        </div>
+      </section>
+
       <section className="hard-assets" id="hard-assets" aria-labelledby="hard-assets-title">
-        <div className="section-head light"><div><span className="kicker">{lang === "es" ? "03 · LABORATORIO DE DINERO DURO" : "03 · SOUND MONEY LAB"}</span><h2 id="hard-assets-title">{t.scarcity}</h2><p>{t.scarcitySub}</p></div></div>
+        <div className="section-head light"><div><span className="kicker">{lang === "es" ? "04 · LABORATORIO DE DINERO DURO" : "04 · SOUND MONEY LAB"}</span><h2 id="hard-assets-title">{t.scarcity}</h2><p>{t.scarcitySub}</p></div></div>
         <div className="asset-grid">
           <article className="btc-card" aria-labelledby="bitcoin-asset-title">
             <div className="asset-title"><span className="coin" aria-hidden="true">₿</span><div><span>BITCOIN · USD</span><h3 id="bitcoin-asset-title"><span className="sr-only">Bitcoin: </span>{bitcoinPriceAvailable ? `$${marketFormat(btc, lang, 0)}` : "—"}</h3><small className={`asset-state ${bitcoinConsensus}`}>{bitcoinPriceStatus} · {data.bitcoin.priceObservedAt ? formatChartDate(data.bitcoin.priceObservedAt.slice(0, 10), lang) : (lang === "es" ? "SIN FECHA" : "NO DATE")}</small></div></div>
@@ -2094,7 +2285,7 @@ export default function Monitor() {
       <section className="pillars" id="theory" aria-labelledby="pillars-title" aria-describedby="pillars-summary">
         <div className="section-head">
           <div>
-            <span className="kicker">{lang === "es" ? "04 · MARCO DE LA TEORÍA AUSTRIACA DEL CICLO" : "04 · ABCT FRAMEWORK"}</span>
+            <span className="kicker">{lang === "es" ? "05 · MARCO DE LA TEORÍA AUSTRIACA DEL CICLO" : "05 · ABCT FRAMEWORK"}</span>
             <h2 id="pillars-title">{t.pillars}</h2>
             <p id="pillars-summary">{lang === "es"
               ? "La Fed crea el marco monetario; los mercados de crédito determinan cómo circula el dinero; la economía real comprueba si llega a la población. Es una cadena de transmisión condicional: la coincidencia entre capas refuerza la lectura, pero no demuestra causalidad por sí sola."
@@ -2224,7 +2415,7 @@ export default function Monitor() {
       </section>
 
       <section className="sources" id="sources">
-        <div><span className="kicker">{lang === "es" ? "05 · PROCEDENCIA" : "05 · PROVENANCE"}</span><h2>{t.sources}</h2><p>{t.disclaimer}</p></div>
+        <div><span className="kicker">{lang === "es" ? "06 · PROCEDENCIA" : "06 · PROVENANCE"}</span><h2>{t.sources}</h2><p>{t.disclaimer}</p></div>
         <div className="source-list">
           {[
             ["FRED API", lang === "es" ? "Ruta REST primaria para series monetarias, de crédito y macro cuando está configurado el secreto del servidor" : "Primary REST route for monetary, credit and macro series when the server secret is configured", "https://fred.stlouisfed.org/docs/api/fred/"],

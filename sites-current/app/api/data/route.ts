@@ -8,7 +8,7 @@ import {
 } from "../../data/source-registry";
 import { loadBitcoinSpot } from "../../data/bitcoin-spot";
 import { fetchUpstream, getUpstreamHealth } from "../../data/upstream";
-import { DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE } from "../../version";
+import { CONTEXT_MODEL_VERSION, DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE } from "../../version";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +48,26 @@ type SignalReadiness = {
   resourcesFx: boolean;
   debtBurden: boolean;
   fiscalImpulse: boolean;
+};
+type SixForceKey = "treasury" | "debt" | "oil" | "manufacturing" | "dollar" | "bitcoin";
+type SixForceReading = {
+  state: string;
+  value: number | null;
+  change: number | null;
+  secondaryValue: number | null;
+  observedAt: string | null;
+  sourceKey: string;
+  available: boolean;
+};
+type SixForceContext = {
+  modelVersion: string;
+  status: "complete" | "partial" | "withheld";
+  available: number;
+  total: 6;
+  synthesis: string;
+  activePatterns: string[];
+  divergences: string[];
+  forces: Record<SixForceKey, SixForceReading>;
 };
 
 const FRED: Record<FredSeriesKey, string> = FRED_SERIES;
@@ -673,6 +693,115 @@ function n(value: number | null | undefined, fallback = 0) {
   return Number.isFinite(value) ? Number(value) : fallback;
 }
 
+function buildSixForceContext(series: Record<string, Point[]>, debtSeries: Point[], bitcoinPrice: number | null): SixForceContext {
+  const treasury10y = latest(series.treasury10y ?? []);
+  const treasuryCurve = latest(series.yieldCurve ?? []);
+  const treasuryChange = delta(series.treasury10y ?? [], 90);
+  const debtGrowth = change(debtSeries, 365);
+  const oilMomentum = change(series.oil ?? [], 90);
+  const manufacturing = latest(series.manufacturingSurvey ?? []);
+  const dollarMomentum = change(series.dollar ?? [], 90);
+  const bitcoinSeries = series.bitcoin ?? [];
+  const bitcoinMomentum = change(bitcoinSeries, 90);
+  const bitcoinLatest = latest(bitcoinSeries)?.value ?? bitcoinPrice;
+
+  const force = (
+    state: string,
+    value: number | null | undefined,
+    changeValue: number | null | undefined,
+    secondaryValue: number | null | undefined,
+    observedAt: string | null,
+    sourceKey: string,
+    required: Array<number | null | undefined>,
+  ): SixForceReading => ({
+    state,
+    value: Number.isFinite(value) ? Number(value) : null,
+    change: Number.isFinite(changeValue) ? Number(changeValue) : null,
+    secondaryValue: Number.isFinite(secondaryValue) ? Number(secondaryValue) : null,
+    observedAt,
+    sourceKey,
+    available: required.every(Number.isFinite),
+  });
+
+  const forces: Record<SixForceKey, SixForceReading> = {
+    treasury: force(
+      !Number.isFinite(treasuryChange) ? "limited-history" : n(treasuryChange) > 0.25 ? "yields-rising" : n(treasuryChange) < -0.25 ? "yields-falling" : "yields-range-bound",
+      treasury10y?.value,
+      treasuryChange,
+      treasuryCurve?.value,
+      treasury10y?.date ?? treasuryCurve?.date ?? null,
+      "treasury10y",
+      [treasury10y?.value, treasuryCurve?.value],
+    ),
+    debt: force(
+      !Number.isFinite(debtGrowth) ? "unavailable" : n(debtGrowth) > 5 ? "debt-accelerating" : n(debtGrowth) < 2 ? "debt-decelerating" : "debt-steady-growth",
+      latest(debtSeries)?.value,
+      debtGrowth,
+      null,
+      latest(debtSeries)?.date ?? null,
+      series.treasuryDebt?.length ? "treasuryDebt" : "federalDebt",
+      [latest(debtSeries)?.value, debtGrowth],
+    ),
+    oil: force(
+      !Number.isFinite(oilMomentum) ? "unavailable" : n(oilMomentum) > 5 ? "oil-rising" : n(oilMomentum) < -5 ? "oil-falling" : "oil-range-bound",
+      latest(series.oil ?? [])?.value,
+      oilMomentum,
+      null,
+      latest(series.oil ?? [])?.date ?? null,
+      "oil",
+      [latest(series.oil ?? [])?.value, oilMomentum],
+    ),
+    manufacturing: force(
+      !manufacturing ? "unavailable" : manufacturing.value > 10 ? "above-trend" : manufacturing.value < -10 ? "below-trend" : "near-trend",
+      manufacturing?.value,
+      delta(series.manufacturingSurvey ?? [], 31),
+      null,
+      manufacturing?.date ?? null,
+      "manufacturingSurvey",
+      [manufacturing?.value],
+    ),
+    dollar: force(
+      !Number.isFinite(dollarMomentum) ? "unavailable" : n(dollarMomentum) > 2 ? "dollar-strengthening" : n(dollarMomentum) < -2 ? "dollar-weakening" : "dollar-range-bound",
+      latest(series.dollar ?? [])?.value,
+      dollarMomentum,
+      null,
+      latest(series.dollar ?? [])?.date ?? null,
+      "dollar",
+      [latest(series.dollar ?? [])?.value, dollarMomentum],
+    ),
+    bitcoin: force(
+      !Number.isFinite(bitcoinMomentum) ? "limited-history" : n(bitcoinMomentum) > 5 ? "bitcoin-rising" : n(bitcoinMomentum) < -5 ? "bitcoin-falling" : "bitcoin-range-bound",
+      bitcoinLatest,
+      bitcoinMomentum,
+      null,
+      latest(bitcoinSeries)?.date ?? null,
+      "bitcoin",
+      [bitcoinLatest, bitcoinMomentum],
+    ),
+  };
+
+  const activePatterns: string[] = [];
+  if (n(oilMomentum) > 5 && manufacturing && manufacturing.value < -10) activePatterns.push("energy-pressure-below-trend-manufacturing");
+  if (n(treasuryChange) > 0.25 && n(debtGrowth) > 5) activePatterns.push("rising-yields-with-fiscal-refinancing-pressure");
+  if (n(dollarMomentum) > 2 && n(bitcoinMomentum) < -5) activePatterns.push("dollar-liquidity-tightening");
+  if (n(dollarMomentum) < -2 && n(bitcoinMomentum) > 5) activePatterns.push("monetary-repricing");
+
+  const divergences: string[] = [];
+  if (n(dollarMomentum) > 2 && n(bitcoinMomentum) > 5) divergences.push("stronger-dollar-and-rising-bitcoin");
+  if (n(dollarMomentum) < -2 && n(bitcoinMomentum) < -5) divergences.push("weaker-dollar-and-falling-bitcoin");
+  if (n(treasuryChange) > 0.25 && n(bitcoinMomentum) > 5) divergences.push("rising-yields-and-rising-bitcoin");
+  if (manufacturing && manufacturing.value < -10 && n(oilMomentum) < -5) divergences.push("below-trend-manufacturing-and-falling-energy");
+
+  const available = Object.values(forces).filter((reading) => reading.available).length;
+  const status = available === 6 ? "complete" : available >= 4 ? "partial" : "withheld";
+  const synthesis = status === "withheld"
+    ? "insufficient-evidence"
+    : activePatterns.length > 1
+      ? "compound-pressure"
+      : activePatterns[0] ?? (divergences.length ? "cross-market-divergence" : "mixed-signals");
+  return { modelVersion: CONTEXT_MODEL_VERSION, status, available, total: 6, synthesis, activePatterns, divergences, forces };
+}
+
 function bitcoinNetworkProvenance(hasMempool: boolean, hasBlockchain: boolean) {
   if (hasMempool && hasBlockchain) return "Mempool.space + Blockchain.com";
   if (hasMempool) return "Mempool.space";
@@ -712,6 +841,11 @@ export async function GET(request: Request) {
       const storedRatioModel = buildRatioModel(storedSeries, storedDebtSeries);
       const storedLatest = metrics.latest ?? {};
       const storedBitcoin = metrics.bitcoin ?? {};
+      const storedSixForce = buildSixForceContext(
+        storedSeries,
+        storedDebtSeries,
+        Number.isFinite(storedBitcoin.price) ? Number(storedBitcoin.price) : null,
+      );
       const storedBitcoinNetwork = bitcoinNetworkProvenance(
         Number.isFinite(storedBitcoin.blockHeight) || Number.isFinite(storedBitcoin.feeFast) || Number.isFinite(storedBitcoin.feeHour),
         Number.isFinite(storedBitcoin.supply) || Number.isFinite(storedBitcoin.hashRate) || Number.isFinite(storedBitcoin.difficulty),
@@ -747,6 +881,7 @@ export async function GET(request: Request) {
       return Response.json({
         schemaVersion: DATA_SCHEMA_VERSION,
         engineVersion: ENGINE_VERSION,
+        contextModelVersion: CONTEXT_MODEL_VERSION,
         siteRelease: SITE_RELEASE,
         requestedAt: generatedAt,
         observedAt: generatedAt,
@@ -771,6 +906,7 @@ export async function GET(request: Request) {
           correlationEvidence: storedCorrelationModel.correlationEvidence,
           ratios: storedRatioModel.ratios,
           ratioEvidence: storedRatioModel.ratioEvidence,
+          sixForce: storedSixForce,
         },
         freshness: storedFreshness,
         upstreams: getUpstreamHealth(),
@@ -959,6 +1095,7 @@ export async function GET(request: Request) {
   const correlationModel = buildCorrelations({ ...series, bitcoin: bitcoinHistory });
 
   const ratioModel = buildRatioModel({ ...series, bitcoin: bitcoinHistory }, debtSeries);
+  const sixForceContext = buildSixForceContext({ ...series, bitcoin: bitcoinHistory }, debtSeries, bitcoinPrice);
 
   const freshness = Object.entries(FRED).map(([key, id]) => ({
     key, id, observedAt: latest(series[key])?.date ?? null,
@@ -979,6 +1116,7 @@ export async function GET(request: Request) {
   let payload = {
     schemaVersion: DATA_SCHEMA_VERSION,
     engineVersion: ENGINE_VERSION,
+    contextModelVersion: CONTEXT_MODEL_VERSION,
     siteRelease: SITE_RELEASE,
     requestedAt,
     observedAt: requestedAt,
@@ -1018,6 +1156,7 @@ export async function GET(request: Request) {
       correlationEvidence: correlationModel.correlationEvidence,
       ratios: ratioModel.ratios,
       ratioEvidence: ratioModel.ratioEvidence,
+      sixForce: sixForceContext,
     },
     freshness,
     upstreams: getUpstreamHealth(),
@@ -1075,7 +1214,7 @@ export async function GET(request: Request) {
         refreshMode: payload.refreshMode,
         regime,
         scores: payload.derived.scores,
-        metrics: { latest: payload.latest, series: payload.series, bitcoin: payload.bitcoin, changes: payload.derived.changes, derived: { correlations: payload.derived.correlations, correlationEvidence: payload.derived.correlationEvidence, ratios: payload.derived.ratios, ratioEvidence: payload.derived.ratioEvidence }, freshness: payload.freshness },
+        metrics: { latest: payload.latest, series: payload.series, bitcoin: payload.bitcoin, changes: payload.derived.changes, derived: { correlations: payload.derived.correlations, correlationEvidence: payload.derived.correlationEvidence, ratios: payload.derived.ratios, ratioEvidence: payload.derived.ratioEvidence, sixForce: payload.derived.sixForce }, freshness: payload.freshness },
         provenance: payload.provenance,
       }, force);
     } catch {
