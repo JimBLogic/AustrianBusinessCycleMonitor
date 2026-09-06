@@ -20,3 +20,14 @@ test('invalid answers cannot inflate scores and retry rounds start empty',()=>{
 test('loaded snapshots have valid timestamps without epoch fallback',()=>{
  assert.equal(validTimestamp('2026-09-06T12:00:00Z')?.toISOString(),'2026-09-06T12:00:00.000Z');for(const v of [null,undefined,'','bad date',0,'1970-01-01','2026-99-99'])assert.equal(validTimestamp(v),null);
 });
+
+
+test('a manual request before Madrid noon cannot block the scheduled edition', async()=>{
+ const {manualRefreshBlocked}=await import('../lib/refresh-policy.mjs');
+ const noon=Date.parse('2026-09-06T10:00:00Z');
+ const nextAllowedAt=noon+20*60_000; // Manual request at 11:50 Madrid.
+ assert.equal(manualRefreshBlocked(true,nextAllowedAt,noon),true);
+ assert.equal(manualRefreshBlocked(false,nextAllowedAt,noon),false);
+ assert.equal(manualRefreshBlocked(true,nextAllowedAt,nextAllowedAt),false);
+ assert.equal(manualRefreshBlocked(true,null,noon),false);
+});

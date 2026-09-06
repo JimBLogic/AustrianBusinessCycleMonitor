@@ -1,5 +1,6 @@
 "use client";
 
+import { manualRefreshBlocked } from "@/lib/refresh-policy.mjs";
 import { validTimestamp } from "@/lib/timestamp.mjs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -834,7 +835,7 @@ export default function Monitor() {
   const load = useCallback(async (manual = false, userInitiated = false) => {
     const {lang, manualRefreshNext} = requestState.current;
     if (dataRequestPending.current) return;
-    if (manual && manualRefreshNext && Date.now() < manualRefreshNext) return;
+    if (manual && manualRefreshBlocked(userInitiated, manualRefreshNext)) return;
     dataRequestPending.current = true;
     setLoading(true);
     setRefreshNotice(manual ? (lang === "es" ? "Consultando fuentes y comparando con tu instantánea anterior…" : "Checking sources and comparing with your previous snapshot…") : "");
