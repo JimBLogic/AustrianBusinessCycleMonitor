@@ -263,3 +263,5 @@ The build now checks TypeScript before bundling, including the loaded-snapshot t
 Every learning route and privacy page has its own canonical and social URL. Spanish is the canonical indexing language; `?lang=en` provides an English reading view without ambiguous hreflang declarations.
 
 For independent hosting, set `ABCM_PUBLIC_ORIGIN=https://your-domain.example` in `.env.selfhost` **before building**. Rebuild after changing it. Canonicals, sitemap, robots and structured data then use your origin. Adapt the privacy page to your operator and host. GitHub Pages alone cannot run this Worker/API and D1 backend.
+
+Fonts are checked-in public assets served from `/fonts/`, with no build-machine paths or external font requests. Production tests verify the referenced assets are packaged.

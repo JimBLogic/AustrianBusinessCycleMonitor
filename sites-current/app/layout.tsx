@@ -1,19 +1,10 @@
 import { SITE_ORIGIN } from "@/lib/site-config";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import "./fonts.css";
 import "./globals.css";
 import "./engine.css";
 import "./academy.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_ORIGIN),
@@ -62,7 +53,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className="antialiased"
       >
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
           "@context": "https://schema.org", "@type": "SoftwareApplication",

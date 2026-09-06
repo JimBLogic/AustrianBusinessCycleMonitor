@@ -29,6 +29,7 @@ test("renders the public monitor with production security headers", async () => 
   const html = await response.text();
   assert.equal(html.includes('name="codex-preview"'), false);
   assert.equal(html.includes("1970"), false);
+  assert.doesNotMatch(html, /(?:href|src)="\/workspace\//);
   assert.match(html, /PENDIENTE DE LA PRIMERA CARGA/);
   assert.match(html, /Cambiar idioma a inglés/);
   assert.match(html, /PRECIO NO DISPONIBLE/);
@@ -69,6 +70,21 @@ test("serves every public learning route in both languages", async () => {
       assert.ok(html.includes(`rel="canonical" href="${expected}"`), `${path}: own canonical`);
       assert.ok(html.includes(`property="og:url" content="${expected}"`), `${path}: own social URL`);
       assert.ok(!html.includes('hreflang="es-ES" href="https://austrian-business-cycle-monitor.jimblogic.chatgpt.site/"'));
+    }
+  }
+});
+
+
+test("font styles refer to portable public assets that exist in the production bundle", async () => {
+  const {readFile, access} = await import("node:fs/promises");
+  for (const family of ["geist-8ac0455e797f", "geist-mono-00e989178794"]) {
+    const css = await readFile(new URL(`../public/fonts/${family}/style.css`, import.meta.url), "utf8");
+    assert.doesNotMatch(css, /\/workspace\/|https:\/\//);
+    const urls = [...css.matchAll(/url\(([^)]+)\)/g)].map(m=>m[1]);
+    assert.ok(urls.length > 0);
+    for (const path of urls) {
+      assert.ok(path.startsWith("/fonts/"));
+      await access(new URL(`../dist/client${path}`, import.meta.url));
     }
   }
 });

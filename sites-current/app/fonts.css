@@ -1,0 +1,3 @@
+@import "../public/fonts/geist-8ac0455e797f/style.css";
+@import "../public/fonts/geist-mono-00e989178794/style.css";
+:root { --font-geist-sans: 'Geist', Arial, sans-serif; --font-geist-mono: 'Geist Mono', monospace; }
