@@ -1,25 +1,29 @@
 # Austrian Business Cycle Monitor
 
-An evidence-first macroeconomic monitor built with Flask, React, TypeScript, FRED, and SQLite.
+A bilingual macroeconomic monitor with sourced learning paths and a reproducible full-stack deployment.
 
 The public application displays deterministic snapshots derived from official observations. Each indicator includes its observation date, freshness, formula, and primary-source lineage. Missing or stale inputs remain explicit; the application does not manufacture plausible replacement values.
 
 ## Current public Sites application
 
 The maintained source of the live application is
-[\`sites-current/\`](sites-current/README.md). It contains the full bilingual
-frontend, Worker/API backend, D1 persistence, R2 storage, authenticated workspace,
-learning routes, integrity checks, and locked build tooling.
+[`sites-current/`](sites-current/README.md). It contains the full bilingual
+frontend, Worker/API backend, D1 persistence for shared macro snapshots, local-only preferences,
+48 sourced learning questions, per-route SEO, integrity checks, and locked build tooling.
 
 - Live application: <https://austrian-business-cycle-monitor.jimblogic.chatgpt.site/>
 - Runtime integrity: <https://austrian-business-cycle-monitor.jimblogic.chatgpt.site/api/health>
-- Local full-stack start: \`cd sites-current && npm run install:ci && npm run dev\`
-- Complete reconstruction and hosting guide: [\`sites-current/README.md\`](sites-current/README.md)
+- Local full-stack start: `cd sites-current && npm run install:ci && npm run dev`
+- Complete reconstruction and hosting guide: [`sites-current/README.md`](sites-current/README.md)
 
 Do not derive the active release from a README title. The canonical source value
-is [\`sites-current/app/version.ts\`](sites-current/app/version.ts), and the
-deployed value is returned by \`/api/health\`. Numbered directories such as
-\`sites-v25/\` are frozen historical references, not supported deployment paths.
+is [`sites-current/app/version.ts`](sites-current/app/version.ts), and the
+deployed value is returned by `/api/health`. Numbered directories such as
+`sites-v25/` are frozen historical references, not supported deployment paths.
+
+The live Sites application offers two six-module learning paths with 24 bilingual questions each, randomized question and answer order, explanations, source links, and mistake review. Quiz progress remains only in browser memory. The application adds no cookies or analytics; the privacy page separately explains hosting analytics.
+
+For independent hosting, follow the Docker/VPS guide in `sites-current/README.md` and set `ABCM_PUBLIC_ORIGIN` before building. GitHub Pages cannot serve its Worker API or D1 database.
 
 The Sites implementation coexists with the trusted Flask/React/FRED pipeline
 below. Choose one complete runtime; do not publish a frontend from one path
@@ -29,13 +33,14 @@ against an undocumented backend from the other.
 
 - `apps/` — Flask API, trusted FRED ingestion, SQLite repositories, and deterministic snapshots.
 - `packages/frontend/` — current public React interface for the trusted Flask pipeline.
-- `sites-current/` — maintained source of the live full-stack Sites application.\n- `sites-v25/` — frozen historical snapshot; not the current code path.
+- `sites-current/` — maintained source of the live full-stack Sites application.
+- `sites-v25/` — frozen historical snapshot; not the current code path.
 - `docs/` — maintained technical, operational, and educational documentation.
 - `archive/` — preserved Copilot-era experiments, launchers, reports, and superseded deployment material. Nothing in this directory is part of the supported runtime.
 
 See [the documentation index](docs/INDEX.md) for maintained guidance and [the archive guide](archive/README.md) before reusing historical code.
 
-## Current production path
+## Historical Flask/React pipeline
 
 ```text
 FRED observations
@@ -68,7 +73,7 @@ The public React entrypoint intentionally does not mount the experimental legacy
 
 It does **not** claim to estimate the natural interest rate, predict recessions with certainty, or provide personalised financial advice.
 
-## Local development
+## Flask/React local development
 
 ### Requirements
 
@@ -106,7 +111,7 @@ python entrypoint.py
 
 Open `http://127.0.0.1:8080` for Vite development or `http://127.0.0.1:5002` after building the frontend.
 
-## Production deployment
+## Flask/React production deployment
 
 The supported small-project deployment uses Docker Compose, a persistent SQLite volume, a separate updater process, and Caddy for automatic HTTPS.
 

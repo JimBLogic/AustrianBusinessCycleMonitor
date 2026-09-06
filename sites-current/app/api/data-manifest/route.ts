@@ -107,10 +107,10 @@ export async function GET() {
     security: {
       secrets: "No browser-exposed API secrets are required by the temporary backend.",
       upstreams: "The server calls a fixed allowlist of upstream endpoints; it is not an open proxy.",
-      caching: "GET serves one durable shared edition for up to 24 hours. POST requests a newer edition only when the latest durable snapshot is at least 15 minutes old. Query parameters cannot bypass either gate.",
+      caching: "GET serves the durable main edition generated after 12:00 Europe/Madrid. Each browser may request a comparison refresh every 30 minutes; the server retains an additional shared safety gate. Query parameters cannot bypass either gate.",
     },
     reliability: {
-      strategy: ["durable 24-hour D1 edition", "15-minute server-enforced manual refresh gate", "typed provider registry", "official source before independent fallback", "bounded exponential backoff for transient 5xx, 429 and network failures", "per-provider circuit breaker after repeated failures", "Retry-After-aware cooldown", "6–12 second per-attempt timeouts", "deterministic date sorting and duplicate removal", "per-series D1 last-known-good recovery", "explicit live / stale / backup / unavailable states", "provisional model only above a 70% complete-signal threshold"],
+      strategy: ["durable daily D1 edition aligned to 12:00 Europe/Madrid", "30-minute per-browser comparison refresh", "15-minute server safety gate", "typed provider registry", "official source before independent fallback", "bounded exponential backoff for transient 5xx, 429 and network failures", "per-provider circuit breaker after repeated failures", "Retry-After-aware cooldown", "6–12 second per-attempt timeouts", "deterministic date sorting and duplicate removal", "per-series D1 last-known-good recovery", "explicit live / stale / backup / unavailable states", "provisional model only above a 70% complete-signal threshold"],
       semantics: "A fresh request does not imply a new official observation. The response separates requestedAt from each series observedAt.",
     },
     inspiration: {

@@ -44,6 +44,7 @@ export default defineConfig(async () => {
   const { cloudflare } = await import("@cloudflare/vite-plugin");
 
   return {
+    define: { __ABCM_PUBLIC_ORIGIN__: JSON.stringify(new URL(process.env.ABCM_PUBLIC_ORIGIN || "https://austrian-business-cycle-monitor.jimblogic.chatgpt.site").origin) },
     server: {
       host: "0.0.0.0",
       allowedHosts: ["terminal.local"],

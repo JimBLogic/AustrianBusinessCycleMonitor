@@ -1,12 +1,25 @@
 "use client";
 
+import { validTimestamp } from "@/lib/timestamp.mjs";
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  hasAcceptedEducationalNotice,
+  readLanguagePreference,
+  readManualRefreshPreference,
+  readWatchlistPreference,
+  saveEducationalNoticeAcceptance,
+  saveLanguagePreference,
+  saveManualRefreshPreference,
+  saveWatchlistPreference,
+  type VisitBaselinePreference,
+  type WatchPreference,
+} from "@/lib/local-preferences";
+import { ClearLocalPreferencesButton } from "./privacidad/ClearLocalPreferencesButton";
 import { CONTEXT_MODEL_VERSION, DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "./version";
 
 type Lang = "en" | "es";
 type SignalKey = "money" | "monetaryStance" | "creditRisk" | "termStructure" | "production" | "labour" | "consumerPrices" | "resourcesFx" | "debtBurden" | "fiscalImpulse";
-const WATCH_KEYS = ["m2", "creditSpread", "cpi", "unemployment", "federalDebt", "bitcoin"] as const;
-type WatchKey = (typeof WATCH_KEYS)[number];
+type WatchKey = WatchPreference;
 type Point = { date: string; value: number };
 type SixForceKey = "treasury" | "debt" | "oil" | "manufacturing" | "dollar" | "bitcoin";
 type SixForceReading = { state: string; value: number | null; change: number | null; secondaryValue: number | null; observedAt: string | null; sourceKey: string; available: boolean };
@@ -33,15 +46,7 @@ type Detail = {
   sourceLabel: string;
   sourceUrl: string;
 };
-type VisitBaseline = {
-  capturedAt: string;
-  requestedAt: string;
-  regime: string;
-  composite: number;
-  modelReady: boolean;
-  bitcoinPrice: number | null;
-  latestDates: Record<string, string | null>;
-};
+type VisitBaseline = VisitBaselinePreference;
 type Data = {
   observedAt: string;
   requestedAt: string;
@@ -270,36 +275,16 @@ function sixForceSynthesis(key: string, lang: Lang) {
   return { title: item.title[lang === "en" ? 0 : 1], body: item.body[lang === "en" ? 0 : 1], falsifier: item.falsifier[lang === "en" ? 0 : 1] };
 }
 
-function validTimestamp(value: string | null | undefined) {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isFinite(date.getTime()) && date.getUTCFullYear() >= 2000 ? date : null;
-}
-
-function parseVisitBaseline(value: string | null): VisitBaseline | null {
-  if (!value) return null;
-  try {
-    const parsed = JSON.parse(value) as Partial<VisitBaseline>;
-    if (!validTimestamp(parsed.capturedAt) || typeof parsed.requestedAt !== "string" || typeof parsed.regime !== "string") return null;
-    if (!Number.isFinite(parsed.composite) || typeof parsed.modelReady !== "boolean") return null;
-    if (parsed.bitcoinPrice != null && !Number.isFinite(parsed.bitcoinPrice)) return null;
-    if (!parsed.latestDates || typeof parsed.latestDates !== "object" || Array.isArray(parsed.latestDates)) return null;
-    const latestDates = Object.fromEntries(Object.entries(parsed.latestDates).filter(([, date]) => date == null || typeof date === "string"));
-    return { ...parsed, latestDates } as VisitBaseline;
-  } catch {
-    return null;
-  }
-}
-
-function parseWatchlist(value: string | null): WatchKey[] {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return [...new Set(parsed.filter((key): key is WatchKey => typeof key === "string" && WATCH_KEYS.includes(key as WatchKey)))].slice(0, 4);
-  } catch {
-    return [];
-  }
+function snapshotBaseline(snapshot: Data): VisitBaseline {
+  return {
+    capturedAt: new Date().toISOString(),
+    requestedAt: snapshot.requestedAt,
+    regime: snapshot.derived.regime,
+    composite: snapshot.derived.scores.composite,
+    modelReady: snapshot.provenance.mode !== "fallback" && (snapshot.provenance.modelStatus ?? (snapshot.provenance.modelReady ? "complete" : "withheld")) !== "withheld",
+    bitcoinPrice: snapshot.bitcoin.price,
+    latestDates: Object.fromEntries(Object.entries(snapshot.latest).map(([key, point]) => [key, point?.date ?? null])),
+  };
 }
 
 function latestValue(data: Data, key: string) {
@@ -804,13 +789,14 @@ export default function Monitor() {
   const [clock, setClock] = useState(0);
   const [seriesKey, setSeriesKey] = useState<keyof typeof seriesMeta>("m2");
   const [horizon, setHorizon] = useState(5);
-  const [selectedMetric, setSelectedMetric] = useState(metrics[0]);
+  const [selectedMetric, setSelectedMetric] = useState<(typeof metrics)[number]>(metrics[0]);
   const [lens, setLens] = useState<"facts" | "thesis">("facts");
   const [quote, setQuote] = useState(0);
   const [menu, setMenu] = useState(false);
   const [activeSection, setActiveSection] = useState("top");
   const [selectedMix, setSelectedMix] = useState(["m2", "sp500", "gold", "bitcoin"]);
   const [refreshNotice, setRefreshNotice] = useState("");
+  const [manualRefreshNext, setManualRefreshNext] = useState<number | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [visitBaseline, setVisitBaseline] = useState<VisitBaseline | null>(null);
   const [baselineSavedThisVisit, setBaselineSavedThisVisit] = useState(false);
@@ -831,17 +817,34 @@ export default function Monitor() {
     setLang(next);
     setMenu(false);
     document.documentElement.lang = next;
-    try { window.localStorage.setItem("abcm:language", next); } catch { /* Preference storage is optional. */ }
+    saveLanguagePreference(next);
     const url = new URL(window.location.href);
     url.searchParams.set("lang", next);
     window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
   }, []);
 
-  const load = useCallback(async (manual = false) => {
+  const requestState = useRef({lang, manualRefreshNext});
+  const dataRequestPending = useRef(false);
+  useEffect(() => { requestState.current = {lang, manualRefreshNext}; }, [lang, manualRefreshNext]);
+  useEffect(() => {
+    const clear = () => { setWatchlist([]); setVisitBaseline(null); setManualRefreshNext(null); setBaselineSavedThisVisit(false); setDisclaimerOpen(true); };
+    window.addEventListener("abcm:preferences-cleared", clear);
+    return () => window.removeEventListener("abcm:preferences-cleared", clear);
+  }, []);
+  const load = useCallback(async (manual = false, userInitiated = false) => {
+    const {lang, manualRefreshNext} = requestState.current;
+    if (dataRequestPending.current) return;
+    if (manual && manualRefreshNext && Date.now() < manualRefreshNext) return;
+    dataRequestPending.current = true;
     setLoading(true);
-    setRefreshNotice(manual ? (lang === "es" ? "Solicitando la instantánea compartida más reciente…" : "Requesting the latest shared snapshot…") : "");
+    setRefreshNotice(manual ? (lang === "es" ? "Consultando fuentes y comparando con tu instantánea anterior…" : "Checking sources and comparing with your previous snapshot…") : "");
     try {
-      const response = await fetch("/api/data", { method: manual ? "POST" : "GET", cache: "no-store" });
+      const response = await fetch("/api/data", {
+        method: manual ? "POST" : "GET",
+        cache: "no-store",
+        credentials: "omit",
+        referrerPolicy: "no-referrer",
+      });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const next: Data = await response.json();
       if (next.provenance.mode === "fallback") throw new Error("No upstream source returned a usable snapshot");
@@ -850,32 +853,28 @@ export default function Monitor() {
       const btcMove = old.bitcoin.price && next.bitcoin.price ? next.bitcoin.price - old.bitcoin.price : null;
       setData(next);
       previousData.current = next;
-      try {
-        window.localStorage.setItem("abcm:last-valid-snapshot", JSON.stringify(next));
-        const nextBaseline = {
-          capturedAt: new Date().toISOString(),
-          requestedAt: next.requestedAt,
-          regime: next.derived.regime,
-          composite: next.derived.scores.composite,
-          modelReady: next.provenance.mode !== "fallback" && (next.provenance.modelStatus ?? (next.provenance.modelReady ? "complete" : "withheld")) !== "withheld",
-          bitcoinPrice: next.bitcoin.price,
-          latestDates: Object.fromEntries(Object.entries(next.latest).map(([key, point]) => [key, point?.date ?? null])),
-        } satisfies VisitBaseline;
-        window.localStorage.setItem("abcm:visit-baseline", JSON.stringify(nextBaseline));
+      if (manual && userInitiated) {
+        const previousSnapshot = snapshotBaseline(old);
+        const nextAllowedAt = Date.now() + 30 * 60_000;
+        saveManualRefreshPreference(previousSnapshot, nextAllowedAt);
         setBaselineSavedThisVisit(true);
-      } catch {
-        // Storage is an optional performance enhancement; live data still works without it.
+        setManualRefreshNext(nextAllowedAt);
+        setVisitBaseline(previousSnapshot);
       }
       if (manual) setRefreshNotice(lang === "es"
         ? `Instantánea sincronizada · BTC ${btcMove == null ? "sin dato" : `${btcMove >= 0 ? "+" : ""}$${format(btcMove, 0)}`} · ${changedMacro} series macro con nueva fecha`
         : `Snapshot synchronized · BTC ${btcMove == null ? "unavailable" : `${btcMove >= 0 ? "+" : ""}$${format(btcMove, 0)}`} · ${changedMacro} macro series with a new date`);
     } catch {
       setRefreshNotice(lang === "es" ? "No se pudo completar la consulta. Se conserva el último snapshot válido." : "Fresh query failed. Keeping the last valid snapshot.");
-    } finally { setLoading(false); }
-  }, [lang]);
+    } finally { dataRequestPending.current = false; setLoading(false); }
+  }, []);
   const loadBitcoin = useCallback(async () => {
     try {
-      const response = await fetch("/api/bitcoin", { cache: "no-store" });
+      const response = await fetch("/api/bitcoin", {
+        cache: "no-store",
+        credentials: "omit",
+        referrerPolicy: "no-referrer",
+      });
       if (!response.ok) return;
       const pulse = await response.json() as {
         price: number | null; priceObservedAt: string | null; provider: string;
@@ -907,8 +906,7 @@ export default function Monitor() {
   }, []);
   useEffect(() => {
     const requestedLanguage = new URLSearchParams(window.location.search).get("lang");
-    let storedLanguage: string | null = null;
-    try { storedLanguage = window.localStorage.getItem("abcm:language"); } catch { /* Preference storage is optional. */ }
+    const storedLanguage = readLanguagePreference();
     const initialLanguage: Lang = requestedLanguage === "en" || requestedLanguage === "es"
       ? requestedLanguage
       : storedLanguage === "en" || storedLanguage === "es" ? storedLanguage : "es";
@@ -918,25 +916,14 @@ export default function Monitor() {
   }, []);
   useEffect(() => {
     const initial = window.setTimeout(() => {
-      try {
-        const cached = window.localStorage.getItem("abcm:last-valid-snapshot");
-        if (cached) {
-          const snapshot = JSON.parse(cached) as Data;
-          if (snapshot?.latest && snapshot?.derived && snapshot?.provenance?.mode !== "fallback") {
-            setData(snapshot);
-            previousData.current = snapshot;
-          }
-        }
-        const storedConsent = window.localStorage.getItem("abcm:educational-notice:v1") === "accepted";
-        const cookieConsent = document.cookie.split("; ").includes("abcm_educational_notice_v1=accepted");
-        setDisclaimerOpen(!storedConsent && !cookieConsent);
-        const savedBaseline = parseVisitBaseline(window.localStorage.getItem("abcm:visit-baseline"));
-        if (savedBaseline) setVisitBaseline(savedBaseline);
-        const savedWatchlist = parseWatchlist(window.localStorage.getItem("abcm:watchlist"));
-        if (savedWatchlist.length) setWatchlist(savedWatchlist);
-      } catch {
-        setDisclaimerOpen(!document.cookie.split("; ").includes("abcm_educational_notice_v1=accepted"));
+      setDisclaimerOpen(!hasAcceptedEducationalNotice());
+      const refreshPreference = readManualRefreshPreference();
+      if (refreshPreference) {
+        setVisitBaseline(refreshPreference.previousSnapshot);
+        if (refreshPreference.nextAllowedAt > Date.now()) setManualRefreshNext(refreshPreference.nextAllowedAt);
       }
+      const savedWatchlist = readWatchlistPreference();
+      if (savedWatchlist.length) setWatchlist(savedWatchlist);
       setClock(Date.now());
       void load(false);
     }, 0);
@@ -961,7 +948,7 @@ export default function Monitor() {
       : Math.max(60_000, validUntil - Date.now() + Math.floor(Math.random() * 30_000));
     // Render the durable edition first. If its daily window has elapsed, a
     // single gated POST refreshes it without holding the page hostage.
-    const id = window.setTimeout(() => void load(expired), delay);
+    const id = window.setTimeout(() => void load(expired, false), delay);
     return () => window.clearTimeout(id);
   }, [data.cache?.nextDailyAt, data.cache?.validUntil, data.provenance.mode, data.requestedAt, load]);
   useEffect(() => { const id = setInterval(() => setQuote((q) => (q + 1) % quotes.length), 12_000); return () => clearInterval(id); }, []);
@@ -1231,15 +1218,13 @@ export default function Monitor() {
   const snapshotAgeMinutes = snapshotDate
     ? Math.max(0, Math.floor((clock - snapshotDate.getTime()) / 60_000))
     : null;
-  const snapshotNeedsRefresh = snapshotAgeMinutes == null || snapshotAgeMinutes >= 1_440;
+  const snapshotNeedsRefresh = snapshotAgeMinutes == null || (data.cache?.nextDailyAt ? Date.parse(data.cache.nextDailyAt) <= clock : snapshotAgeMinutes >= 1_440);
   const snapshotTimestamp = snapshotDate
     ? new Intl.DateTimeFormat(lang === "es" ? "es-ES" : "en-GB", {
       dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Madrid",
     }).format(snapshotDate)
     : "—";
-  const nextRefreshDate = (data.cache?.nextManualAt ?? data.cache?.validUntil)
-    ? validTimestamp(data.cache?.nextManualAt ?? data.cache?.validUntil)
-    : snapshotDate ? new Date(snapshotDate.getTime() + 900_000) : null;
+  const nextRefreshDate = manualRefreshNext && manualRefreshNext > clock ? new Date(manualRefreshNext) : null;
   const nextRefreshTimestamp = nextRefreshDate
     ? new Intl.DateTimeFormat(lang === "es" ? "es-ES" : "en-GB", {
       dateStyle: "medium", timeStyle: "medium", timeZone: "Europe/Madrid",
@@ -1371,12 +1356,7 @@ export default function Monitor() {
   }
 
   function acceptDisclaimer() {
-    try {
-      window.localStorage.setItem("abcm:educational-notice:v1", "accepted");
-    } catch {
-      // Cookie below provides a standards-based fallback.
-    }
-    document.cookie = "abcm_educational_notice_v1=accepted; Max-Age=31536000; Path=/; SameSite=Lax";
+    saveEducationalNoticeAcceptance();
     setDisclaimerOpen(false);
   }
 
@@ -1385,7 +1365,7 @@ export default function Monitor() {
       const next = current.includes(key)
         ? (current.length === 1 ? current : current.filter((item) => item !== key))
         : current.length >= 4 ? current : [...current, key];
-      try { window.localStorage.setItem("abcm:watchlist", JSON.stringify(next)); } catch { /* device-local enhancement */ }
+      saveWatchlistPreference(next);
       return next;
     });
   }
@@ -1664,7 +1644,7 @@ export default function Monitor() {
             <p className="lede">{t.intro}</p>
             <div className="actions">
               <a className="primary" href="#dashboard">{lang === "es" ? "Explorar el panel" : "Explore dashboard"} <span>↓</span></a>
-              <button className="secondary" onClick={() => load(true)} disabled={loading || !refreshUnlocked} aria-busy={loading} aria-describedby="snapshot-status" title={!refreshUnlocked ? (lang === "es" ? `Disponible en ${refreshCountdown}` : `Available in ${refreshCountdown}`) : undefined}>{loading ? (lang === "es" ? "Cargando datos" : "Loading data") : refreshUnlocked ? `↻ ${t.refresh}` : refreshCountdown}</button>
+              <button className="secondary" onClick={() => load(true, true)} disabled={loading || !refreshUnlocked} aria-busy={loading} aria-describedby="snapshot-status" title={!refreshUnlocked ? (lang === "es" ? `Disponible en ${refreshCountdown}` : `Available in ${refreshCountdown}`) : undefined}>{loading ? (lang === "es" ? "Cargando datos" : "Loading data") : refreshUnlocked ? `↻ ${t.refresh}` : refreshCountdown}</button>
             </div>
             <div className={`snapshot-status ${snapshotNeedsRefresh ? "needs-refresh" : "current"}`} id="snapshot-status" aria-label={lang === "es" ? "Estado de la edición de datos" : "Data edition status"}>
               <div>
@@ -1680,7 +1660,7 @@ export default function Monitor() {
                 ? (lang === "es" ? "PENDIENTE DE LA PRIMERA CARGA. Las fechas aparecerán cuando exista una instantánea válida." : "AWAITING THE FIRST LOAD. Dates will appear when a valid snapshot exists.")
                 : snapshotNeedsRefresh
                   ? (lang === "es" ? `La edición diaria tiene ${Math.floor(snapshotAgeMinutes / 60)} h. La próxima lectura solicitará una edición nueva; mientras tanto se conserva esta copia verificada.` : `The daily edition is ${Math.floor(snapshotAgeMinutes / 60)} h old. The next read will request a new edition; this verified copy remains available meanwhile.`)
-                  : (lang === "es" ? `Edición diaria generada hace ${snapshotAgeMinutes} min. Se sirve al instante a todos los visitantes; una actualización manual solo se habilita cada 15 minutos.` : `Daily edition generated ${snapshotAgeMinutes} min ago. It is served instantly to every visitor; manual refresh unlocks only every 15 minutes.`)}</p>
+                  : (lang === "es" ? `Edición principal de las 12:00 (hora española). Cada navegador puede pedir una comparación con su estado anterior cada 30 minutos.` : `Main edition at 12:00 Spain time. Each browser can request a comparison with its previous state every 30 minutes.`)}</p>
             </div>
             {refreshNotice && <div className={`refresh-notice ${refreshNotice.includes("failed") || refreshNotice.includes("No se") ? "error" : ""}`} role="status" aria-live="polite">{refreshNotice}</div>}
           </div>
@@ -1789,7 +1769,7 @@ export default function Monitor() {
                   : `${regime.body} Highest pressure sits in ${strongest.label.toLowerCase()} (${strongest.score}/100), lowest in ${weakest.label.toLowerCase()} (${weakest.score}/100).`)
                 : (lang === "es" ? "No existe cobertura suficiente para resumir el régimen. Revisa las fuentes o solicita una actualización." : "Coverage is insufficient to summarize the regime. Check sources or request a refresh.")}</p>
             </div>
-            <div className="return-actions"><button type="button" onClick={() => load(true)} disabled={loading || !refreshUnlocked}>↻ {refreshUnlocked ? t.refresh : refreshCountdown}</button><a href={`/learn?lang=${lang}`}>{lang === "es" ? "Comprender la lectura" : "Understand the reading"} →</a></div>
+            <div className="return-actions"><button type="button" onClick={() => load(true, true)} disabled={loading || !refreshUnlocked}>↻ {refreshUnlocked ? t.refresh : refreshCountdown}</button><a href={`/learn?lang=${lang}`}>{lang === "es" ? "Comprender la lectura" : "Understand the reading"} →</a></div>
           </article>
           <aside className="personal-watch" aria-labelledby="watch-title">
             <div><span id="watch-title">{lang === "es" ? "MI RADAR · EN ESTE DISPOSITIVO" : "MY RADAR · ON THIS DEVICE"}</span><b>{watchlist.length}/4</b></div>
@@ -2440,7 +2420,13 @@ export default function Monitor() {
           ].map(([name,desc,url])=><a key={name} href={url} target="_blank" rel="noreferrer"><span><b>{name}</b><small>{desc}</small></span><em>↗</em></a>)}
         </div>
       </section>
-      <footer><span>{lang === "es" ? "ABCM · CONTEXTO HOY. MEJORES DECISIONES MAÑANA." : "ABCM · CONTEXT TODAY. BETTER DECISIONS TOMORROW."}</span><span>SITES V{SITE_RELEASE} · DATA {DATA_SCHEMA_VERSION} · <a href="/api/health" target="_blank" rel="noreferrer">{lang === "es" ? "Integridad ↗" : "Integrity ↗"}</a> · <a href={`/learn?lang=${lang}`} target="_blank" rel="noreferrer">{lang === "es" ? "Aprende ↗" : "Learn ↗"}</a> · JimBLogic · 2026 · <a href="https://github.com/JimBLogic/AustrianBusinessCycleMonitor">GitHub ↗</a></span></footer>
+      <footer>
+        <span>{lang === "es" ? "ABCM · CONTEXTO HOY. MEJORES DECISIONES MAÑANA." : "ABCM · CONTEXT TODAY. BETTER DECISIONS TOMORROW."}</span>
+        <span>
+          SITES V{SITE_RELEASE} · DATA {DATA_SCHEMA_VERSION} · <a href="/api/health" target="_blank" rel="noreferrer">{lang === "es" ? "Integridad ↗" : "Integrity ↗"}</a> · <a href={`/learn?lang=${lang}`} target="_blank" rel="noreferrer">{lang === "es" ? "Aprende ↗" : "Learn ↗"}</a> · <a href="/privacidad">{lang === "es" ? "Privacidad" : "Privacy"}</a> · JimBLogic · 2026 · <a href="https://github.com/JimBLogic/AustrianBusinessCycleMonitor">GitHub ↗</a>
+        </span>
+        <ClearLocalPreferencesButton compact language={lang} />
+      </footer>
       {detail&&<div className="detail-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetail(null); }}>
         <article id="detail-dialog" className="detail-dialog" role="dialog" aria-modal="true" aria-labelledby="detail-title">
           <button ref={detailCloseRef} className="detail-close" type="button" onClick={() => setDetail(null)} aria-label={lang === "es" ? "Cerrar explicación" : "Close explanation"}>×</button>

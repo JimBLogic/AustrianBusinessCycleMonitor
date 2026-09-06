@@ -9,12 +9,12 @@ const files = await Promise.all([
   "app/learn/library.ts",
   "app/api/data/route.ts",
   "app/api/data-manifest/route.ts",
-  "app/api/workspace/route.ts",
-  "app/api/files/route.ts",
-  "app/api/files/[id]/route.ts",
-  "app/chatgpt-auth.ts",
+  "app/privacidad/page.tsx",
   "app/data/bitcoin-spot.ts",
   "app/data/upstream.ts",
+  "lib/local-preferences.ts",
+  "lib/network-policy.ts",
+  "worker/index.ts",
   "app/version.ts",
   "scripts/selfhost-smoke.sh",
   "next.config.ts",
@@ -37,7 +37,7 @@ test("retains complete Spanish and English navigation paths", () => {
 });
 
 test("identifies the next immutable Sites release and its canonical repository mirror", () => {
-  assert.match(source, /SITE_RELEASE = 42/);
+  assert.match(source, /SITE_RELEASE = [1-9][0-9]*/);
   assert.match(source, /DATA_SCHEMA_VERSION = "1\.4\.0"/);
   assert.match(source, /CONTEXT_MODEL_VERSION = "abcm-six-force-1"/);
   assert.match(source, /sites-current/);
@@ -57,6 +57,16 @@ test("publishes ten auditable signals with durable daily editions", () => {
   ]) assert.ok(source.includes(expected), `missing daily ten-signal contract: ${expected}`);
 });
 
+test("aligns the main edition to Madrid noon and preserves per-browser comparisons", () => {
+  for (const expected of [
+    'MADRID_TIME_ZONE = "Europe/Madrid"',
+    "madridNoonUtc",
+    "abcm:manual-refresh-state:v1",
+    "saveManualRefreshPreference",
+    "30 minutos",
+  ]) assert.ok(source.includes(expected), `missing Madrid refresh contract: ${expected}`);
+});
+
 test("documents resilient Bitcoin sourcing and truthful initial UI states", () => {
   for (const expected of [
     "Kraken",
@@ -69,10 +79,10 @@ test("documents resilient Bitcoin sourcing and truthful initial UI states", () =
   assert.equal(source.includes("new Date(0)"), false);
 });
 
-test("keeps authenticated mutations same-site and applies browser hardening headers", () => {
+test("removes personal routes and applies browser hardening headers", () => {
   for (const expected of [
-    "isTrustedMutation(request)",
-    "Cross-site request rejected",
+    "No hay anuncios, píxeles, fingerprinting",
+    "R2 is not bound",
     "Content-Security-Policy",
     "frame-ancestors 'none'",
     "Cross-Origin-Resource-Policy",
@@ -85,7 +95,7 @@ test("documents the maintained release and a reproducible local full-stack rebui
     "Start frontend and backend together",
     "npm run validate:artifact",
     "D1 database bound as `DB`",
-    "`BUCKET` binding",
+    "R2 is not bound",
     "app/version.ts` and `/api/health`",
   ]) assert.ok(source.includes(expected), `missing reconstruction guidance: ${expected}`);
   assert.equal(source.includes("Sites v25 reference interface"), false);

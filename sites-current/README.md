@@ -21,8 +21,6 @@ The frontend and backend are one deployable TypeScript application:
 - API routes under `app/api/`;
 - a Cloudflare Worker entry point in `worker/index.ts`;
 - local or hosted D1 persistence through the `DB` binding;
-- local or hosted R2 file storage through the `BUCKET` binding;
-- optional authenticated workspace routes;
 - official macroeconomic providers plus explicit fallback and freshness states.
 
 The public dashboard also includes a non-scored six-force context layer for
@@ -32,9 +30,15 @@ reducing the result to a positive/negative color. The manufacturing input is
 the Chicago Fed CFSEC regional survey proxy (`CFSBCACTIVITYMFG`), clearly
 labeled as not ISM PMI and kept outside the ten-signal composite.
 
-Public routes include `/`, `/learn`, `/api/data`, `/api/bitcoin`,
-`/api/data-manifest`, and `/api/health`. The authenticated `/workspace` route
-and its file/export APIs are intentionally absent from public navigation.
+Public routes include `/`, `/learn`, `/privacidad`, `/api/data`, `/api/bitcoin`,
+`/api/data-manifest`, and `/api/health`. The former authenticated workspace,
+file upload and personal-record APIs have been removed. D1 supports only shared
+macro editions; R2 is not bound.
+
+Privacy behavior, the exact browser-storage inventory, Sites analytics limitation,
+server host allowlist and regression controls are documented in
+[`docs/PRIVACY_AUDIT.md`](docs/PRIVACY_AUDIT.md). The public disclosure lives at
+[`/privacidad`](https://austrian-business-cycle-monitor.jimblogic.chatgpt.site/privacidad).
 
 ## Recreate the current web application locally
 
@@ -85,12 +89,12 @@ npm run dev
 
 Open `http://localhost:5173`. Vite serves the frontend while Miniflare runs the
 Worker and API routes in the same process. The development configuration creates
-project-local D1 and R2 emulators for the `DB` and `BUCKET` bindings, so a
+project-local D1 emulator for the `DB` binding, so a
 second backend terminal is not required.
 
 Local runtime state is stored beneath ignored project directories such as
 `.wrangler/` and `.sites-runtime/`. Delete those directories only when you
-intentionally want a fresh local database and bucket.
+intentionally want a fresh local macro database.
 
 ### 5. Validate the reconstruction
 
@@ -114,7 +118,7 @@ Worker `fetch` export and `dist/.openai/hosting.json` with the binding names.
 ### Local container mirror
 
 The exact Sites application can also run locally in a container, including
-Miniflare-backed D1 and R2 emulation:
+Miniflare-backed D1 emulation:
 
 ```bash
 cp .dev.vars.example .dev.vars
@@ -122,13 +126,13 @@ docker compose --env-file .dev.vars -f compose.local.yml up --build
 ```
 
 Open `http://localhost:5173`. The named volumes preserve the local database and
-object store between container replacements. Stop it with:
+between container replacements. Stop it with:
 
 ```bash
 docker compose --env-file .dev.vars -f compose.local.yml down
 ```
 
-Add `-v` only when you intentionally want to erase the local D1/R2 state. This
+Add `-v` only when you intentionally want to erase the local D1 state. This
 container is a reproducible local mirror and QA environment; it is not the
 recommended Internet-facing production server because it runs the Cloudflare
 development emulator.
@@ -137,16 +141,15 @@ development emulator.
 
 The maintained Sites deployment packages both layers together. There is no
 separate static frontend that can be hosted safely while ignoring its API,
-D1, R2, and Worker requirements.
+D1 and Worker requirements.
 
 ### ChatGPT Sites — maintained production path
 
 1. Import or edit the `austrian-business-cycle-monitor` Site from the canonical
    `sites-current/` source.
-2. Preserve `.openai/hosting.json`; `DB` and `BUCKET` are logical binding names,
-   not credentials or portable resource IDs.
-3. Provision or retain one D1 database bound as `DB` and one R2 bucket bound as
-   `BUCKET`.
+2. Preserve `.openai/hosting.json`; `DB` is a logical binding name, not a
+   credential or portable resource ID.
+3. Provision or retain one D1 database bound as `DB` for shared macro editions.
 4. Add `FRED_API_KEY` as a hosted secret/environment value. Never place it in
    Git or in `.openai/hosting.json`.
 5. Run the locked build and artifact validation.
@@ -157,18 +160,18 @@ D1, R2, and Worker requirements.
 
 ### Another Cloudflare account or hosting provider
 
-Treat `worker/index.ts`, the API routes, D1 schema/migrations, R2 storage, and
+Treat `worker/index.ts`, the API routes, D1 schema/migrations, and
 security headers as one system. A new host must provide compatible Worker,
-database, object-storage, secrets, and scheduled-refresh semantics. Create
+database, secrets, and scheduled-refresh semantics. Create
 host-specific deployment configuration outside the maintained Sites manifest;
-do not replace the logical `DB`/`BUCKET` bindings with secrets or production IDs
+do not replace the logical `DB` binding with secrets or production IDs
 in committed source.
 
 ### Exact self-hosted mirror on a VPS
 
 `compose.selfhost.yml` runs the same compiled Worker artifact, client assets,
 routes and API contract as Sites. Wrangler's local Workers runtime supplies
-persistent D1/R2-compatible storage, and Caddy provides the public HTTPS edge.
+persistent D1-compatible storage, and Caddy provides the public HTTPS edge.
 
 ```bash
 cp .env.selfhost.example .env.selfhost
@@ -190,9 +193,9 @@ curl -fsS https://YOUR_DOMAIN/api/health
 curl -fsS https://YOUR_DOMAIN/api/data-manifest
 ```
 
-The `abcm-worker-data` volume preserves macro editions, workspace records and
-objects across image replacements. Back it up before host migrations or major
-runtime upgrades. Run one `monitor` replica: the local D1/R2 emulator is a
+The `abcm-worker-data` volume preserves shared macro editions across image
+replacements. Back it up before host migrations or major runtime upgrades.
+Run one `monitor` replica: the local D1 emulator is a
 single-host persistence layer, not a distributed database.
 
 The root Flask/React `compose.production.yml` remains available for historical
@@ -203,26 +206,26 @@ be placed in front of this frontend.
 
 | Goal | Supported path | Same Sites UI and API | Persistent data |
 | --- | --- | --- | --- |
-| Managed production | ChatGPT Sites with `DB` and `BUCKET` | Yes | Hosted D1 and R2 |
+| Managed production | ChatGPT Sites with `DB` | Yes | Hosted D1 macro editions |
 | Local native development | `npm run dev` | Yes | Project-local emulation |
 | Local container mirror | `compose.local.yml` | Yes | Named Docker volumes |
 | Exact VPS self-host | `compose.selfhost.yml` | Yes | Named Worker-runtime volume |
 | Historical VPS runtime | Root `compose.production.yml` | No; separate Flask/React UI | SQLite volume |
 
 GitHub Pages alone cannot host `sites-current/`: it only serves static files and
-cannot provide the Worker API, D1, R2 or server-side refresh gate. Use Sites,
+cannot provide the Worker API, D1 or server-side refresh gate. Use Sites,
 the exact VPS stack, or a compatible Cloudflare Worker host.
 
 ## Data, migrations, and backups
 
-- `db/runtime.ts` manages D1-backed records and macro snapshots.
+- `db/runtime.ts` manages shared D1-backed macro snapshots.
 - `db/schema.ts` defines the maintained database schema.
 - `drizzle/` contains committed migrations.
 - `npm run db:generate` creates a migration after an intentional schema change.
-- R2 objects and D1 data are runtime state and are not recreated by cloning Git.
+- D1 macro editions are runtime state and are not recreated by cloning Git.
 
-Back up hosted D1 and R2 data separately before migration or provider changes.
-Source control recreates the application, not its production records.
+Back up hosted D1 data before migration or provider changes. Source control
+recreates the application, not its production macro editions.
 
 ## Release discipline
 
@@ -250,3 +253,13 @@ GitHub validates the maintained and historical applications independently:
 
 The split changes scheduling only. It does not remove a release gate, and public
 web requests never trigger GitHub Actions.
+
+## Learning and privacy release (6 September 2026)
+
+The two learning paths contain 48 bilingual questions (four per module), explicit explanations and direct sources. Question and choice order shuffle on each new round; stable IDs preserve grading. Mistakes can be retried. Progress stays only in memory. Attributed theories are distinguished from protocol facts and calculations.
+
+The build now checks TypeScript before bundling, including the loaded-snapshot timestamp helper. Clearing preferences reports storage failures honestly. App code sets no cookies and does not transmit quiz answers. Hosting analytics is described separately on `/privacidad`; there is no fictitious analytics rejection control.
+
+Every learning route and privacy page has its own canonical and social URL. Spanish is the canonical indexing language; `?lang=en` provides an English reading view without ambiguous hreflang declarations.
+
+For independent hosting, set `ABCM_PUBLIC_ORIGIN=https://your-domain.example` in `.env.selfhost` **before building**. Rebuild after changing it. Canonicals, sitemap, robots and structured data then use your origin. Adapt the privacy page to your operator and host. GitHub Pages alone cannot run this Worker/API and D1 backend.

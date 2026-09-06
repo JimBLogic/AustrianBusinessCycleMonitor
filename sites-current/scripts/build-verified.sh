@@ -18,6 +18,9 @@ if [[ ! -x "${vinext}" ]]; then
   exit 69
 fi
 
+echo "Checking TypeScript..."
+"${SITES_PROJECT_ROOT}/node_modules/.bin/tsc" --noEmit --incremental false
+
 echo "Running bounded vinext build..."
 timeout \
   --signal=TERM \
