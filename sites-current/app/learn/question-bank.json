@@ -1,0 +1,2503 @@
+[
+  {
+    "id": "austrian-0-0",
+    "track": "austrian",
+    "module": 0,
+    "kind": "theory",
+    "prompt": [
+      "¿Qué determina el valor según el enfoque austriaco?",
+      "What determines value in the Austrian approach?"
+    ],
+    "options": [
+      {
+        "id": "austrian-0-0-0",
+        "text": [
+          "El coste histórico de producción",
+          "Historical production cost"
+        ]
+      },
+      {
+        "id": "austrian-0-0-1",
+        "text": [
+          "La utilidad marginal subjetiva",
+          "Subjective marginal utility"
+        ]
+      },
+      {
+        "id": "austrian-0-0-2",
+        "text": [
+          "La decisión del banco central",
+          "The central bank decision"
+        ]
+      },
+      {
+        "id": "austrian-0-0-3",
+        "text": [
+          "Una relación constante independiente del contexto",
+          "A constant relationship independent of context"
+        ]
+      }
+    ],
+    "answerId": "austrian-0-0-1",
+    "explanation": [
+      "La teoría del valor subjetivo explica que el valor económico depende de la importancia que una persona atribuye a la siguiente unidad disponible para satisfacer un fin. Por eso la utilidad marginal subjetiva, no el coste histórico ni una decisión monetaria, responde a la pregunta.",
+      "Subjective value theory holds that economic value depends on the importance a person assigns to the next available unit in pursuing an end. Therefore subjective marginal utility—not historical cost or a monetary-policy decision—answers the question."
+    ],
+    "sources": [
+      {
+        "name": "Mises · Human Action",
+        "url": "https://mises.org/library/book/human-action",
+        "section": "Chapters I and VII: action and marginal utility"
+      }
+    ]
+  },
+  {
+    "id": "austrian-1-0",
+    "track": "austrian",
+    "module": 1,
+    "kind": "theory",
+    "prompt": [
+      "¿Qué problema básico ayuda a resolver el dinero?",
+      "Which basic problem does money help solve?"
+    ],
+    "options": [
+      {
+        "id": "austrian-1-0-0",
+        "text": [
+          "La doble coincidencia de deseos",
+          "The double coincidence of wants"
+        ]
+      },
+      {
+        "id": "austrian-1-0-1",
+        "text": [
+          "La volatilidad bursátil",
+          "Stock-market volatility"
+        ]
+      },
+      {
+        "id": "austrian-1-0-2",
+        "text": [
+          "El desempleo tecnológico",
+          "Technological unemployment"
+        ]
+      },
+      {
+        "id": "austrian-1-0-3",
+        "text": [
+          "Una relación constante independiente del contexto",
+          "A constant relationship independent of context"
+        ]
+      }
+    ],
+    "answerId": "austrian-1-0-0",
+    "explanation": [
+      "Menger explica la emergencia del dinero a partir de bienes más vendibles que facilitan intercambios indirectos. Esa función evita exigir que ambas partes quieran exactamente lo que la otra ofrece al mismo tiempo: la doble coincidencia de deseos.",
+      "Menger explains money emerging from more saleable goods that enable indirect exchange. This avoids requiring both parties to want exactly what the other offers at the same time: the double coincidence of wants."
+    ],
+    "sources": [
+      {
+        "name": "Menger · On the Origins of Money",
+        "url": "https://mises.org/library/book/origins-money",
+        "section": "Salability and the emergence of a medium of exchange"
+      }
+    ]
+  },
+  {
+    "id": "austrian-2-0",
+    "track": "austrian",
+    "module": 2,
+    "kind": "theory",
+    "prompt": [
+      "Según la teoría del interés expuesta en esta ruta, ¿qué coordina el tipo de interés?",
+      "According to the interest theory presented here, what does the interest rate coordinate?"
+    ],
+    "options": [
+      {
+        "id": "austrian-2-0-0",
+        "text": [
+          "Solo el precio de las acciones",
+          "Only stock prices"
+        ]
+      },
+      {
+        "id": "austrian-2-0-1",
+        "text": [
+          "Consumo, ahorro e inversión a través del tiempo",
+          "Consumption, saving and investment through time"
+        ]
+      },
+      {
+        "id": "austrian-2-0-2",
+        "text": [
+          "El número de empresas",
+          "The number of firms"
+        ]
+      },
+      {
+        "id": "austrian-2-0-3",
+        "text": [
+          "Una relación constante independiente del contexto",
+          "A constant relationship independent of context"
+        ]
+      }
+    ],
+    "answerId": "austrian-2-0-1",
+    "explanation": [
+      "En la teoría monetaria y del capital, el interés relaciona bienes presentes y futuros. Coordina cuánto consumir, ahorrar e invertir a través del tiempo; no determina únicamente acciones ni el número de empresas.",
+      "In monetary and capital theory, interest relates present and future goods. It coordinates consumption, saving and investment through time; it does not determine only stock prices or the number of firms."
+    ],
+    "sources": [
+      {
+        "name": "Mises · Human Action",
+        "url": "https://mises.org/library/book/human-action",
+        "section": "Chapters XVIII–XIX: time preference and interest"
+      }
+    ]
+  },
+  {
+    "id": "austrian-3-0",
+    "track": "austrian",
+    "module": 3,
+    "kind": "theory",
+    "prompt": [
+      "¿Por qué el capital no es una masa homogénea?",
+      "Why is capital not a homogeneous lump?"
+    ],
+    "options": [
+      {
+        "id": "austrian-3-0-0",
+        "text": [
+          "Porque cada bien ocupa funciones y etapas distintas",
+          "Because each good has different functions and stages"
+        ]
+      },
+      {
+        "id": "austrian-3-0-1",
+        "text": [
+          "Porque solo existe capital financiero",
+          "Because only financial capital exists"
+        ]
+      },
+      {
+        "id": "austrian-3-0-2",
+        "text": [
+          "Porque no puede depreciarse",
+          "Because it cannot depreciate"
+        ]
+      },
+      {
+        "id": "austrian-3-0-3",
+        "text": [
+          "Una relación constante independiente del contexto",
+          "A constant relationship independent of context"
+        ]
+      }
+    ],
+    "answerId": "austrian-3-0-0",
+    "explanation": [
+      "Hayek describe una estructura productiva compuesta por bienes de capital heterogéneos, específicos y complementarios que actúan en etapas distintas. No existe un bloque uniforme de «capital» que pueda reasignarse sin costes.",
+      "Hayek describes a production structure made of heterogeneous, specific and complementary capital goods serving different stages. There is no uniform lump of “capital” that can be reassigned without cost."
+    ],
+    "sources": [
+      {
+        "name": "Menger · Principles of Economics",
+        "url": "https://mises.org/library/book/principles-economics",
+        "section": "Chapter I: goods of higher order"
+      }
+    ]
+  },
+  {
+    "id": "austrian-4-0",
+    "track": "austrian",
+    "module": 4,
+    "kind": "theory",
+    "prompt": [
+      "En la ABCT, ¿qué significa malinvestment?",
+      "In ABCT, what does malinvestment mean?"
+    ],
+    "options": [
+      {
+        "id": "austrian-4-0-0",
+        "text": [
+          "Cualquier inversión que pierde dinero",
+          "Any investment that loses money"
+        ]
+      },
+      {
+        "id": "austrian-4-0-1",
+        "text": [
+          "Inversión inducida por señales intertemporales distorsionadas",
+          "Investment induced by distorted intertemporal signals"
+        ]
+      },
+      {
+        "id": "austrian-4-0-2",
+        "text": [
+          "Comprar bonos públicos",
+          "Buying government bonds"
+        ]
+      },
+      {
+        "id": "austrian-4-0-3",
+        "text": [
+          "Una relación constante independiente del contexto",
+          "A constant relationship independent of context"
+        ]
+      }
+    ],
+    "answerId": "austrian-4-0-1",
+    "explanation": [
+      "En la ABCT, malinvestment designa proyectos inducidos por señales intertemporales distorsionadas y no toda inversión que termina perdiendo dinero. La clasificación depende del proceso de coordinación entre crédito, ahorro y estructura productiva.",
+      "In ABCT, malinvestment means projects induced by distorted intertemporal signals—not every investment that later loses money. The classification concerns coordination among credit, saving and the production structure."
+    ],
+    "sources": [
+      {
+        "name": "Mises · Human Action",
+        "url": "https://mises.org/library/book/human-action",
+        "section": "Chapter XX: credit expansion and the trade cycle"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-0-0",
+    "track": "bitcoin",
+    "module": 0,
+    "kind": "protocol",
+    "prompt": [
+      "¿Dónde vive el límite de 21 millones?",
+      "Where does the 21-million limit live?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-0-0-0",
+        "text": [
+          "En una promesa del CEO",
+          "In a CEO promise"
+        ]
+      },
+      {
+        "id": "bitcoin-0-0-1",
+        "text": [
+          "En reglas validadas por los nodos",
+          "In rules validated by nodes"
+        ]
+      },
+      {
+        "id": "bitcoin-0-0-2",
+        "text": [
+          "En una cuenta bancaria",
+          "In a bank account"
+        ]
+      },
+      {
+        "id": "bitcoin-0-0-3",
+        "text": [
+          "Un registro privado que solo modifica el proveedor",
+          "A private ledger modified only by the provider"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-0-0-1",
+    "explanation": [
+      "El límite de emisión forma parte de las reglas de consenso que cada nodo completo aplica al validar bloques. No depende de una empresa, un director ejecutivo ni una cuenta bancaria.",
+      "The issuance limit is part of the consensus rules each full node enforces while validating blocks. It does not depend on a company, chief executive or bank account."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin Developer Guide · Block Chain",
+        "url": "https://developer.bitcoin.org/devguide/block_chain.html",
+        "section": "Consensus rules, proof of work and block validation"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-1-0",
+    "track": "bitcoin",
+    "module": 1,
+    "kind": "protocol",
+    "prompt": [
+      "¿Qué controla realmente una wallet?",
+      "What does a wallet actually control?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-1-0-0",
+        "text": [
+          "Las claves para autorizar gasto",
+          "Keys authorizing spending"
+        ]
+      },
+      {
+        "id": "bitcoin-1-0-1",
+        "text": [
+          "El precio de Bitcoin",
+          "Bitcoin's price"
+        ]
+      },
+      {
+        "id": "bitcoin-1-0-2",
+        "text": [
+          "Los mineros",
+          "Miners"
+        ]
+      },
+      {
+        "id": "bitcoin-1-0-3",
+        "text": [
+          "Un registro privado que solo modifica el proveedor",
+          "A private ledger modified only by the provider"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-1-0-0",
+    "explanation": [
+      "La guía técnica describe una wallet como software que administra claves y construye firmas para gastar salidas no gastadas. Las monedas no están «dentro» de la aplicación y la wallet no controla el precio ni a los mineros.",
+      "The technical guide describes a wallet as software that manages keys and creates signatures to spend unspent outputs. Coins are not “inside” the app, and the wallet controls neither price nor miners."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin Developer Guide · Wallets",
+        "url": "https://developer.bitcoin.org/devguide/wallets.html",
+        "section": "Key management and wallet types"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-2-0",
+    "track": "bitcoin",
+    "module": 2,
+    "kind": "protocol",
+    "prompt": [
+      "¿Qué decide tu nodo?",
+      "What does your node decide?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-2-0-0",
+        "text": [
+          "Qué bloques cumplen sus reglas",
+          "Which blocks satisfy its rules"
+        ]
+      },
+      {
+        "id": "bitcoin-2-0-1",
+        "text": [
+          "El precio futuro",
+          "The future price"
+        ]
+      },
+      {
+        "id": "bitcoin-2-0-2",
+        "text": [
+          "La política monetaria del dólar",
+          "Dollar monetary policy"
+        ]
+      },
+      {
+        "id": "bitcoin-2-0-3",
+        "text": [
+          "Un registro privado que solo modifica el proveedor",
+          "A private ledger modified only by the provider"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-2-0-0",
+    "explanation": [
+      "Bitcoin Core valida de forma independiente que bloques y transacciones respeten sus reglas de consenso. Los mineros pueden proponer bloques, pero un nodo rechaza aquellos que incumplen las reglas que ejecuta.",
+      "Bitcoin Core independently validates that blocks and transactions follow its consensus rules. Miners may propose blocks, but a node rejects blocks that violate the rules it runs."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin Developer Guide · Operating Modes",
+        "url": "https://developer.bitcoin.org/devguide/operating_modes.html",
+        "section": "Full nodes and simplified payment verification"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-3-0",
+    "track": "bitcoin",
+    "module": 3,
+    "kind": "protocol",
+    "prompt": [
+      "¿Cuál es la primera pregunta antes de elegir custodia?",
+      "What is the first question before choosing custody?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-3-0-0",
+        "text": [
+          "Qué hardware está de moda",
+          "Which hardware is trendy"
+        ]
+      },
+      {
+        "id": "bitcoin-3-0-1",
+        "text": [
+          "Cuál es mi modelo de amenazas",
+          "What is my threat model"
+        ]
+      },
+      {
+        "id": "bitcoin-3-0-2",
+        "text": [
+          "Cuánto subirá el precio",
+          "How much price will rise"
+        ]
+      },
+      {
+        "id": "bitcoin-3-0-3",
+        "text": [
+          "Un registro privado que solo modifica el proveedor",
+          "A private ledger modified only by the provider"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-3-0-1",
+    "explanation": [
+      "La documentación de seguridad recomienda evaluar riesgos, capacidades y recuperación antes de elegir herramientas. El modelo de amenazas determina qué se protege, de quién y con qué costes; la moda o una predicción de precio no responden a esas preguntas.",
+      "Security guidance recommends assessing risks, capabilities and recovery before choosing tools. A threat model defines what is protected, from whom and at what cost; trends or price predictions do not answer those questions."
+    ],
+    "sources": [
+      {
+        "name": "EFF · Your Security Plan",
+        "url": "https://ssd.eff.org/module/your-security-plan",
+        "section": "Assets, adversaries, likelihood and consequences"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-4-0",
+    "track": "bitcoin",
+    "module": 4,
+    "kind": "protocol",
+    "prompt": [
+      "¿Bitcoin es anónimo por defecto?",
+      "Is Bitcoin anonymous by default?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-4-0-0",
+        "text": [
+          "Sí, totalmente",
+          "Yes, completely"
+        ]
+      },
+      {
+        "id": "bitcoin-4-0-1",
+        "text": [
+          "No, es un registro público seudónimo",
+          "No, it is a public pseudonymous ledger"
+        ]
+      },
+      {
+        "id": "bitcoin-4-0-2",
+        "text": [
+          "Solo cuando sube de precio",
+          "Only when price rises"
+        ]
+      },
+      {
+        "id": "bitcoin-4-0-3",
+        "text": [
+          "Un registro privado que solo modifica el proveedor",
+          "A private ledger modified only by the provider"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-4-0-1",
+    "explanation": [
+      "La cadena de bloques es pública y las direcciones son seudónimos, no identidades secretas garantizadas. El análisis de transacciones, la reutilización de direcciones, KYC y metadatos de red pueden vincular actividad.",
+      "The blockchain is public and addresses are pseudonyms, not guaranteed secret identities. Transaction analysis, address reuse, KYC and network metadata can link activity."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin.org · Protect your privacy",
+        "url": "https://bitcoin.org/en/protect-your-privacy",
+        "section": "Public transactions, address reuse and network privacy"
+      }
+    ]
+  },
+  {
+    "id": "austrian-0-1",
+    "track": "austrian",
+    "module": 0,
+    "kind": "theory",
+    "prompt": [
+      "En Mises, ¿qué distingue la acción humana de un reflejo?",
+      "In Mises, what distinguishes human action from a reflex?"
+    ],
+    "options": [
+      {
+        "id": "austrian-0-1-0",
+        "text": [
+          "La conducta dirigida a un fin",
+          "Conduct directed toward a purpose"
+        ]
+      },
+      {
+        "id": "austrian-0-1-1",
+        "text": [
+          "Que siempre obtiene beneficios",
+          "Always earning profits"
+        ]
+      },
+      {
+        "id": "austrian-0-1-2",
+        "text": [
+          "Que requiere usar dinero",
+          "Requiring money"
+        ]
+      },
+      {
+        "id": "austrian-0-1-3",
+        "text": [
+          "Que no admite errores",
+          "Allowing no mistakes"
+        ]
+      }
+    ],
+    "answerId": "austrian-0-1-0",
+    "explanation": [
+      "Mises define la acción como conducta intencional; perseguir un fin no garantiza acertar ni obtener beneficios.",
+      "Mises defines action as purposeful conduct; pursuing a goal does not guarantee success or profit."
+    ],
+    "sources": [
+      {
+        "name": "Mises · Human Action",
+        "url": "https://mises.org/library/book/human-action",
+        "section": "Chapters I and VII: action and marginal utility"
+      }
+    ]
+  },
+  {
+    "id": "austrian-0-2",
+    "track": "austrian",
+    "module": 0,
+    "kind": "theory",
+    "prompt": [
+      "¿A qué unidad se refiere la utilidad marginal en esta teoría?",
+      "Which unit does marginal utility concern in this theory?"
+    ],
+    "options": [
+      {
+        "id": "austrian-0-2-0",
+        "text": [
+          "La unidad adicional relevante para la decisión",
+          "The additional unit relevant to the decision"
+        ]
+      },
+      {
+        "id": "austrian-0-2-1",
+        "text": [
+          "Todas las unidades producidas en la historia",
+          "Every unit ever produced"
+        ]
+      },
+      {
+        "id": "austrian-0-2-2",
+        "text": [
+          "La media del coste nacional",
+          "Average national cost"
+        ]
+      },
+      {
+        "id": "austrian-0-2-3",
+        "text": [
+          "Solo los bienes gratuitos",
+          "Only free goods"
+        ]
+      }
+    ],
+    "answerId": "austrian-0-2-0",
+    "explanation": [
+      "La valoración marginal considera el uso de la unidad adicional, dadas las unidades disponibles y los fines del individuo.",
+      "Marginal valuation concerns the use of an additional unit, given available units and individual purposes."
+    ],
+    "sources": [
+      {
+        "name": "Mises · Human Action",
+        "url": "https://mises.org/library/book/human-action",
+        "section": "Chapters I and VII: action and marginal utility"
+      }
+    ]
+  },
+  {
+    "id": "austrian-0-3",
+    "track": "austrian",
+    "module": 0,
+    "kind": "calculation",
+    "prompt": [
+      "Un índice pasa de 200 a 210. ¿Cuál es su variación porcentual?",
+      "An index moves from 200 to 210. What is its percentage change?"
+    ],
+    "options": [
+      {
+        "id": "austrian-0-3-0",
+        "text": [
+          "5 %",
+          "5%"
+        ]
+      },
+      {
+        "id": "austrian-0-3-1",
+        "text": [
+          "10 %",
+          "10%"
+        ]
+      },
+      {
+        "id": "austrian-0-3-2",
+        "text": [
+          "0,5 %",
+          "0.5%"
+        ]
+      },
+      {
+        "id": "austrian-0-3-3",
+        "text": [
+          "105 %",
+          "105%"
+        ]
+      }
+    ],
+    "answerId": "austrian-0-3-0",
+    "explanation": [
+      "La variación es (210 − 200) ÷ 200 × 100 = 5 %. Los puntos de índice no equivalen a puntos porcentuales.",
+      "The change is (210 − 200) ÷ 200 × 100 = 5%. Index points are not percentage points."
+    ],
+    "sources": [
+      {
+        "name": "BLS · Consumer Price Index FAQ",
+        "url": "https://www.bls.gov/cpi/questions-and-answers.htm",
+        "section": "Uses, scope and calculation of the CPI"
+      }
+    ]
+  },
+  {
+    "id": "austrian-1-1",
+    "track": "austrian",
+    "module": 1,
+    "kind": "theory",
+    "prompt": [
+      "En la explicación de Menger, ¿qué es la vendibilidad?",
+      "In Menger’s explanation, what is salability?"
+    ],
+    "options": [
+      {
+        "id": "austrian-1-1-0",
+        "text": [
+          "La facilidad de intercambiar un bien",
+          "The ease of exchanging a good"
+        ]
+      },
+      {
+        "id": "austrian-1-1-1",
+        "text": [
+          "La obligación de aceptarlo legalmente",
+          "A legal obligation to accept it"
+        ]
+      },
+      {
+        "id": "austrian-1-1-2",
+        "text": [
+          "Su rentabilidad anual garantizada",
+          "Its guaranteed annual return"
+        ]
+      },
+      {
+        "id": "austrian-1-1-3",
+        "text": [
+          "Su coste de fabricación exacto",
+          "Its exact manufacturing cost"
+        ]
+      }
+    ],
+    "answerId": "austrian-1-1-0",
+    "explanation": [
+      "Menger explica la adopción de medios de cambio mediante diferencias en su facilidad de venta, no mediante rendimientos garantizados.",
+      "Menger explains the adoption of exchange media through differences in ease of sale, not guaranteed returns."
+    ],
+    "sources": [
+      {
+        "name": "Menger · On the Origins of Money",
+        "url": "https://mises.org/library/book/origins-money",
+        "section": "Salability and the emergence of a medium of exchange"
+      }
+    ]
+  },
+  {
+    "id": "austrian-1-2",
+    "track": "austrian",
+    "module": 1,
+    "kind": "definition",
+    "prompt": [
+      "¿Qué función cumple un medio de cambio?",
+      "What function does a medium of exchange serve?"
+    ],
+    "options": [
+      {
+        "id": "austrian-1-2-0",
+        "text": [
+          "Permitir intercambios indirectos",
+          "Enabling indirect exchange"
+        ]
+      },
+      {
+        "id": "austrian-1-2-1",
+        "text": [
+          "Eliminar todo riesgo de crédito",
+          "Eliminating all credit risk"
+        ]
+      },
+      {
+        "id": "austrian-1-2-2",
+        "text": [
+          "Fijar el precio de todos los bienes",
+          "Fixing the price of every good"
+        ]
+      },
+      {
+        "id": "austrian-1-2-3",
+        "text": [
+          "Impedir cualquier cambio de precios",
+          "Preventing any price changes"
+        ]
+      }
+    ],
+    "answerId": "austrian-1-2-0",
+    "explanation": [
+      "Se acepta un bien para volver a intercambiarlo por otro, evitando la necesidad de trueque directo entre deseos coincidentes.",
+      "A good is accepted to exchange it again for another, avoiding the need for directly matching wants in barter."
+    ],
+    "sources": [
+      {
+        "name": "Menger · On the Origins of Money",
+        "url": "https://mises.org/library/book/origins-money",
+        "section": "Salability and the emergence of a medium of exchange"
+      }
+    ]
+  },
+  {
+    "id": "austrian-1-3",
+    "track": "austrian",
+    "module": 1,
+    "kind": "calculation",
+    "prompt": [
+      "Si los precios suben 4 % y el saldo monetario sube 2 %, ¿qué ocurre con su poder de compra?",
+      "If prices rise 4% and a cash balance rises 2%, what happens to its purchasing power?"
+    ],
+    "options": [
+      {
+        "id": "austrian-1-3-0",
+        "text": [
+          "Cae aproximadamente 1,92 %",
+          "It falls about 1.92%"
+        ]
+      },
+      {
+        "id": "austrian-1-3-1",
+        "text": [
+          "Sube 2 %",
+          "It rises 2%"
+        ]
+      },
+      {
+        "id": "austrian-1-3-2",
+        "text": [
+          "Se mantiene exactamente igual",
+          "It stays exactly unchanged"
+        ]
+      },
+      {
+        "id": "austrian-1-3-3",
+        "text": [
+          "Cae 6 %",
+          "It falls 6%"
+        ]
+      }
+    ],
+    "answerId": "austrian-1-3-0",
+    "explanation": [
+      "Con la misma cesta de referencia: 1,02 ÷ 1,04 − 1 ≈ −1,92 %. El aumento nominal no basta para preservar el poder de compra.",
+      "For the same reference basket: 1.02 ÷ 1.04 − 1 ≈ −1.92%. Nominal growth is insufficient to preserve purchasing power."
+    ],
+    "sources": [
+      {
+        "name": "BLS · Consumer Price Index FAQ",
+        "url": "https://www.bls.gov/cpi/questions-and-answers.htm",
+        "section": "Uses, scope and calculation of the CPI"
+      }
+    ]
+  },
+  {
+    "id": "austrian-2-1",
+    "track": "austrian",
+    "module": 2,
+    "kind": "calculation",
+    "prompt": [
+      "Con interés nominal del 5 % e inflación del 3 %, ¿cuál es el tipo real aproximado por resta?",
+      "With 5% nominal interest and 3% inflation, what is the approximate real rate using subtraction?"
+    ],
+    "options": [
+      {
+        "id": "austrian-2-1-0",
+        "text": [
+          "2 %",
+          "2%"
+        ]
+      },
+      {
+        "id": "austrian-2-1-1",
+        "text": [
+          "8 %",
+          "8%"
+        ]
+      },
+      {
+        "id": "austrian-2-1-2",
+        "text": [
+          "−2 %",
+          "−2%"
+        ]
+      },
+      {
+        "id": "austrian-2-1-3",
+        "text": [
+          "15 %",
+          "15%"
+        ]
+      }
+    ],
+    "answerId": "austrian-2-1-0",
+    "explanation": [
+      "La aproximación indicada resta inflación a interés nominal: 5 − 3 = 2 %. La fórmula exacta de Fisher da un valor ligeramente distinto.",
+      "The stated approximation subtracts inflation from nominal interest: 5 − 3 = 2%. The exact Fisher formula gives a slightly different value."
+    ],
+    "sources": [
+      {
+        "name": "ECB · What are interest rates?",
+        "url": "https://www.ecb.europa.eu/ecb-and-you/explainers/tell-me/html/nominal_and_real_interest_rates.en.html",
+        "section": "Nominal and real interest rates"
+      }
+    ]
+  },
+  {
+    "id": "austrian-2-2",
+    "track": "austrian",
+    "module": 2,
+    "kind": "theory",
+    "prompt": [
+      "¿Qué compara la preferencia temporal?",
+      "What does time preference compare?"
+    ],
+    "options": [
+      {
+        "id": "austrian-2-2-0",
+        "text": [
+          "La satisfacción presente y futura",
+          "Present and future satisfaction"
+        ]
+      },
+      {
+        "id": "austrian-2-2-1",
+        "text": [
+          "Solo monedas de distintos países",
+          "Only different national currencies"
+        ]
+      },
+      {
+        "id": "austrian-2-2-2",
+        "text": [
+          "Solo precios de acciones",
+          "Only stock prices"
+        ]
+      },
+      {
+        "id": "austrian-2-2-3",
+        "text": [
+          "El clima de dos estaciones",
+          "The weather in two seasons"
+        ]
+      }
+    ],
+    "answerId": "austrian-2-2-0",
+    "explanation": [
+      "En la teoría del interés, la preferencia temporal se refiere a la valoración relativa de satisfacción presente y futura.",
+      "In interest theory, time preference concerns the relative valuation of present and future satisfaction."
+    ],
+    "sources": [
+      {
+        "name": "Mises · Human Action",
+        "url": "https://mises.org/library/book/human-action",
+        "section": "Chapters XVIII–XIX: time preference and interest"
+      }
+    ]
+  },
+  {
+    "id": "austrian-2-3",
+    "track": "austrian",
+    "module": 2,
+    "kind": "definition",
+    "prompt": [
+      "¿Qué se necesita además del interés nominal para calcular un tipo real ex post?",
+      "Besides nominal interest, what is needed to calculate an ex-post real rate?"
+    ],
+    "options": [
+      {
+        "id": "austrian-2-3-0",
+        "text": [
+          "La inflación observada del periodo comparable",
+          "Observed inflation for a comparable period"
+        ]
+      },
+      {
+        "id": "austrian-2-3-1",
+        "text": [
+          "El número de bancos",
+          "The number of banks"
+        ]
+      },
+      {
+        "id": "austrian-2-3-2",
+        "text": [
+          "El precio de una acción cualquiera",
+          "An arbitrary stock price"
+        ]
+      },
+      {
+        "id": "austrian-2-3-3",
+        "text": [
+          "La inflación esperada dentro de veinte años",
+          "Expected inflation twenty years ahead"
+        ]
+      }
+    ],
+    "answerId": "austrian-2-3-0",
+    "explanation": [
+      "Ex post utiliza inflación observada; ex ante utiliza inflación esperada. Los periodos comparados deben ser coherentes.",
+      "Ex post uses observed inflation; ex ante uses expected inflation. The compared periods must be consistent."
+    ],
+    "sources": [
+      {
+        "name": "ECB · What are interest rates?",
+        "url": "https://www.ecb.europa.eu/ecb-and-you/explainers/tell-me/html/nominal_and_real_interest_rates.en.html",
+        "section": "Nominal and real interest rates"
+      }
+    ]
+  },
+  {
+    "id": "austrian-3-1",
+    "track": "austrian",
+    "module": 3,
+    "kind": "theory",
+    "prompt": [
+      "Según Menger, ¿para qué sirven los bienes de orden superior?",
+      "According to Menger, what do higher-order goods serve?"
+    ],
+    "options": [
+      {
+        "id": "austrian-3-1-0",
+        "text": [
+          "Para producir bienes que satisfacen necesidades",
+          "To produce goods that satisfy needs"
+        ]
+      },
+      {
+        "id": "austrian-3-1-1",
+        "text": [
+          "Solo para consumirlos directamente",
+          "Only for direct consumption"
+        ]
+      },
+      {
+        "id": "austrian-3-1-2",
+        "text": [
+          "Para medir la inflación exclusivamente",
+          "Exclusively to measure inflation"
+        ]
+      },
+      {
+        "id": "austrian-3-1-3",
+        "text": [
+          "Para garantizar beneficios sin producción",
+          "To guarantee profits without production"
+        ]
+      }
+    ],
+    "answerId": "austrian-3-1-0",
+    "explanation": [
+      "Los bienes de orden superior contribuyen indirectamente a satisfacer necesidades mediante la producción de otros bienes.",
+      "Higher-order goods contribute indirectly to satisfying needs by producing other goods."
+    ],
+    "sources": [
+      {
+        "name": "Menger · Principles of Economics",
+        "url": "https://mises.org/library/book/principles-economics",
+        "section": "Chapter I: goods of higher order"
+      }
+    ]
+  },
+  {
+    "id": "austrian-3-2",
+    "track": "austrian",
+    "module": 3,
+    "kind": "definition",
+    "prompt": [
+      "¿Qué compara la utilización de capacidad industrial?",
+      "What does industrial capacity utilization compare?"
+    ],
+    "options": [
+      {
+        "id": "austrian-3-2-0",
+        "text": [
+          "Producción efectiva y capacidad estimada",
+          "Actual output and estimated capacity"
+        ]
+      },
+      {
+        "id": "austrian-3-2-1",
+        "text": [
+          "Deuda y número de habitantes",
+          "Debt and population"
+        ]
+      },
+      {
+        "id": "austrian-3-2-2",
+        "text": [
+          "Importaciones y tipos de interés",
+          "Imports and interest rates"
+        ]
+      },
+      {
+        "id": "austrian-3-2-3",
+        "text": [
+          "Precio de Bitcoin y oro",
+          "Bitcoin and gold prices"
+        ]
+      }
+    ],
+    "answerId": "austrian-3-2-0",
+    "explanation": [
+      "La Reserva Federal expresa la utilización como producción dividida por una medida de capacidad, en porcentaje.",
+      "The Federal Reserve expresses utilization as output divided by a measure of capacity, in percent."
+    ],
+    "sources": [
+      {
+        "name": "Federal Reserve · Industrial Production and Capacity Utilization",
+        "url": "https://www.federalreserve.gov/releases/g17/",
+        "section": "Definitions of industrial production and capacity utilization"
+      }
+    ]
+  },
+  {
+    "id": "austrian-3-3",
+    "track": "austrian",
+    "module": 3,
+    "kind": "calculation",
+    "prompt": [
+      "Con producción de 80 y capacidad de 100 en unidades comparables, ¿qué utilización resulta?",
+      "With output of 80 and capacity of 100 in comparable units, what utilization results?"
+    ],
+    "options": [
+      {
+        "id": "austrian-3-3-0",
+        "text": [
+          "80 %",
+          "80%"
+        ]
+      },
+      {
+        "id": "austrian-3-3-1",
+        "text": [
+          "20 %",
+          "20%"
+        ]
+      },
+      {
+        "id": "austrian-3-3-2",
+        "text": [
+          "125 %",
+          "125%"
+        ]
+      },
+      {
+        "id": "austrian-3-3-3",
+        "text": [
+          "180 %",
+          "180%"
+        ]
+      }
+    ],
+    "answerId": "austrian-3-3-0",
+    "explanation": [
+      "Utilización = producción ÷ capacidad × 100: 80 ÷ 100 × 100 = 80 %.",
+      "Utilization = output ÷ capacity × 100: 80 ÷ 100 × 100 = 80%."
+    ],
+    "sources": [
+      {
+        "name": "Federal Reserve · Industrial Production and Capacity Utilization",
+        "url": "https://www.federalreserve.gov/releases/g17/",
+        "section": "Definitions of industrial production and capacity utilization"
+      }
+    ]
+  },
+  {
+    "id": "austrian-4-1",
+    "track": "austrian",
+    "module": 4,
+    "kind": "theory",
+    "prompt": [
+      "En la ABCT, ¿qué mecanismo puede distorsionar las señales intertemporales?",
+      "In ABCT, what mechanism can distort intertemporal signals?"
+    ],
+    "options": [
+      {
+        "id": "austrian-4-1-0",
+        "text": [
+          "Expansión crediticia no respaldada por ahorro",
+          "Credit expansion not backed by saving"
+        ]
+      },
+      {
+        "id": "austrian-4-1-1",
+        "text": [
+          "Cualquier innovación tecnológica por definición",
+          "Any technological innovation by definition"
+        ]
+      },
+      {
+        "id": "austrian-4-1-2",
+        "text": [
+          "Toda bajada de precios por definición",
+          "Any price decline by definition"
+        ]
+      },
+      {
+        "id": "austrian-4-1-3",
+        "text": [
+          "Toda inversión financiada con ahorro",
+          "Any investment funded by saving"
+        ]
+      }
+    ],
+    "answerId": "austrian-4-1-0",
+    "explanation": [
+      "Es una proposición atribuida a la ABCT sobre coordinación del capital; identificar expansión de crédito no demuestra por sí solo una crisis.",
+      "This is an ABCT proposition about capital coordination; identifying credit expansion does not by itself demonstrate a crisis."
+    ],
+    "sources": [
+      {
+        "name": "Mises · Human Action",
+        "url": "https://mises.org/library/book/human-action",
+        "section": "Chapter XX: credit expansion and the trade cycle"
+      }
+    ]
+  },
+  {
+    "id": "austrian-4-2",
+    "track": "austrian",
+    "module": 4,
+    "kind": "calculation",
+    "prompt": [
+      "Si el Treasury a 10 años rinde 3,5 % y a 2 años 4 %, ¿cuál es el spread 10Y–2Y?",
+      "If the 10-year Treasury yields 3.5% and the 2-year yields 4%, what is the 10Y–2Y spread?"
+    ],
+    "options": [
+      {
+        "id": "austrian-4-2-0",
+        "text": [
+          "−0,5 puntos porcentuales",
+          "−0.5 percentage points"
+        ]
+      },
+      {
+        "id": "austrian-4-2-1",
+        "text": [
+          "+0,5 puntos porcentuales",
+          "+0.5 percentage points"
+        ]
+      },
+      {
+        "id": "austrian-4-2-2",
+        "text": [
+          "7,5 puntos porcentuales",
+          "7.5 percentage points"
+        ]
+      },
+      {
+        "id": "austrian-4-2-3",
+        "text": [
+          "−4 puntos porcentuales",
+          "−4 percentage points"
+        ]
+      }
+    ],
+    "answerId": "austrian-4-2-0",
+    "explanation": [
+      "Se resta el rendimiento a dos años del de diez: 3,5 − 4 = −0,5 puntos porcentuales.",
+      "Subtract the two-year yield from the ten-year yield: 3.5 − 4 = −0.5 percentage points."
+    ],
+    "sources": [
+      {
+        "name": "FRED · 10-Year minus 2-Year Treasury spread",
+        "url": "https://fred.stlouisfed.org/series/T10Y2Y",
+        "section": "Units: percent; difference between Treasury yields"
+      }
+    ]
+  },
+  {
+    "id": "austrian-4-3",
+    "track": "austrian",
+    "module": 4,
+    "kind": "definition",
+    "prompt": [
+      "Un spread 10Y–2Y negativo indica que…",
+      "A negative 10Y–2Y spread indicates that…"
+    ],
+    "options": [
+      {
+        "id": "austrian-4-3-0",
+        "text": [
+          "El rendimiento a 10 años es menor que a 2 años",
+          "The 10-year yield is lower than the 2-year yield"
+        ]
+      },
+      {
+        "id": "austrian-4-3-1",
+        "text": [
+          "Ambos rendimientos son negativos",
+          "Both yields are negative"
+        ]
+      },
+      {
+        "id": "austrian-4-3-2",
+        "text": [
+          "El dólar dejó de circular",
+          "The dollar stopped circulating"
+        ]
+      },
+      {
+        "id": "austrian-4-3-3",
+        "text": [
+          "La inflación es necesariamente cero",
+          "Inflation is necessarily zero"
+        ]
+      }
+    ],
+    "answerId": "austrian-4-3-0",
+    "explanation": [
+      "El signo expresa una diferencia de rendimientos. No implica que cada rendimiento sea negativo ni fija una fecha de recesión.",
+      "The sign expresses a yield difference. It does not imply that each yield is negative or set a recession date."
+    ],
+    "sources": [
+      {
+        "name": "FRED · 10-Year minus 2-Year Treasury spread",
+        "url": "https://fred.stlouisfed.org/series/T10Y2Y",
+        "section": "Units: percent; difference between Treasury yields"
+      }
+    ]
+  },
+  {
+    "id": "austrian-5-0",
+    "track": "austrian",
+    "module": 5,
+    "kind": "definition",
+    "prompt": [
+      "¿Qué demuestra por sí sola una correlación entre dos series?",
+      "What does correlation between two series establish by itself?"
+    ],
+    "options": [
+      {
+        "id": "austrian-5-0-0",
+        "text": [
+          "Una asociación, no una relación causal demostrada",
+          "An association, not an established causal relationship"
+        ]
+      },
+      {
+        "id": "austrian-5-0-1",
+        "text": [
+          "Que la primera causa la segunda",
+          "That the first causes the second"
+        ]
+      },
+      {
+        "id": "austrian-5-0-2",
+        "text": [
+          "Que no hay factores comunes",
+          "That there are no common factors"
+        ]
+      },
+      {
+        "id": "austrian-5-0-3",
+        "text": [
+          "Que la relación durará siempre",
+          "That the relationship will last forever"
+        ]
+      }
+    ],
+    "answerId": "austrian-5-0-0",
+    "explanation": [
+      "NIST distingue asociación de causalidad: una correlación puede reflejar factores comunes u otras relaciones que requieren investigación.",
+      "NIST distinguishes association from causality: correlation may reflect common factors or other relationships requiring investigation."
+    ],
+    "sources": [
+      {
+        "name": "NIST · Scatter Plot",
+        "url": "https://www.itl.nist.gov/div898/handbook/eda/section3/scatterp.htm",
+        "section": "Association does not establish causation"
+      }
+    ]
+  },
+  {
+    "id": "austrian-5-1",
+    "track": "austrian",
+    "module": 5,
+    "kind": "definition",
+    "prompt": [
+      "¿Qué permite consultar una base de datos de vintages como ALFRED?",
+      "What does a vintage database such as ALFRED let you inspect?"
+    ],
+    "options": [
+      {
+        "id": "austrian-5-1-0",
+        "text": [
+          "Los datos conocidos en una fecha pasada",
+          "Data known at a past date"
+        ]
+      },
+      {
+        "id": "austrian-5-1-1",
+        "text": [
+          "Los datos futuros garantizados",
+          "Guaranteed future data"
+        ]
+      },
+      {
+        "id": "austrian-5-1-2",
+        "text": [
+          "Solo la cotización de hoy",
+          "Only today’s quote"
+        ]
+      },
+      {
+        "id": "austrian-5-1-3",
+        "text": [
+          "Las preferencias privadas de los usuarios",
+          "Users’ private preferences"
+        ]
+      }
+    ],
+    "answerId": "austrian-5-1-0",
+    "explanation": [
+      "ALFRED conserva versiones históricas de series: permite distinguir lo disponible entonces de revisiones posteriores.",
+      "ALFRED preserves historical versions of series, distinguishing information available then from later revisions."
+    ],
+    "sources": [
+      {
+        "name": "Federal Reserve Bank of St. Louis · ALFRED",
+        "url": "https://alfred.stlouisfed.org/",
+        "section": "Vintage data: information available at a point in time"
+      }
+    ]
+  },
+  {
+    "id": "austrian-5-2",
+    "track": "austrian",
+    "module": 5,
+    "kind": "definition",
+    "prompt": [
+      "¿Qué error introduce evaluar una predicción antigua con datos revisados que entonces no existían?",
+      "What error arises from evaluating an old prediction with revised data unavailable at the time?"
+    ],
+    "options": [
+      {
+        "id": "austrian-5-2-0",
+        "text": [
+          "Usar información futura respecto a esa predicción",
+          "Using future information relative to that prediction"
+        ]
+      },
+      {
+        "id": "austrian-5-2-1",
+        "text": [
+          "Eliminar toda incertidumbre estadística",
+          "Eliminating all statistical uncertainty"
+        ]
+      },
+      {
+        "id": "austrian-5-2-2",
+        "text": [
+          "Duplicar necesariamente el tamaño de muestra",
+          "Necessarily doubling sample size"
+        ]
+      },
+      {
+        "id": "austrian-5-2-3",
+        "text": [
+          "Convertir porcentajes en euros",
+          "Converting percentages into euros"
+        ]
+      }
+    ],
+    "answerId": "austrian-5-2-0",
+    "explanation": [
+      "La fecha de disponibilidad importa: un backtest debe usar el conjunto de información accesible al formular cada predicción.",
+      "Availability dates matter: a backtest must use information accessible when each prediction was made."
+    ],
+    "sources": [
+      {
+        "name": "Federal Reserve Bank of St. Louis · ALFRED",
+        "url": "https://alfred.stlouisfed.org/",
+        "section": "Vintage data: information available at a point in time"
+      }
+    ]
+  },
+  {
+    "id": "austrian-5-3",
+    "track": "austrian",
+    "module": 5,
+    "kind": "definition",
+    "prompt": [
+      "¿Qué mide el CPI de consumidores urbanos de EE. UU.?",
+      "What does the US urban-consumer CPI measure?"
+    ],
+    "options": [
+      {
+        "id": "austrian-5-3-0",
+        "text": [
+          "El cambio de precios de una cesta de consumo",
+          "Price changes for a consumption basket"
+        ]
+      },
+      {
+        "id": "austrian-5-3-1",
+        "text": [
+          "El precio de todas las acciones",
+          "The price of all stocks"
+        ]
+      },
+      {
+        "id": "austrian-5-3-2",
+        "text": [
+          "La cantidad exacta de dinero bancario",
+          "The exact quantity of bank money"
+        ]
+      },
+      {
+        "id": "austrian-5-3-3",
+        "text": [
+          "La utilidad subjetiva de cada persona",
+          "Each person’s subjective utility"
+        ]
+      }
+    ],
+    "answerId": "austrian-5-3-0",
+    "explanation": [
+      "El CPI mide cambios medios de precios pagados por consumidores urbanos por bienes y servicios; no replica la cesta individual de todos.",
+      "The CPI measures average price changes paid by urban consumers for goods and services; it does not reproduce every individual basket."
+    ],
+    "sources": [
+      {
+        "name": "BLS · Consumer Price Index FAQ",
+        "url": "https://www.bls.gov/cpi/questions-and-answers.htm",
+        "section": "Uses, scope and calculation of the CPI"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-0-1",
+    "track": "bitcoin",
+    "module": 0,
+    "kind": "protocol",
+    "prompt": [
+      "¿Qué problema aborda el consenso descrito en el whitepaper?",
+      "What problem does the consensus described in the whitepaper address?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-0-1-0",
+        "text": [
+          "El doble gasto sin una autoridad central",
+          "Double spending without a central authority"
+        ]
+      },
+      {
+        "id": "bitcoin-0-1-1",
+        "text": [
+          "La eliminación de fluctuaciones de precio",
+          "Eliminating price fluctuations"
+        ]
+      },
+      {
+        "id": "bitcoin-0-1-2",
+        "text": [
+          "La recuperación automática de claves perdidas",
+          "Automatic recovery of lost keys"
+        ]
+      },
+      {
+        "id": "bitcoin-0-1-3",
+        "text": [
+          "La eliminación de comisiones en todo momento",
+          "Eliminating fees at all times"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-0-1-0",
+    "explanation": [
+      "El whitepaper propone acordar un historial de transacciones para evitar que el mismo valor se gaste dos veces sin depender de un tercero central.",
+      "The whitepaper proposes agreement on transaction history to prevent spending the same value twice without relying on a central third party."
+    ],
+    "sources": [
+      {
+        "name": "Satoshi Nakamoto · Bitcoin whitepaper",
+        "url": "https://bitcoin.org/bitcoin.pdf",
+        "section": "Sections 2–5: transactions, proof of work and network"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-0-2",
+    "track": "bitcoin",
+    "module": 0,
+    "kind": "protocol",
+    "prompt": [
+      "¿Qué exige la prueba de trabajo para un bloque válido?",
+      "What does proof of work require for a valid block?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-0-2-0",
+        "text": [
+          "Un hash que cumpla el objetivo de dificultad",
+          "A hash satisfying the difficulty target"
+        ]
+      },
+      {
+        "id": "bitcoin-0-2-1",
+        "text": [
+          "Una firma del director de Bitcoin",
+          "A signature from Bitcoin’s director"
+        ]
+      },
+      {
+        "id": "bitcoin-0-2-2",
+        "text": [
+          "Un precio mínimo de mercado",
+          "A minimum market price"
+        ]
+      },
+      {
+        "id": "bitcoin-0-2-3",
+        "text": [
+          "El permiso de un exchange",
+          "Permission from an exchange"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-0-2-0",
+    "explanation": [
+      "El hash del encabezado debe satisfacer el objetivo establecido por las reglas; el precio de mercado no forma parte de esa condición.",
+      "The header hash must satisfy the target set by the rules; market price is not part of that condition."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin Developer Guide · Block Chain",
+        "url": "https://developer.bitcoin.org/devguide/block_chain.html",
+        "section": "Consensus rules, proof of work and block validation"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-0-3",
+    "track": "bitcoin",
+    "module": 0,
+    "kind": "protocol",
+    "prompt": [
+      "¿Qué criterio determina la cadena preferida entre cadenas válidas en prueba de trabajo?",
+      "What determines the preferred chain among valid proof-of-work chains?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-0-3-0",
+        "text": [
+          "El mayor trabajo acumulado",
+          "The greatest accumulated work"
+        ]
+      },
+      {
+        "id": "bitcoin-0-3-1",
+        "text": [
+          "El mayor número de direcciones",
+          "The largest number of addresses"
+        ]
+      },
+      {
+        "id": "bitcoin-0-3-2",
+        "text": [
+          "La mayor cotización declarada",
+          "The highest declared price"
+        ]
+      },
+      {
+        "id": "bitcoin-0-3-3",
+        "text": [
+          "La fecha de creación más reciente",
+          "The most recent creation date"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-0-3-0",
+    "explanation": [
+      "La selección compara trabajo acumulado entre cadenas válidas, no un recuento de usuarios ni precios.",
+      "Selection compares accumulated work among valid chains, not user counts or prices."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin Developer Guide · Block Chain",
+        "url": "https://developer.bitcoin.org/devguide/block_chain.html",
+        "section": "Consensus rules, proof of work and block validation"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-1-1",
+    "track": "bitcoin",
+    "module": 1,
+    "kind": "protocol",
+    "prompt": [
+      "¿Qué significa UTXO?",
+      "What does UTXO mean?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-1-1-0",
+        "text": [
+          "Salida de transacción no gastada",
+          "Unspent transaction output"
+        ]
+      },
+      {
+        "id": "bitcoin-1-1-1",
+        "text": [
+          "Cuenta de usuario en un exchange",
+          "User account at an exchange"
+        ]
+      },
+      {
+        "id": "bitcoin-1-1-2",
+        "text": [
+          "Clave privada cifrada",
+          "Encrypted private key"
+        ]
+      },
+      {
+        "id": "bitcoin-1-1-3",
+        "text": [
+          "Bloque sin confirmar",
+          "Unconfirmed block"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-1-1-0",
+    "explanation": [
+      "Una UTXO es una salida aún no consumida por una entrada de otra transacción; el modelo no consiste en saldos de cuentas tradicionales.",
+      "A UTXO is an output not yet consumed by another transaction’s input; the model is not traditional account balances."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin Developer Guide · Transactions",
+        "url": "https://developer.bitcoin.org/devguide/transactions.html",
+        "section": "Inputs, outputs, change and transaction fees"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-1-2",
+    "track": "bitcoin",
+    "module": 1,
+    "kind": "calculation",
+    "prompt": [
+      "Entradas: 100 000 sats. Salidas totales, incluido cambio: 98 000 sats. ¿Qué comisión se paga?",
+      "Inputs: 100,000 sats. Total outputs including change: 98,000 sats. What fee is paid?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-1-2-0",
+        "text": [
+          "2 000 sats",
+          "2,000 sats"
+        ]
+      },
+      {
+        "id": "bitcoin-1-2-1",
+        "text": [
+          "98 000 sats",
+          "98,000 sats"
+        ]
+      },
+      {
+        "id": "bitcoin-1-2-2",
+        "text": [
+          "100 000 sats",
+          "100,000 sats"
+        ]
+      },
+      {
+        "id": "bitcoin-1-2-3",
+        "text": [
+          "0 sats",
+          "0 sats"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-1-2-0",
+    "explanation": [
+      "La comisión es la suma de entradas menos la suma de salidas: 100 000 − 98 000 = 2 000 sats.",
+      "The fee is total inputs minus total outputs: 100,000 − 98,000 = 2,000 sats."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin Developer Guide · Transactions",
+        "url": "https://developer.bitcoin.org/devguide/transactions.html",
+        "section": "Inputs, outputs, change and transaction fees"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-1-3",
+    "track": "bitcoin",
+    "module": 1,
+    "kind": "protocol",
+    "prompt": [
+      "¿Para qué sirve una firma válida al gastar una salida que la requiere?",
+      "What does a valid signature do when spending an output that requires it?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-1-3-0",
+        "text": [
+          "Satisfacer la condición criptográfica de autorización",
+          "Satisfy the cryptographic authorization condition"
+        ]
+      },
+      {
+        "id": "bitcoin-1-3-1",
+        "text": [
+          "Ocultar toda la transacción pública",
+          "Hide the entire public transaction"
+        ]
+      },
+      {
+        "id": "bitcoin-1-3-2",
+        "text": [
+          "Garantizar el siguiente precio",
+          "Guarantee the next price"
+        ]
+      },
+      {
+        "id": "bitcoin-1-3-3",
+        "text": [
+          "Revelar necesariamente la clave privada",
+          "Necessarily reveal the private key"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-1-3-0",
+    "explanation": [
+      "La firma permite verificar autorización conforme al script aplicable sin publicar la clave privada; otras condiciones de validez también deben cumplirse.",
+      "The signature enables authorization verification under the applicable script without publishing the private key; other validity conditions must also hold."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin Developer Guide · Transactions",
+        "url": "https://developer.bitcoin.org/devguide/transactions.html",
+        "section": "Inputs, outputs, change and transaction fees"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-2-1",
+    "track": "bitcoin",
+    "module": 2,
+    "kind": "protocol",
+    "prompt": [
+      "¿Puede un bloque con mucho trabajo ser rechazado por un nodo completo?",
+      "Can a block with substantial work be rejected by a full node?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-2-1-0",
+        "text": [
+          "Sí, si incumple otras reglas de consenso",
+          "Yes, if it violates other consensus rules"
+        ]
+      },
+      {
+        "id": "bitcoin-2-1-1",
+        "text": [
+          "No, el trabajo anula todas las reglas",
+          "No, work overrides all rules"
+        ]
+      },
+      {
+        "id": "bitcoin-2-1-2",
+        "text": [
+          "Solo si baja el precio",
+          "Only if the price falls"
+        ]
+      },
+      {
+        "id": "bitcoin-2-1-3",
+        "text": [
+          "Solo con permiso de un exchange",
+          "Only with an exchange’s permission"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-2-1-0",
+    "explanation": [
+      "La prueba de trabajo es una condición necesaria, pero no sustituye la validación de transacciones y otras reglas de consenso.",
+      "Proof of work is necessary but does not replace transaction validation and other consensus rules."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin Developer Guide · Block Chain",
+        "url": "https://developer.bitcoin.org/devguide/block_chain.html",
+        "section": "Consensus rules, proof of work and block validation"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-2-2",
+    "track": "bitcoin",
+    "module": 2,
+    "kind": "protocol",
+    "prompt": [
+      "¿Qué distingue la verificación SPV de un nodo completo?",
+      "What distinguishes SPV verification from a full node?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-2-2-0",
+        "text": [
+          "SPV no valida todas las transacciones como un nodo completo",
+          "SPV does not validate all transactions as a full node does"
+        ]
+      },
+      {
+        "id": "bitcoin-2-2-1",
+        "text": [
+          "SPV crea nuevas reglas monetarias automáticamente",
+          "SPV automatically creates new monetary rules"
+        ]
+      },
+      {
+        "id": "bitcoin-2-2-2",
+        "text": [
+          "SPV exige custodiar fondos en un banco",
+          "SPV requires custody at a bank"
+        ]
+      },
+      {
+        "id": "bitcoin-2-2-3",
+        "text": [
+          "SPV elimina todo supuesto de confianza",
+          "SPV removes every trust assumption"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-2-2-0",
+    "explanation": [
+      "SPV usa encabezados y pruebas de inclusión con supuestos distintos; no reproduce la validación completa de todas las transacciones.",
+      "SPV uses headers and inclusion proofs under different assumptions; it does not reproduce complete validation of all transactions."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin Developer Guide · Operating Modes",
+        "url": "https://developer.bitcoin.org/devguide/operating_modes.html",
+        "section": "Full nodes and simplified payment verification"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-2-3",
+    "track": "bitcoin",
+    "module": 2,
+    "kind": "definition",
+    "prompt": [
+      "¿Qué riesgo reduce conectar tu wallet a tu propio nodo en vez de consultar saldos a un tercero?",
+      "What risk is reduced by connecting your wallet to your own node instead of querying balances from a third party?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-2-3-0",
+        "text": [
+          "Revelar a ese tercero las consultas de la wallet",
+          "Revealing wallet queries to that third party"
+        ]
+      },
+      {
+        "id": "bitcoin-2-3-1",
+        "text": [
+          "La pérdida física de todas las copias de la seed",
+          "Physical loss of every seed backup"
+        ]
+      },
+      {
+        "id": "bitcoin-2-3-2",
+        "text": [
+          "La volatilidad del precio",
+          "Price volatility"
+        ]
+      },
+      {
+        "id": "bitcoin-2-3-3",
+        "text": [
+          "Cualquier fallo posible de hardware",
+          "Every possible hardware failure"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-2-3-0",
+    "explanation": [
+      "El nodo propio reduce dependencia y exposición de consultas, pero no elimina riesgos de custodia, hardware o red.",
+      "An own node reduces dependency and query exposure, but does not eliminate custody, hardware or network risks."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin Developer Guide · Operating Modes",
+        "url": "https://developer.bitcoin.org/devguide/operating_modes.html",
+        "section": "Full nodes and simplified payment verification"
+      },
+      {
+        "name": "Bitcoin.org · Protect your privacy",
+        "url": "https://bitcoin.org/en/protect-your-privacy",
+        "section": "Public transactions, address reuse and network privacy"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-3-1",
+    "track": "bitcoin",
+    "module": 3,
+    "kind": "security",
+    "prompt": [
+      "En una política multisig 2 de 3, ¿cuántas firmas válidas distintas exige el gasto?",
+      "Under a 2-of-3 multisig policy, how many distinct valid signatures are required to spend?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-3-1-0",
+        "text": [
+          "Dos de las tres claves autorizadas",
+          "Two of the three authorized keys"
+        ]
+      },
+      {
+        "id": "bitcoin-3-1-1",
+        "text": [
+          "Cualquiera de las tres por sí sola",
+          "Any one of the three alone"
+        ]
+      },
+      {
+        "id": "bitcoin-3-1-2",
+        "text": [
+          "Siempre las tres",
+          "Always all three"
+        ]
+      },
+      {
+        "id": "bitcoin-3-1-3",
+        "text": [
+          "Ninguna si se conoce una dirección",
+          "None if an address is known"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-3-1-0",
+    "explanation": [
+      "El umbral 2 de 3 exige dos firmas correspondientes a claves autorizadas; conocer la dirección no permite firmar.",
+      "The 2-of-3 threshold requires two signatures from authorized keys; knowing the address does not allow signing."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin Developer Guide · Contracts",
+        "url": "https://developer.bitcoin.org/devguide/contracts.html",
+        "section": "Multisig: requiring multiple signatures"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-3-2",
+    "track": "bitcoin",
+    "module": 3,
+    "kind": "protocol",
+    "prompt": [
+      "En BIP 39, ¿qué ocurre al usar una passphrase distinta con el mismo mnemónico?",
+      "In BIP 39, what happens when using a different passphrase with the same mnemonic?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-3-2-0",
+        "text": [
+          "Se deriva una seed distinta",
+          "A different seed is derived"
+        ]
+      },
+      {
+        "id": "bitcoin-3-2-1",
+        "text": [
+          "Se corrige automáticamente a la original",
+          "It is automatically corrected to the original"
+        ]
+      },
+      {
+        "id": "bitcoin-3-2-2",
+        "text": [
+          "Se solicita al banco recuperar la original",
+          "A bank is asked to recover the original"
+        ]
+      },
+      {
+        "id": "bitcoin-3-2-3",
+        "text": [
+          "Se publica la original en la blockchain",
+          "The original is published on the blockchain"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-3-2-0",
+    "explanation": [
+      "La derivación combina mnemónico y passphrase. Una passphrase errónea puede producir otra wallet válida, no un aviso de contraseña incorrecta.",
+      "Derivation combines mnemonic and passphrase. An incorrect passphrase can produce another valid wallet, not a wrong-password warning."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin BIP 39",
+        "url": "https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki",
+        "section": "Generating the mnemonic and deriving the seed"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-3-3",
+    "track": "bitcoin",
+    "module": 3,
+    "kind": "security",
+    "prompt": [
+      "¿Qué riesgo cubre guardar una copia de recuperación fuera del mismo edificio?",
+      "What risk is addressed by keeping a recovery backup outside the same building?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-3-3-0",
+        "text": [
+          "La destrucción simultánea por un incidente local",
+          "Simultaneous destruction from a local incident"
+        ]
+      },
+      {
+        "id": "bitcoin-3-3-1",
+        "text": [
+          "Toda caída del precio",
+          "Every price decline"
+        ]
+      },
+      {
+        "id": "bitcoin-3-3-2",
+        "text": [
+          "Toda vulnerabilidad del software",
+          "Every software vulnerability"
+        ]
+      },
+      {
+        "id": "bitcoin-3-3-3",
+        "text": [
+          "Toda posible filtración de identidad",
+          "Every possible identity leak"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-3-3-0",
+    "explanation": [
+      "Separar ubicaciones reduce fallos comunes como incendio o inundación; la copia sigue necesitando protección frente a acceso no autorizado.",
+      "Separating locations reduces common failures such as fire or flooding; the backup still needs protection from unauthorized access."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin.org · Securing your wallet",
+        "url": "https://bitcoin.org/en/secure-your-wallet",
+        "section": "Backups, offline wallets, multisignature and inheritance"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-4-1",
+    "track": "bitcoin",
+    "module": 4,
+    "kind": "security",
+    "prompt": [
+      "¿Por qué reutilizar una dirección perjudica la privacidad?",
+      "Why does address reuse harm privacy?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-4-1-0",
+        "text": [
+          "Facilita relacionar pagos mediante el mismo identificador",
+          "It helps link payments through the same identifier"
+        ]
+      },
+      {
+        "id": "bitcoin-4-1-1",
+        "text": [
+          "Publica por sí sola la clave privada",
+          "It directly publishes the private key"
+        ]
+      },
+      {
+        "id": "bitcoin-4-1-2",
+        "text": [
+          "Reduce la dificultad de todos los bloques",
+          "It reduces every block’s difficulty"
+        ]
+      },
+      {
+        "id": "bitcoin-4-1-3",
+        "text": [
+          "Impide confirmar futuras transacciones",
+          "It prevents future confirmations"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-4-1-0",
+    "explanation": [
+      "El historial público vincula transacciones asociadas a una dirección reutilizada; esto no equivale a revelar la clave privada.",
+      "Public history links transactions associated with a reused address; this is not the same as revealing the private key."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin.org · Protect your privacy",
+        "url": "https://bitcoin.org/en/protect-your-privacy",
+        "section": "Public transactions, address reuse and network privacy"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-4-2",
+    "track": "bitcoin",
+    "module": 4,
+    "kind": "protocol",
+    "prompt": [
+      "¿Qué permite una clave pública extendida BIP 32 sin material privado adicional?",
+      "What does a BIP 32 extended public key permit without additional private material?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-4-2-0",
+        "text": [
+          "Derivar claves públicas hijas no endurecidas",
+          "Deriving non-hardened child public keys"
+        ]
+      },
+      {
+        "id": "bitcoin-4-2-1",
+        "text": [
+          "Firmar cualquier gasto",
+          "Signing any spend"
+        ]
+      },
+      {
+        "id": "bitcoin-4-2-2",
+        "text": [
+          "Derivar claves privadas endurecidas",
+          "Deriving hardened private keys"
+        ]
+      },
+      {
+        "id": "bitcoin-4-2-3",
+        "text": [
+          "Cambiar el límite de emisión",
+          "Changing the issuance limit"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-4-2-0",
+    "explanation": [
+      "Una xpub permite derivación pública no endurecida y puede exponer actividad relacionada. No basta por sí sola para firmar.",
+      "An xpub enables non-hardened public derivation and can expose related activity. On its own it is insufficient to sign."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin BIP 32",
+        "url": "https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki",
+        "section": "Extended keys and public child-key derivation"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-4-3",
+    "track": "bitcoin",
+    "module": 4,
+    "kind": "security",
+    "prompt": [
+      "¿Usar Tor vuelve privado el historial público de transacciones?",
+      "Does using Tor make public transaction history private?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-4-3-0",
+        "text": [
+          "No; privacidad de red y del registro son capas distintas",
+          "No; network and ledger privacy are different layers"
+        ]
+      },
+      {
+        "id": "bitcoin-4-3-1",
+        "text": [
+          "Sí; borra las transacciones confirmadas",
+          "Yes; it erases confirmed transactions"
+        ]
+      },
+      {
+        "id": "bitcoin-4-3-2",
+        "text": [
+          "Sí; impide que los nodos lean bloques",
+          "Yes; it prevents nodes from reading blocks"
+        ]
+      },
+      {
+        "id": "bitcoin-4-3-3",
+        "text": [
+          "Solo cuando la wallet tiene saldo cero",
+          "Only when the wallet balance is zero"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-4-3-0",
+    "explanation": [
+      "Tor puede ayudar a ocultar la dirección de red, pero no elimina los datos de transacciones publicados en la cadena.",
+      "Tor can help conceal the network address but does not remove transaction data published on chain."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin.org · Protect your privacy",
+        "url": "https://bitcoin.org/en/protect-your-privacy",
+        "section": "Public transactions, address reuse and network privacy"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-5-0",
+    "track": "bitcoin",
+    "module": 5,
+    "kind": "security",
+    "prompt": [
+      "Según la guía de seguridad de Bitcoin.org, ¿qué problema plantea no documentar la recuperación para herederos?",
+      "According to Bitcoin.org’s security guide, what problem arises from not documenting recovery for heirs?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-5-0-0",
+        "text": [
+          "Los fondos pueden quedar inaccesibles si el titular falta",
+          "Funds may become inaccessible if the holder is gone"
+        ]
+      },
+      {
+        "id": "bitcoin-5-0-1",
+        "text": [
+          "Los fondos vuelven automáticamente al creador",
+          "Funds automatically return to the creator"
+        ]
+      },
+      {
+        "id": "bitcoin-5-0-2",
+        "text": [
+          "Un nodo recupera siempre las claves",
+          "A node always recovers the keys"
+        ]
+      },
+      {
+        "id": "bitcoin-5-0-3",
+        "text": [
+          "La dirección se convierte en pública por primera vez",
+          "The address becomes public for the first time"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-5-0-0",
+    "explanation": [
+      "La guía recomienda considerar la sucesión: sin claves o instrucciones utilizables, los herederos pueden carecer de acceso.",
+      "The guide recommends considering succession: without usable keys or instructions, heirs may lack access."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin.org · Securing your wallet",
+        "url": "https://bitcoin.org/en/secure-your-wallet",
+        "section": "Backups, offline wallets, multisignature and inheritance"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-5-1",
+    "track": "bitcoin",
+    "module": 5,
+    "kind": "security",
+    "prompt": [
+      "En un modelo de amenazas, ¿qué es un activo?",
+      "In a threat model, what is an asset?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-5-1-0",
+        "text": [
+          "Algo que se quiere proteger",
+          "Something you want to protect"
+        ]
+      },
+      {
+        "id": "bitcoin-5-1-1",
+        "text": [
+          "Solo una cotización bursátil",
+          "Only a stock quote"
+        ]
+      },
+      {
+        "id": "bitcoin-5-1-2",
+        "text": [
+          "Únicamente el atacante",
+          "Only the attacker"
+        ]
+      },
+      {
+        "id": "bitcoin-5-1-3",
+        "text": [
+          "Un método para borrar bloques",
+          "A method for deleting blocks"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-5-1-0",
+    "explanation": [
+      "EFF usa activo para aquello que merece protección: datos, dispositivos, comunicaciones u otros recursos relevantes.",
+      "EFF uses asset for what deserves protection: data, devices, communications or other relevant resources."
+    ],
+    "sources": [
+      {
+        "name": "EFF · Your Security Plan",
+        "url": "https://ssd.eff.org/module/your-security-plan",
+        "section": "Assets, adversaries, likelihood and consequences"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-5-2",
+    "track": "bitcoin",
+    "module": 5,
+    "kind": "security",
+    "prompt": [
+      "¿Qué dos dimensiones distingue un modelo de riesgo al valorar una amenaza?",
+      "What two dimensions does a risk model distinguish when assessing a threat?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-5-2-0",
+        "text": [
+          "Probabilidad e impacto",
+          "Likelihood and impact"
+        ]
+      },
+      {
+        "id": "bitcoin-5-2-1",
+        "text": [
+          "Solo precio y popularidad",
+          "Only price and popularity"
+        ]
+      },
+      {
+        "id": "bitcoin-5-2-2",
+        "text": [
+          "Solo tamaño y color del dispositivo",
+          "Only device size and color"
+        ]
+      },
+      {
+        "id": "bitcoin-5-2-3",
+        "text": [
+          "Solo número de seguidores y visitas",
+          "Only followers and views"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-5-2-0",
+    "explanation": [
+      "Una amenaza puede ser improbable y grave, o frecuente y limitada. El plan de seguridad considera probabilidad y consecuencias.",
+      "A threat may be unlikely and severe, or frequent and limited. Security planning considers likelihood and consequences."
+    ],
+    "sources": [
+      {
+        "name": "EFF · Your Security Plan",
+        "url": "https://ssd.eff.org/module/your-security-plan",
+        "section": "Assets, adversaries, likelihood and consequences"
+      }
+    ]
+  },
+  {
+    "id": "bitcoin-5-3",
+    "track": "bitcoin",
+    "module": 5,
+    "kind": "security",
+    "prompt": [
+      "¿Qué comprueba un ensayo de recuperación con fondos de prueba?",
+      "What does a recovery drill using test funds check?"
+    ],
+    "options": [
+      {
+        "id": "bitcoin-5-3-0",
+        "text": [
+          "Que la copia y el procedimiento permiten recuperar acceso",
+          "That the backup and procedure can restore access"
+        ]
+      },
+      {
+        "id": "bitcoin-5-3-1",
+        "text": [
+          "Que el precio subirá",
+          "That the price will rise"
+        ]
+      },
+      {
+        "id": "bitcoin-5-3-2",
+        "text": [
+          "Que nunca habrá un ataque",
+          "That no attack will ever occur"
+        ]
+      },
+      {
+        "id": "bitcoin-5-3-3",
+        "text": [
+          "Que cualquier tercero es fiable",
+          "That every third party is trustworthy"
+        ]
+      }
+    ],
+    "answerId": "bitcoin-5-3-0",
+    "explanation": [
+      "Ensayar permite detectar errores del procedimiento antes de depender de él. No garantiza ausencia de ataques ni rendimientos.",
+      "Rehearsing reveals procedural mistakes before depending on the process. It does not guarantee freedom from attacks or returns."
+    ],
+    "sources": [
+      {
+        "name": "Bitcoin.org · Securing your wallet",
+        "url": "https://bitcoin.org/en/secure-your-wallet",
+        "section": "Backups, offline wallets, multisignature and inheritance"
+      }
+    ]
+  }
+]

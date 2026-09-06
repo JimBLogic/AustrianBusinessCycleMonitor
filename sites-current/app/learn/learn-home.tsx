@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { ClearLocalPreferencesButton } from "../privacidad/ClearLocalPreferencesButton";
 import { libraryItems, type LibraryLevel, type LibraryTrack } from "./library";
 
 type Lang = "es" | "en";
@@ -81,6 +82,7 @@ const copy = {
 
 export default function LearnHome({ initialLang }: { initialLang: Lang }) {
   const [lang, setLang] = useState<Lang>(initialLang);
+  useEffect(() => { document.documentElement.lang = lang; }, [lang]);
   const [track, setTrack] = useState<"all" | LibraryTrack>("all");
   const [level, setLevel] = useState<"all" | LibraryLevel>("all");
 
@@ -89,7 +91,7 @@ export default function LearnHome({ initialLang }: { initialLang: Lang }) {
     setLang(next);
     const url = new URL(window.location.href);
     url.searchParams.set("lang", next);
-    window.history.replaceState({}, "", url);
+    window.history.replaceState(window.history.state, "", url);
   }
 
   const t = copy[lang];
@@ -112,7 +114,7 @@ export default function LearnHome({ initialLang }: { initialLang: Lang }) {
     essay: ["Ensayo", "Essay"],
   };
   return (
-    <main className="academy-home">
+    <main className="academy-home" lang={lang}>
       <nav className="academy-top">
         <Link href="/" className="academy-logo"><span>₿</span> {t.brand}</Link>
         <div className="learn-actions">
@@ -127,13 +129,13 @@ export default function LearnHome({ initialLang }: { initialLang: Lang }) {
       </header>
       <section className="academy-paths">
         <Link href={`/learn/austrian-economics?lang=${lang}`} className="path-card austrian-path">
-          <span>{t.path} 01 · 6 {t.modules}</span><b>🏛</b>
+          <span>{t.path} 01 · 6 {t.modules} · 24 {lang === "es" ? "PREGUNTAS" : "QUESTIONS"}</span><b>🏛</b>
           <h2>{t.austrian}</h2>
           <p>{t.austrianBody}</p>
           <strong>{t.start} →</strong>
         </Link>
         <Link href={`/learn/bitcoin-sovereignty?lang=${lang}`} className="path-card bitcoin-path">
-          <span>{t.path} 02 · 6 {t.modules}</span><b>₿</b>
+          <span>{t.path} 02 · 6 {t.modules} · 24 {lang === "es" ? "PREGUNTAS" : "QUESTIONS"}</span><b>₿</b>
           <h2>{t.bitcoin}</h2>
           <p>{t.bitcoinBody}</p>
           <strong>{t.start} →</strong>
@@ -170,7 +172,11 @@ export default function LearnHome({ initialLang }: { initialLang: Lang }) {
           </a>)}
         </div>
       </section>
-      <footer className="academy-footer">{t.brand} · JIMBLOGIC · OPEN SOURCE LEARNING</footer>
+      <footer className="academy-footer">
+        <span>{t.brand} · JIMBLOGIC · OPEN SOURCE LEARNING</span>
+        <Link href="/privacidad">{lang === "es" ? "Privacidad" : "Privacy"}</Link>
+        <ClearLocalPreferencesButton compact language={lang} />
+      </footer>
     </main>
   );
 }

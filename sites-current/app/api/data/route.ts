@@ -809,6 +809,38 @@ function bitcoinNetworkProvenance(hasMempool: boolean, hasBlockchain: boolean) {
   return "unavailable";
 }
 
+const MADRID_TIME_ZONE = "Europe/Madrid";
+
+function madridParts(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: MADRID_TIME_ZONE,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  return Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, Number(part.value)]));
+}
+
+function madridNoonUtc(year: number, month: number, day: number) {
+  const localTarget = Date.UTC(year, month - 1, day, 12);
+  const guess = new Date(localTarget);
+  const observed = madridParts(guess);
+  const offset = Date.UTC(observed.year, observed.month - 1, observed.day, observed.hour, observed.minute, observed.second) - guess.getTime();
+  return new Date(localTarget - offset);
+}
+
+function dailyMadridWindow(now = new Date()) {
+  const local = madridParts(now);
+  const todayNoon = madridNoonUtc(local.year, local.month, local.day);
+  const previousDate = new Date(Date.UTC(local.year, local.month - 1, local.day - 1));
+  const currentBoundary = now.getTime() >= todayNoon.getTime()
+    ? todayNoon
+    : madridNoonUtc(previousDate.getUTCFullYear(), previousDate.getUTCMonth() + 1, previousDate.getUTCDate());
+  const nextDate = new Date(Date.UTC(local.year, local.month - 1, local.day + (now.getTime() >= todayNoon.getTime() ? 1 : 0)));
+  const nextBoundary = madridNoonUtc(nextDate.getUTCFullYear(), nextDate.getUTCMonth() + 1, nextDate.getUTCDate());
+  return { currentBoundary, nextBoundary };
+}
+
 export async function GET(request: Request) {
   const manual = request.method === "POST";
   // Public reads always use the shared refresh window. A query parameter must
@@ -817,16 +849,18 @@ export async function GET(request: Request) {
   const runtimeIsSites = Boolean(getRuntimeBindings()?.DB);
 
   // Fast path: every visitor receives the latest durable edition immediately.
-  // Normal reads create at most one new edition per 24 hours; an explicit
+  // Normal reads create one main edition after 12:00 Europe/Madrid; an explicit
   // visitor refresh is allowed after 15 minutes. The persisted edition remains
   // available when upstream providers are slow or unavailable.
   try {
     const persisted = await readLatestMacroSnapshot();
     const persistedAt = persisted?.requestedAt ? Date.parse(persisted.requestedAt) : Number.NaN;
     const minimumAgeMs = 15 * 60_000;
+    const madridWindow = dailyMadridWindow();
     const persistedGold = (persisted?.metrics as { series?: Record<string, Point[]> } | undefined)?.series?.gold;
     const persistedHasGoldHistory = Array.isArray(persistedGold) && persistedGold.length > 1;
-    if (persisted && persistedHasGoldHistory && Number.isFinite(persistedAt) && (!manual || Date.now() - persistedAt < minimumAgeMs)) {
+    const currentMainEdition = Number.isFinite(persistedAt) && persistedAt >= madridWindow.currentBoundary.getTime();
+    if (persisted && persistedHasGoldHistory && currentMainEdition && (!manual || Date.now() - persistedAt < minimumAgeMs)) {
       const metrics = persisted.metrics as {
         latest?: Record<string, Point | null>;
         series?: Record<string, Point[]>;
@@ -877,7 +911,7 @@ export async function GET(request: Request) {
       const hasNativeTenSignals = Number.isFinite(storedScores.money);
       const generatedAt = persisted.requestedAt;
       const nextManualAt = new Date(persistedAt + 15 * 60_000).toISOString();
-      const nextDailyAt = new Date(persistedAt + 24 * 60 * 60_000).toISOString();
+      const nextDailyAt = madridWindow.nextBoundary.toISOString();
       return Response.json({
         schemaVersion: DATA_SCHEMA_VERSION,
         engineVersion: ENGINE_VERSION,
@@ -1113,6 +1147,7 @@ export async function GET(request: Request) {
   const requestedAt = new Date().toISOString();
   const cacheTtlSeconds = 900;
   const editionTtlSeconds = 86_400;
+  const madridWindow = dailyMadridWindow(new Date(requestedAt));
   let payload = {
     schemaVersion: DATA_SCHEMA_VERSION,
     engineVersion: ENGINE_VERSION,
@@ -1125,7 +1160,7 @@ export async function GET(request: Request) {
       generatedAt: requestedAt,
       validUntil: new Date(Date.parse(requestedAt) + cacheTtlSeconds * 1000).toISOString(),
       nextManualAt: new Date(Date.parse(requestedAt) + cacheTtlSeconds * 1000).toISOString(),
-      nextDailyAt: new Date(Date.parse(requestedAt) + editionTtlSeconds * 1000).toISOString(),
+      nextDailyAt: madridWindow.nextBoundary.toISOString(),
       ttlSeconds: cacheTtlSeconds,
       editionTtlSeconds,
       mode: "durable-daily-edition",

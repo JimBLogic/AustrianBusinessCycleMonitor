@@ -1,4 +1,5 @@
 import type { SourceDefinition } from "./source-registry";
+import { essentialServerUrl } from "@/lib/network-policy";
 
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 const FAILURE_THRESHOLD = 2;
@@ -99,7 +100,7 @@ export async function fetchUpstream(
     const timer = setTimeout(() => controller.abort(), policy.timeoutMs);
     let response: Response | null = null;
     try {
-      response = await fetch(input, { ...init, signal: controller.signal });
+      response = await fetch(essentialServerUrl(input), { ...init, signal: controller.signal });
       if (response.ok) {
         recordSuccess(policy.id);
         return response;

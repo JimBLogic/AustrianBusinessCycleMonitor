@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.selfhost
+      args:
+        ABCM_PUBLIC_ORIGIN: ${ABCM_PUBLIC_ORIGIN:-http://localhost}
     init: true
     restart: unless-stopped
     env_file:

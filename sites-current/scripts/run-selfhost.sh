@@ -26,9 +26,5 @@ if [[ -n "${FRED_API_KEY:-}" ]]; then
 fi
 
 cd "${project_root}"
-if [[ "${ABCM_SELFHOST_DEBUG:-0}" == "1" ]]; then
-  printf 'Starting self-host runtime:' >&2
-  printf ' %q' "${project_root}/node_modules/.bin/${args[0]}" "${args[@]:1}" >&2
-  printf '\n' >&2
-fi
+# Arguments may contain the FRED API key; do not print them.
 exec "${project_root}/node_modules/.bin/${args[0]}" "${args[@]:1}"

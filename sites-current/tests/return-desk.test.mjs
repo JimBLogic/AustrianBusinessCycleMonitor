@@ -2,16 +2,18 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const [monitor, styles] = await Promise.all([
+const [monitor, styles, preferences] = await Promise.all([
   readFile(new URL("../app/monitor.tsx", import.meta.url), "utf8"),
   readFile(new URL("../app/engine.css", import.meta.url), "utf8"),
+  readFile(new URL("../lib/local-preferences.ts", import.meta.url), "utf8"),
 ]);
 
 test("validates device-local return data before using it", () => {
-  assert.match(monitor, /function parseVisitBaseline/);
-  assert.match(monitor, /function parseWatchlist/);
-  assert.match(monitor, /validTimestamp\(parsed\.capturedAt\)/);
-  assert.match(monitor, /WATCH_KEYS\.includes/);
+  assert.match(preferences, /function parseVisitBaseline/);
+  assert.match(preferences, /validTimestamp\(parsed\.capturedAt\)/);
+  assert.match(preferences, /WATCH_KEYS\.includes/);
+  assert.match(monitor, /readManualRefreshPreference\(\)/);
+  assert.match(monitor, /readWatchlistPreference\(\)/);
 });
 
 test("keeps the four-variable limit explicit and non-destructive", () => {
