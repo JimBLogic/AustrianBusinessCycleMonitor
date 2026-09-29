@@ -29,6 +29,14 @@ test("renders the public monitor with production security headers", async () => 
   const html = await response.text();
   assert.equal(html.includes('name="codex-preview"'), false);
   assert.equal(html.includes("1970"), false);
+  const sections = ['id="top"', 'id="theory"', 'id="dashboard"', 'id="method-details"'];
+  for (let i = 1; i < sections.length; i++) {
+    assert.ok(html.indexOf(sections[i - 1]) < html.indexOf(sections[i]), "progressive reading order");
+  }
+  assert.match(html, /<details[^>]*id="method-details"/);
+  assert.doesNotMatch(html, /<details[^>]*id="method-details"[^>]*\bopen/);
+  assert.match(html, /No es una probabilidad de recesión/);
+
   assert.doesNotMatch(html, /(?:href|src)="\/workspace\//);
   assert.match(html, /PENDIENTE DE LA PRIMERA CARGA/);
   assert.match(html, /Cambiar idioma a inglés/);

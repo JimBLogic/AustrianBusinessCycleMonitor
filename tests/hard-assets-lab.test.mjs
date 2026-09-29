@@ -7,7 +7,7 @@ const styles = readFileSync(new URL("../app/globals.css", import.meta.url), "utf
 const dataRoute = readFileSync(new URL("../app/api/data/route.ts", import.meta.url), "utf8");
 const lab = monitor.slice(
   monitor.indexOf('<section className="hard-assets"'),
-  monitor.indexOf('<section className="pillars"'),
+  monitor.indexOf('</section>', monitor.indexOf('<section className="hard-assets"')),
 );
 
 test("uses the aligned monthly Bitcoin-gold ratio instead of mixing spot dates", () => {

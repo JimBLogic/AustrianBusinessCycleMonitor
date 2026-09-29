@@ -55,7 +55,7 @@ test("uses semantic section, list and card structure", () => {
     '<ol className="pillar-grid">',
     '<li key={pillar.key}><article',
     'aria-labelledby={`pillar-${pillar.key}-title`}',
-    '<ol className="process"',
+    '<dl className="pillar-observations">',
   ]) assert.ok(section.includes(expected), "missing pillar semantics: " + expected);
 });
 

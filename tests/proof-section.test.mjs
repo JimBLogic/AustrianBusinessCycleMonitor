@@ -23,7 +23,7 @@ test("opens verified evidence safely with explicit accessible names", () => {
   assert.equal((monitor.match(/rel="noopener noreferrer"/g) ?? []).length >= 4, true);
   assert.equal((monitor.match(/pestaña nueva/g) ?? []).length >= 4, true);
   assert.match(monitor, /SOURCE_MIRROR\.repository/);
-  assert.match(monitor, /tree\/master\/\$\{SOURCE_MIRROR\.path\}/);
+  assert.match(monitor, /tree\/\$\{SOURCE_MIRROR\.ref\}\/\$\{SOURCE_MIRROR\.path\}/);
 });
 
 test("keeps proof cards balanced and visibly stateful", () => {

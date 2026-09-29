@@ -4,6 +4,7 @@ import "./fonts.css";
 import "./globals.css";
 import "./engine.css";
 import "./academy.css";
+import "./progressive.css";
 
 
 export const metadata: Metadata = {
