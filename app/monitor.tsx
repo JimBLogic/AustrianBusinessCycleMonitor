@@ -1,5 +1,6 @@
 "use client";
 
+import { retainDashboardSeries } from "@/lib/dashboard-recovery.mjs";
 import { manualRefreshBlocked } from "@/lib/refresh-policy.mjs";
 import { validTimestamp } from "@/lib/timestamp.mjs";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -48,7 +49,8 @@ type Detail = {
   sourceUrl: string;
 };
 type VisitBaseline = VisitBaselinePreference;
-type Data = {
+export type Data = {
+  health?: {status:string; indicators:Array<{indicator:string;source:string;status:string;last_attempt:string|null;last_success:string|null;last_valid_value:number|null;observation_date:string|null;failure_reason:string|null;fallback:{configured:string;active:string|null}}>};
   observedAt: string;
   requestedAt: string;
   refreshMode: string;
@@ -58,10 +60,10 @@ type Data = {
   bitcoin: {
     price: number | null; change24h: number | null; marketCap: number | null;
     priceObservedAt?: string;
-    priceConsensus?: "confirmed" | "divergent" | "single-source" | "unavailable";
+    priceConsensus?: "confirmed" | "divergent" | "single-source" | "unavailable" | "stale";
     priceSpreadPercent?: number | null;
     priceSources?: string[];
-    supply: number; stockToFlow: number; blockHeight: number | null;
+    supply: number | null; stockToFlow: number | null; blockHeight: number | null;
     hashRate: number | null; difficulty: number | null; feeFast: number | null; feeHour: number | null;
   };
   derived: {
@@ -92,7 +94,7 @@ const fallback: Data = {
   cache: { generatedAt: "", validUntil: "", ttlSeconds: 900, mode: "shared-snapshot" },
   series: {},
   latest: {},
-  bitcoin: { price: null, change24h: null, marketCap: null, priceConsensus: "unavailable", priceSpreadPercent: null, priceSources: [], supply: 0, stockToFlow: 0, blockHeight: null, hashRate: null, difficulty: null, feeFast: null, feeHour: null },
+  bitcoin: { price: null, change24h: null, marketCap: null, priceConsensus: "unavailable", priceSpreadPercent: null, priceSources: [], supply: null, stockToFlow: null, blockHeight: null, hashRate: null, difficulty: null, feeFast: null, feeHour: null },
   derived: {
     changes: {},
     scores: { liquidity: 0, credit: 0, realEconomy: 0, inflation: 0, fiscal: 0, money: 0, monetaryStance: 0, creditRisk: 0, termStructure: 0, production: 0, labour: 0, consumerPrices: 0, resourcesFx: 0, debtBurden: 0, fiscalImpulse: 0, composite: 0 },
@@ -153,8 +155,9 @@ const text = {
 
 const seriesMeta = {
   m2: { en: "M2 money stock", es: "Masa monetaria M2", unit: { en: "USD bn", es: "miles de millones USD" }, source: "M2SL", color: "#c7ff18" },
+  treasury2y: { en: "Treasury 2Y yield", es: "Rendimiento Treasury 2A", unit: { en: "%", es: "%" }, source: "DGS2", color: "#d96238" },
   treasury10y: { en: "10-year Treasury yield", es: "Rendimiento Treasury 10A", unit: { en: "percent", es: "porcentaje" }, source: "DGS10", color: "#72b7ff" },
-  federalDebt: { en: "Federal debt", es: "Deuda federal", unit: { en: "USD bn", es: "miles de millones USD" }, source: "GFDEBTN", color: "#ff6b1a" },
+  federalDebt: { en: "Federal debt", es: "Deuda federal", unit: { en: "USD millions", es: "millones USD" }, source: "GFDEBTN", color: "#ff6b1a" },
   cpi: { en: "Consumer prices", es: "Precios al consumidor", unit: { en: "index points", es: "puntos de índice" }, source: "CPIAUCSL", color: "#bba4ff" },
   oil: { en: "WTI crude oil", es: "Petróleo WTI", unit: { en: "USD / barrel", es: "USD por barril" }, source: "DCOILWTICO", color: "#f0c85a" },
   gold: { en: "Gold", es: "Oro", unit: { en: "USD / troy oz", es: "USD por onza troy" }, source: "GOLDAMGBD228NLBM", color: "#ffd15c" },
@@ -325,6 +328,7 @@ const worldBankLinks: Record<string, string> = {
 const fredSeriesIds: Record<string, string> = {
   m2: "M2SL",
   treasury10y: "DGS10",
+  treasury2y: "DGS2",
   federalDebt: "GFDEBTN",
   oil: "DCOILWTICO",
   gold: "GOLDAMGBD228NLBM",
@@ -370,7 +374,7 @@ function observedDate(data: Data, key: string) {
 function marketState(data: Data, key: string) {
   const status = data.freshness.find((item) => item.key === key)?.status;
   if (status === "live") return "live";
-  if (status === "last-known-good") return "backup";
+  if (status === "last-known-good") return "stale";
   if (status === "stale") return "stale";
   return "unavailable";
 }
@@ -391,7 +395,7 @@ function marketStateLabel(state: string, lang: Lang) {
 function sourceStatusLabel(status: string, lang: Lang) {
   const labels: Record<string, [string, string]> = {
     live: ["CURRENT", "AL DÍA"],
-    "last-known-good": ["LAST VERIFIED", "ÚLTIMO VERIFICADO"],
+    "last-known-good": ["STALE · LAST VERIFIED", "STALE · ÚLTIMO VERIFICADO"],
     stale: ["STALE", "DESACTUALIZADO"],
     unavailable: ["UNAVAILABLE", "NO DISPONIBLE"],
   };
@@ -784,10 +788,10 @@ function engineReading(key: keyof typeof engineLabels, score: number, lang: Lang
   return { range: bands[index].range, title: item[0], fact: item[1], interpretation: item[2], watch: item[3] };
 }
 
-export default function Monitor() {
+export default function Monitor({ initialData }: {initialData?:Data|null}) {
   const [lang, setLang] = useState<Lang>("es");
-  const [data, setData] = useState<Data>(fallback);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<Data>(initialData ?? fallback);
+  const [loading, setLoading] = useState(!initialData);
   const [disclaimerOpen, setDisclaimerOpen] = useState(false);
   const [clock, setClock] = useState(0);
   const [seriesKey, setSeriesKey] = useState<keyof typeof seriesMeta>("m2");
@@ -805,7 +809,7 @@ export default function Monitor() {
   const [baselineSavedThisVisit, setBaselineSavedThisVisit] = useState(false);
   const [watchlist, setWatchlist] = useState<WatchKey[]>(["m2", "creditSpread", "bitcoin"]);
   const [diagnosticScenario, setDiagnosticScenario] = useState(0);
-  const previousData = useRef<Data>(fallback);
+  const previousData = useRef<Data>(initialData ?? fallback);
   const navRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const firstNavLinkRef = useRef<HTMLAnchorElement>(null);
@@ -842,14 +846,15 @@ export default function Monitor() {
     setLoading(true);
     setRefreshNotice(manual ? (lang === "es" ? "Consultando fuentes y comparando con tu instantánea anterior…" : "Checking sources and comparing with your previous snapshot…") : "");
     try {
-      const response = await fetch("/api/data?edition=quality-2026-09-28", {
+      const response = await fetch("/api/data", {
+        signal: AbortSignal.timeout(90_000),
         method: manual ? "POST" : "GET",
         cache: "no-store",
         credentials: "omit",
         referrerPolicy: "no-referrer",
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const next: Data = await response.json();
+      const next = retainDashboardSeries(previousData.current, await response.json()) as Data;
       if (next.provenance.mode === "fallback") throw new Error("No upstream source returned a usable snapshot");
       const old = previousData.current;
       const changedMacro = Object.keys(next.latest).filter((key) => next.latest[key]?.date !== old.latest[key]?.date).length;
@@ -1075,7 +1080,8 @@ export default function Monitor() {
   const modelInputsAvailable = data.provenance.modelInputsAvailable ?? 0;
   const modelInputsTotal = data.provenance.modelInputsTotal ?? 14;
   const gold = latestValue(data, "gold");
-  const debt = latestValue(data, "treasuryDebt") ?? latestValue(data, "federalDebt");
+  const rawFederalDebt = latestValue(data, "federalDebt");
+  const debt = latestValue(data, "treasuryDebt") ?? (rawFederalDebt == null ? null : rawFederalDebt / 1000);
   const debtSeriesKey = latestValue(data, "treasuryDebt") != null ? "treasuryDebt" : "federalDebt";
   const btc = data.bitcoin.price;
   const meta = seriesMeta[seriesKey];
@@ -1240,10 +1246,10 @@ export default function Monitor() {
   const refreshCountdown = secondsToRefresh == null
     ? "—"
     : `${String(Math.floor(secondsToRefresh / 60)).padStart(2, "0")}:${String(secondsToRefresh % 60).padStart(2, "0")}`;
-  const bitcoinConsensus = data.bitcoin.priceConsensus ?? "unavailable";
+  const bitcoinConsensus = data.bitcoin.price != null && (!data.bitcoin.priceObservedAt || clock - Date.parse(data.bitcoin.priceObservedAt) > 15 * 60_000) ? "stale" : data.bitcoin.priceConsensus ?? "unavailable";
   const bitcoinPriceAvailable = data.provenance.mode !== "fallback" && btc != null && Number.isFinite(btc) && btc > 0;
   const bitcoinNetworkAvailable = data.provenance.mode !== "fallback" && data.provenance.bitcoinNetwork !== "unavailable";
-  const bitcoinSupplyAvailable = bitcoinNetworkAvailable && Number.isFinite(data.bitcoin.supply) && data.bitcoin.supply > 0;
+  const bitcoinSupplyAvailable = bitcoinNetworkAvailable && Number.isFinite(data.bitcoin.supply) && (data.bitcoin.supply ?? 0) > 0;
   const bitcoinPriceStatus = marketStateLabel(bitcoinConsensus, lang);
   const upstreamReady = data.upstreams?.filter((item) => item.status === "ready").length ?? 0;
   const upstreamCooling = data.upstreams?.filter((item) => item.status === "cooldown").length ?? 0;
@@ -1773,7 +1779,7 @@ export default function Monitor() {
               const contextOnly = "contextOnly" in metric && metric.contextOnly;
               const signalReady = !contextOnly && data.provenance.mode !== "fallback" && data.provenance.signalReady?.[metric.signal] !== false && Number.isFinite(data.derived.scores[metric.signal]);
               const pressure = signalReady ? data.derived.scores[metric.signal] : null;
-              const shownValue = metric.key === "federalDebt" && value != null ? `$${marketFormat(value / 1000, lang, metric.digits)} T` : marketFormat(value, lang, metric.digits);
+              const shownValue = metric.key === "federalDebt" && value != null ? `$${marketFormat(value / 1_000_000, lang, metric.digits)} T` : marketFormat(value, lang, metric.digits);
               return <button ref={(element) => { metricTabRefs.current[index] = element; }} id={`metric-tab-${metric.key}`} role="tab" aria-selected={selectedMetric.key === metric.key} aria-controls="signal-inspector" tabIndex={selectedMetric.key === metric.key ? 0 : -1} type="button" key={metric.key} className={`metric-card ${selectedMetric.key === metric.key ? "selected" : ""} ${available ? "has-data" : "no-data"}`} onClick={() => setSelectedMetric(metric)} onKeyDown={(event) => handleMetricTabKey(event, index)}>
                 <span className="metric-title"><i className={`metric-source-dot ${state}`} aria-hidden="true" />{metric.label[lang === "en" ? 0 : 1]}</span>
                 <span className="metric-reading"><strong>{shownValue}</strong><small>{available ? metric.unit[lang === "en" ? 0 : 1] : (lang === "es" ? "sin observación verificable" : "no verifiable observation")}</small></span>
@@ -1792,7 +1798,7 @@ export default function Monitor() {
             const contextOnly = "contextOnly" in selectedMetric && selectedMetric.contextOnly;
             const signalReady = !contextOnly && data.provenance.mode !== "fallback" && data.provenance.signalReady?.[selectedMetric.signal] !== false && Number.isFinite(data.derived.scores[selectedMetric.signal]);
             const pressure = signalReady ? data.derived.scores[selectedMetric.signal] : null;
-            const shownValue = selectedMetric.key === "federalDebt" && value != null ? `$${marketFormat(value / 1000, lang, selectedMetric.digits)} T` : marketFormat(value, lang, selectedMetric.digits);
+            const shownValue = selectedMetric.key === "federalDebt" && value != null ? `$${marketFormat(value / 1_000_000, lang, selectedMetric.digits)} T` : marketFormat(value, lang, selectedMetric.digits);
             const sourceUrl = selectedMetric.key === "federalDebt" ? debtSourceUrl(data) : seriesSourceUrl(data, selectedMetric.key);
             return <aside className="inspector" id="signal-inspector" role="tabpanel" aria-labelledby={`metric-tab-${selectedMetric.key}`} tabIndex={0}>
               <div className="inspector-heading"><span className="kicker">{lens === "facts" ? t.facts : t.thesis}</span><span className={`inspector-state ${state}`}>{status}</span></div>
@@ -1963,7 +1969,7 @@ export default function Monitor() {
         <div className="asset-grid">
           <article className="btc-card" aria-labelledby="bitcoin-asset-title">
             <div className="asset-title"><span className="coin" aria-hidden="true">₿</span><div><span>BITCOIN · USD</span><h3 id="bitcoin-asset-title"><span className="sr-only">Bitcoin: </span>{bitcoinPriceAvailable ? `$${marketFormat(btc, lang, 0)}` : "—"}</h3><small className={`asset-state ${bitcoinConsensus}`}>{bitcoinPriceStatus} · {data.bitcoin.priceObservedAt ? formatChartDate(data.bitcoin.priceObservedAt.slice(0, 10), lang) : (lang === "es" ? "SIN FECHA" : "NO DATE")}</small></div></div>
-            <dl className="asset-stats"><div><dt>{t.s2f}</dt><dd>{bitcoinSupplyAvailable ? `${marketFormat(data.bitcoin.stockToFlow, lang, 1)}×` : "—"}</dd></div><div><dt>{t.supply}</dt><dd>{bitcoinSupplyAvailable ? `${marketFormat(data.bitcoin.supply / 1e6, lang, 2)} M BTC` : "—"}</dd></div><div><dt>{t.block}</dt><dd>{bitcoinNetworkAvailable ? marketFormat(data.bitcoin.blockHeight, lang, 0) : "—"}</dd></div><div><dt>{t.fees}</dt><dd>{bitcoinNetworkAvailable && data.bitcoin.feeFast != null ? `${marketFormat(data.bitcoin.feeFast, lang, 0)} sat/vB` : "—"}</dd></div></dl>
+            <dl className="asset-stats"><div><dt>{t.s2f}</dt><dd>{bitcoinSupplyAvailable ? `${marketFormat(data.bitcoin.stockToFlow, lang, 1)}×` : "—"}</dd></div><div><dt>{t.supply}</dt><dd>{bitcoinSupplyAvailable ? `${marketFormat(data.bitcoin.supply! / 1e6, lang, 2)} M BTC` : "—"}</dd></div><div><dt>{t.block}</dt><dd>{bitcoinNetworkAvailable ? marketFormat(data.bitcoin.blockHeight, lang, 0) : "—"}</dd></div><div><dt>{t.fees}</dt><dd>{bitcoinNetworkAvailable && data.bitcoin.feeFast != null ? `${marketFormat(data.bitcoin.feeFast, lang, 0)} sat/vB` : "—"}</dd></div></dl>
             <p>{lang === "en" ? "Stock-to-flow describes programmed scarcity; it is not a reliable standalone price model. Bitcoin’s supply schedule is auditable, its custody can be sovereign, and its settlement resists permission." : "El stock-to-flow describe la escasez programada; no es un modelo de precio fiable por sí solo. La oferta de Bitcoin es auditable, su custodia puede ser soberana y su liquidación resiste permisos."}</p>
             <div className="asset-evidence"><a href={bitcoinSourceUrl(data)} target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? `Abrir precio de Bitcoin: ${bitcoinPriceStatus}, en una pestaña nueva` : `Open Bitcoin price: ${bitcoinPriceStatus}, in a new tab`}>{lang === "es" ? "Precio · dos mercados" : "Price · two venues"} ↗</a><a href="https://mempool.space/" target="_blank" rel="noopener noreferrer">Mempool.space ↗</a><a href="https://www.blockchain.com/explorer/charts/total-bitcoins" target="_blank" rel="noopener noreferrer">Blockchain.com ↗</a></div>
           </article>
@@ -2312,6 +2318,10 @@ export default function Monitor() {
       <section className="proof-section" aria-labelledby="proof-title">
         <div className="proof-heading">
           <div><span className="kicker">{lang === "es" ? "PRUEBA DE TRABAJO · ARQUITECTURA DE CONFIANZA" : "PROOF OF WORK · TRUST ARCHITECTURE"}</span><h2 id="proof-title">{lang === "es" ? "No confíes en el dashboard. Verifícalo." : "Do not trust the dashboard. Verify it."}</h2></div>
+          {data.health && <details className="source-audit"><summary>{lang === "es" ? "Diagnóstico por indicador" : "Per-indicator diagnostics"} · {data.health.status}</summary>
+            <div style={{overflowX:"auto"}}><table><thead><tr>{["Indicator","Source","Status","Last attempt (UTC)","Last success (UTC)","Value","Observation","Failure / fallback"].map(label=><th key={label}>{label}</th>)}</tr></thead>
+            <tbody>{data.health.indicators.map(row=><tr key={row.indicator}><th>{row.indicator}</th><td>{row.source}</td><td>{row.status}</td><td>{row.last_attempt ?? "—"}</td><td>{row.last_success ?? "—"}</td><td>{row.last_valid_value ?? "—"}</td><td>{row.observation_date ?? "—"}</td><td>{row.failure_reason ?? "—"}<br/>{row.fallback.active ?? row.fallback.configured}</td></tr>)}</tbody></table></div>
+          </details>}
           <p>{lang === "es" ? "ABCM enseña su cadena de suministro, los huecos de datos y cómo reproducir el resultado. Un fallo visible es preferible a una cifra convincente pero inventada." : "ABCM exposes its supply chain, data gaps and reproducibility path. A visible failure is better than a convincing invented number."}</p>
         </div>
         <div className="proof-grid">

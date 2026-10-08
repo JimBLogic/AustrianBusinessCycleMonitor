@@ -11,5 +11,7 @@ test('all three educational series retain primary and fallback data paths', asyn
   assert.doesNotMatch(route, /H15_discontinued/);
   assert.doesNotMatch(route, /rightsUnavailable|isRestrictedSeries|isRestrictedFredId/);
   const db = await readFile(new URL('../db/runtime.ts', import.meta.url), 'utf8');
-  assert.match(db, /dataRightsPolicy === "2026-09-28-v1"\) return null/);
+  assert.match(db, /recoverSnapshot/);
+  const {supportedSnapshot}=await import('../lib/snapshot-policy.mjs');
+  assert.equal(supportedSnapshot({dataRightsPolicy:'2026-09-28-v1',sourcePolicyVersion:'2026-09-28-quality-v1'}),false);
 });

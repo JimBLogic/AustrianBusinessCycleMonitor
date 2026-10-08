@@ -1,0 +1,28 @@
+name: Production data refresh and verification
+on:
+  schedule:
+    - cron: '0 10,11 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: abcm-production-data
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Refresh at noon Europe/Madrid and verify actual data
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = schedule ] && [ "$(TZ=Europe/Madrid date +%H)" != 12 ]; then exit 0; fi
+          if [ -f sites-current/scripts/verify-production.mjs ]; then
+            node sites-current/scripts/verify-production.mjs --refresh
+          else
+            node scripts/verify-production.mjs --refresh
+          fi

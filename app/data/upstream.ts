@@ -5,7 +5,6 @@ import { essentialServerUrl } from "@/lib/network-policy";
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 const FAILURE_THRESHOLD = 2;
 const DEFAULT_COOLDOWN_MS = 5 * 60_000;
-const MAX_COOLDOWN_MS = 30 * 60_000;
 
 type CircuitState = {
   failures: number;
@@ -111,7 +110,14 @@ export async function fetchUpstream(
     const timer = setTimeout(() => controller.abort(), policy.timeoutMs);
     let response: Response | null = null;
     try {
-      response = await fetch(essentialServerUrl(input), { ...init, redirect: "error", signal: controller.signal });
+      response = await fetch(essentialServerUrl(input), { ...init, redirect: "manual", signal: controller.signal });
+      // workerd only supports follow/manual. Keep redirects blocked by inspecting
+      // the response instead of using the unsupported browser-only error mode.
+      if (response.status >= 300 && response.status < 400) {
+        await response.body?.cancel();
+        recordFailure(policy.id, `Redirect blocked (HTTP ${response.status})`, response);
+        throw new Error(`Redirect blocked (HTTP ${response.status})`);
+      }
       if (response.ok) {
         const body = await boundedBody(response);
         validateTransportBody(body, new Headers(init.headers).get("Accept") ?? "");
@@ -128,7 +134,7 @@ export async function fetchUpstream(
     } catch (error) {
       lastError = error;
       if (attempt === policy.maxAttempts - 1) {
-        recordFailure(policy.id, error instanceof Error && /body exceeds|Invalid JSON|Unexpected HTML/.test(error.message) ? error.message : "timeout or network failure");
+        recordFailure(policy.id, error instanceof Error && /body exceeds|Invalid JSON|Unexpected HTML|Redirect blocked/.test(error.message) ? error.message : error instanceof TypeError ? "request runtime or transport TypeError" : "timeout or network failure");
         throw new Error(`${policy.id}: timeout, invalid payload or network failure`);
       }
     } finally {

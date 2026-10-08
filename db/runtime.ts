@@ -1,3 +1,6 @@
+import { recoverSnapshot } from "../lib/snapshot-recovery.mjs";
+import { supportedSnapshot } from "../lib/snapshot-policy.mjs";
+
 type D1Statement = {
   bind(...values: unknown[]): D1Statement;
   run(): Promise<unknown>;
@@ -95,27 +98,12 @@ export async function recordMacroSnapshot(snapshot: {
 export async function readLatestMacroSnapshot() {
   await ensureDatabase();
   const { db } = getBindings();
-  const row = await db.prepare(
+  const rows = await db.prepare(
     `SELECT requested_at AS requestedAt, refresh_mode AS refreshMode, regime,
             scores_json AS scoresJson, metrics_json AS metricsJson, provenance_json AS provenanceJson
-     FROM macro_snapshots ORDER BY requested_at DESC LIMIT 1`,
-  ).first<Record<string, string>>();
-  if (!row) return null;
-  // Do not serve editions generated while the three educational series were disabled.
-  if (JSON.parse(row.provenanceJson)?.dataRightsPolicy === "2026-09-28-v1") return null;
-  if (JSON.parse(row.provenanceJson)?.sourcePolicyVersion !== "2026-09-28-quality-v1") return null;
-  const metrics = JSON.parse(row.metricsJson);
-  const hasUsableMetric = Boolean(metrics?.bitcoin?.price) ||
-    Object.values(metrics?.latest ?? {}).some((item) => Number.isFinite((item as { value?: number } | null)?.value));
-  if (!hasUsableMetric) return null;
-  return {
-    requestedAt: row.requestedAt,
-    refreshMode: row.refreshMode,
-    regime: row.regime,
-    scores: JSON.parse(row.scoresJson),
-    metrics,
-    provenance: JSON.parse(row.provenanceJson),
-  };
+     FROM macro_snapshots ORDER BY requested_at DESC LIMIT 8`,
+  ).all<Record<string, string>>();
+  return recoverSnapshot(rows.results);
 }
 
 export async function readSourceValidationHistory() {
@@ -127,7 +115,7 @@ export async function readSourceValidationHistory() {
   return rows.results.flatMap(row => {
     try {
       const provenance = JSON.parse(row.provenanceJson);
-      if (provenance.sourcePolicyVersion !== "2026-09-28-quality-v1" || !Array.isArray(provenance.backupValidation)) return [];
+      if (!supportedSnapshot(provenance) || !Array.isArray(provenance.backupValidation)) return [];
       return [{ checkedAt: row.checkedAt, checks: provenance.backupValidation }];
     } catch { return []; }
   });
