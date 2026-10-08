@@ -17,6 +17,7 @@ type RuntimeBindings = {
   DB?: D1Binding;
   FRED_API_KEY?: string;
   BLS_API_KEY?: string;
+  waitUntil?: (promise:Promise<unknown>) => void;
 };
 
 declare global {

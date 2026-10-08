@@ -42,3 +42,7 @@ Tests cover persisted writer-reader round trip with upstreams disabled; corrupt/
 Dependency updates remove critical and fixable findings without a framework migration. The remaining npm audit findings are the `braces` CVE-2026-93687 / GHSA-vfj7-8cjw-p6xm dependency chain in lint/build tools. npm still returns a failing audit: **do not claim a clean audit**. Upstream latest braces is 3.0.3 with no published patch at verification time. No forced downgrade or advisory suppression is used.
 
 The GitHub workflow refreshes at noon Europe/Madrid (two UTC schedules with a local-hour gate). GitHub scheduling is best-effort, not an exact-time SLA. Browser refresh also recovers an overdue edition. A future successful scheduled run must be observed before claiming daily operation proved across days.
+
+## Production-only concurrent response failure
+
+The v85 post-deployment real POST check caught HTTP 500 after an edition had already been persisted at 11:43:05 UTC. The stack pointed to cloning the globally shared Response. The single-flight cache now shares fully buffered immutable response data, creates a fresh Response per request, and uses Worker waitUntil to protect an in-flight refresh. Delivery failures attempt durable recovery explicitly. This was detected by production verification, not declared successful from unit tests.

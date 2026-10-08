@@ -66,7 +66,7 @@ function withSecurityHeaders(response: Response) {
 
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    (globalThis as unknown as { __ABCM_RUNTIME_ENV__: Env }).__ABCM_RUNTIME_ENV__ = env;
+    (globalThis as unknown as { __ABCM_RUNTIME_ENV__: Env & {waitUntil:(promise:Promise<unknown>)=>void} }).__ABCM_RUNTIME_ENV__ = {...env,waitUntil:ctx.waitUntil.bind(ctx)};
     const url = new URL(request.url);
 
     if (url.pathname === "/_vinext/image") {

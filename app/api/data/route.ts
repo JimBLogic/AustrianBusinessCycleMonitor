@@ -1209,14 +1209,29 @@ async function generateEdition(request: Request) {
   });
 }
 
-let editionInFlight: Promise<Response> | null = null;
+type BufferedEdition = {body:string;status:number;headers:Array<[string,string]>};
+let editionInFlight: Promise<BufferedEdition> | null = null;
 export async function GET(request: Request) {
-  // Single flight includes response body construction and persistence. Reads and refreshes
-  // share the same work in this isolate; other isolates still use durable editions.
   const stored = await readPersistedEdition(request);
   if (stored) return stored;
-  if (!editionInFlight) editionInFlight = generateEdition(request).finally(() => { editionInFlight = null; });
-  return (await editionInFlight).clone();
+  // Workers response streams belong to the originating request. Share only
+  // immutable buffered bytes, then create a fresh Response for each visitor.
+  if (!editionInFlight) {
+    const pending = generateEdition(request).then(async response => ({
+      body:await response.text(),status:response.status,headers:[...response.headers.entries()],
+    }));
+    editionInFlight = pending;
+    getRuntimeBindings()?.waitUntil?.(pending.catch(() => undefined));
+    void pending.finally(() => { if (editionInFlight === pending) editionInFlight = null; }).catch(() => undefined);
+  }
+  try {
+    const result = await editionInFlight;
+    return new Response(result.body,{status:result.status,headers:result.headers});
+  } catch {
+    console.error("[snapshot] Edition delivery failed; attempting durable recovery");
+    const recovered = await readPersistedEdition(new Request(request.url));
+    return recovered ?? Response.json({status:"UNAVAILABLE",error:"No durable edition and live refresh failed"},{status:503,headers:{"Cache-Control":"no-store"}});
+  }
 }
 
 export async function POST(request: Request) {
