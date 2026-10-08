@@ -1,6 +1,7 @@
 name: DEPRECATED (unused)
 
-on: {}
+on:
+  workflow_dispatch:
 
 jobs:
   noop:

@@ -64,16 +64,19 @@ jobs:
           docker run -d --name abcm-sites-selfhost -p 8787:8787 abcm-sites-selfhost:ci
           trap 'docker logs abcm-sites-selfhost || true; docker rm -f abcm-sites-selfhost || true' EXIT
 
-          healthy=false
+          # A new volume has no observations. HTTP 503 + UNAVAILABLE is the
+          # correct data-readiness result, not a worker/database failure.
+          ready=false
           for attempt in {1..60}; do
-            if curl -fsS http://127.0.0.1:8787/api/health |
-              jq -e --argjson release "$expected_release" '.siteRelease == $release'; then
-              healthy=true
+            status="$(curl -sS -o selfhost-health.json -w '%{http_code}' http://127.0.0.1:8787/api/health || true)"
+            if [ "$status" = 503 ] && jq -e --argjson release "$expected_release" \
+              '.siteRelease == $release and .status == "UNAVAILABLE" and .persistence.status == "ready" and .persistence.snapshotReadable == false' selfhost-health.json; then
+              ready=true
               break
             fi
             sleep 2
           done
-          test "$healthy" = true
+          test "$ready" = true
 
           curl -fsS http://127.0.0.1:8787/ > selfhost-index.html
           curl -fsS http://127.0.0.1:8787/api/data-manifest |
