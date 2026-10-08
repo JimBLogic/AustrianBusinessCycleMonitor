@@ -1,3 +1,5 @@
+import { supportedSnapshot } from "../lib/snapshot-policy.mjs";
+
 type D1Statement = {
   bind(...values: unknown[]): D1Statement;
   run(): Promise<unknown>;
@@ -102,8 +104,7 @@ export async function readLatestMacroSnapshot() {
   ).first<Record<string, string>>();
   if (!row) return null;
   // Do not serve editions generated while the three educational series were disabled.
-  if (JSON.parse(row.provenanceJson)?.dataRightsPolicy === "2026-09-28-v1") return null;
-  if (JSON.parse(row.provenanceJson)?.sourcePolicyVersion !== "2026-09-28-quality-v1") return null;
+  if (!supportedSnapshot(JSON.parse(row.provenanceJson))) return null;
   const metrics = JSON.parse(row.metricsJson);
   const hasUsableMetric = Boolean(metrics?.bitcoin?.price) ||
     Object.values(metrics?.latest ?? {}).some((item) => Number.isFinite((item as { value?: number } | null)?.value));
@@ -127,7 +128,7 @@ export async function readSourceValidationHistory() {
   return rows.results.flatMap(row => {
     try {
       const provenance = JSON.parse(row.provenanceJson);
-      if (provenance.sourcePolicyVersion !== "2026-09-28-quality-v1" || !Array.isArray(provenance.backupValidation)) return [];
+      if (!supportedSnapshot(provenance) || !Array.isArray(provenance.backupValidation)) return [];
       return [{ checkedAt: row.checkedAt, checks: provenance.backupValidation }];
     } catch { return []; }
   });

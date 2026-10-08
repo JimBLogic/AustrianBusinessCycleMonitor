@@ -9,7 +9,11 @@ test('cold-start pipeline preserves sources, runs comparisons and rejects fake s
   globalThis.fetch=async(input)=>{
     const u=new URL(input);calls.push(u.href);
     if(u.hostname==='fred.stlouisfed.org'){
-      const ids=u.searchParams.get('id').split(',');
+      const requested=u.searchParams.get('id').split(',');
+      // Mixed-frequency batch omits a quarterly series; individual recovery is
+      // older than the freshness threshold but must remain visible as history.
+      const ids=requested.length>1?requested.filter(id=>id!=='GFDEBTN'):requested;
+      if(requested.length===1 && requested[0]==='GFDEBTN') return new Response('observation_date,GFDEBTN\n2025-01-01,40000\n2025-04-01,41000');
       return new Response('observation_date,'+ids.join(',')+'\n'+dates.map(d=>d+','+ids.map(id=>values[id]??'').join(',')).join('\n'),{headers:{'content-type':'text/csv'}});
     }
     if(u.hostname.includes('cboe.com')){
@@ -28,12 +32,17 @@ test('cold-start pipeline preserves sources, runs comparisons and rejects fake s
     throw new Error('Unexpected endpoint '+u.href);
   };
   const worker = (await import('../dist/server/index.js')).default;
-  const DB={batch:async()=>[],prepare(sql){let args=[];return {bind(...a){args=a;return this;},first:async()=>null,all:async()=>({results:[]}),run:async()=>{if(sql.startsWith('INSERT'))persisted.push(args);return {};}};}};
+  const DB={batch:async()=>[],prepare(sql){let args=[];return {bind(...a){args=a;return this;},first:async()=>{
+      const a=persisted.at(-1);
+      return a?{requestedAt:a[1],refreshMode:a[2],regime:a[3],scoresJson:a[4],metricsJson:a[5],provenanceJson:a[6]}:null;
+    },all:async()=>({results:[]}),run:async()=>{if(sql.startsWith('INSERT'))persisted.push(args);return {};}};}};
   try{
     const env={DB,ASSETS:{fetch:async()=>new Response('',{status:404})}},ctx={waitUntil(){},passThroughOnException(){}};
     const [r1,r2]=await Promise.all([worker.fetch(new Request('http://localhost/api/data'),env,ctx),worker.fetch(new Request('http://localhost/api/data'),env,ctx)]);
     assert.equal(r1.status,200);assert.equal(r2.status,200);
     const p=await r1.json();await r2.text();
+    assert.equal(p.latest.federalDebt.value,41000);
+    assert.equal(p.freshness.find(row=>row.key==='federalDebt').status,'stale');
     assert.equal(p.latest.creditSpread.value,1.39);assert.equal(p.latest.vix.value,15);
     assert.equal(p.provenance.backupValidation.find(c=>c.key==='creditSpread').status,'matched');
     assert.equal(p.provenance.backupValidation.find(c=>c.key==='vix').status,'matched');
@@ -41,5 +50,16 @@ test('cold-start pipeline preserves sources, runs comparisons and rejects fake s
     assert.equal(calls.filter(u=>u.includes('VIX_History')).length,1,'concurrent requests must share pipeline');
     assert.equal(persisted.length,1);assert.equal(p.series.gold.length,0,'no PAXG pseudo-gold');
     assert.ok(!calls.some(u=>u.includes('H15_discontinued')||u.includes('api.worldbank.org')));
+    const before=calls.length;
+    globalThis.fetch=async()=>{throw new Error('all providers offline after persistence');};
+    const saved=await (await worker.fetch(new Request('http://localhost/api/data'),env,ctx)).json();
+    assert.equal(saved.refreshMode,'daily-edition');
+    assert.equal(saved.provenance.mode,'daily-persisted');
+    assert.equal(saved.requestedAt,p.requestedAt);
+    assert.deepEqual(saved.series,p.series,'the writer output must survive the production reader');
+    assert.equal(calls.length,before);
+    const cooldown=await (await worker.fetch(new Request('http://localhost/api/data',{method:'POST'}),env,ctx)).json();
+    assert.equal(cooldown.refreshMode,'manual-cooldown');
+    assert.equal(cooldown.requestedAt,p.requestedAt);
   }finally{globalThis.fetch=original;}
 });

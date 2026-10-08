@@ -1,4 +1,5 @@
 import { finiteObservation, normalizeSeries, parseFredCsv, parseCboeCsv, alignedDifference, compareSeries, seriesFresh } from "@/lib/series-quality.mjs";
+import { SOURCE_POLICY_VERSION } from "@/lib/snapshot-policy.mjs";
 import { getRuntimeBindings, readLatestMacroSnapshot, recordMacroSnapshot } from "../../../db/runtime";
 import { strFromU8, unzipSync } from "fflate";
 import {
@@ -357,8 +358,12 @@ async function baaComponents(force: boolean): Promise<SeriesResult> {
 async function fillMacroFallbacks(results: Record<string, SeriesResult>, force: boolean) {
   const needs = (key: FredSeriesKey) => !seriesFresh(results[key].points, MAX_OBSERVATION_AGE_DAYS[key]);
   const select = (key: FredSeriesKey, candidate: SeriesResult) => {
-    const maxAge = key === "gold" && candidate.source === "worldbank" ? 75 : MAX_OBSERVATION_AGE_DAYS[key];
-    if (seriesFresh(candidate.points, maxAge) && (!results[key].points.length || (candidate.points.at(-1)?.date ?? "") >= (results[key].points.at(-1)?.date ?? ""))) results[key] = candidate;
+    // Keep verified historical observations even when their publication is late.
+    // Freshness labels and modelSeries still exclude stale inputs from scoring.
+    const points = normalizePoints(candidate.points);
+    if (points.length && (!results[key].points.length || (points.at(-1)?.date ?? "") >= (results[key].points.at(-1)?.date ?? ""))) {
+      results[key] = { ...candidate, points };
+    }
   };
   // Retry missing individual series when one batch response was partial. Keep exact units/frequency.
   await runLimited(Object.entries(FRED).filter(([key]) => key !== "gold" && needs(key as FredSeriesKey)).map(([key,id]) => async () => select(key as FredSeriesKey, await fredSeries(id, force))), 3);
@@ -797,7 +802,10 @@ async function generateEdition(request: Request) {
     // A normal page load must never wait for the upstream refresh pipeline.
     // Serve the last verified edition immediately even after its daily window
     // elapsed; the client then starts one gated POST in the background.
-    if (persisted && (!manual || (currentMainEdition && Date.now() - persistedAt < minimumAgeMs))) {
+    // Regenerate pre-repair editions once; otherwise their empty quarterly
+    // history survives a deployment until the next daily/manual refresh.
+    const currentSourcePolicy = persisted?.provenance?.sourcePolicyVersion === SOURCE_POLICY_VERSION;
+    if (persisted && currentSourcePolicy && (!manual || (currentMainEdition && Date.now() - persistedAt < minimumAgeMs))) {
       const metrics = persisted.metrics as {
         latest?: Record<string, Point | null>;
         series?: Record<string, Point[]>;
@@ -1135,7 +1143,7 @@ async function generateEdition(request: Request) {
     freshness,
     upstreams: getUpstreamHealth(),
     provenance: {
-      sourcePolicyVersion: "2026-09-28-quality-v1",
+      sourcePolicyVersion: SOURCE_POLICY_VERSION,
       backupValidation,
       blsCheckedAt,
       transportHealth: getUpstreamHealth(),

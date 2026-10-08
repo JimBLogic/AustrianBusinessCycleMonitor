@@ -6,7 +6,7 @@ const route = await readFile(new URL("../app/api/data/route.ts", import.meta.url
 const registry = await readFile(new URL("../app/data/source-registry.ts", import.meta.url), "utf8");
 
 test("serves the last verified edition immediately while a daily refresh is pending", () => {
-  assert.ok(route.includes("persisted && (!manual ||"));
+  assert.ok(route.includes("persisted && currentSourcePolicy && (!manual ||"));
   assert.ok(route.includes('"stale-while-refresh"'));
   assert.ok(route.includes('mode: currentMainEdition ? "daily-persisted" : "stale-persisted"'));
 });
