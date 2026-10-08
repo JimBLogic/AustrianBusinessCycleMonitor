@@ -21,19 +21,19 @@
   "dependencies": {
     "drizzle-orm": "0.45.2",
     "fflate": "0.8.3",
-    "next": "16.3.0",
+    "next": "16.3.8",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.51.1",
+    "@cloudflare/vite-plugin": "1.63.0",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
     "@vitejs/plugin-rsc": "0.5.26",
-    "drizzle-kit": "0.31.10",
+    "drizzle-kit": "0.31.11",
     "eslint": "9.39.4",
     "eslint-config-next": "16.2.6",
     "react-server-dom-webpack": "19.2.8",
@@ -41,8 +41,15 @@
     "typescript": "5.9.3",
     "vinext": "0.0.50",
     "vite": "8.2.1",
-    "wrangler": "4.120.0"
+    "wrangler": "4.148.0"
   },
   "type": "module",
-  "displayName": "Austrian Business Cycle Monitor"
+  "displayName": "Austrian Business Cycle Monitor",
+  "overrides": {
+    "image-size": "2.0.4",
+    "sharp": "0.35.5",
+    "@esbuild-kit/core-utils": {
+      "esbuild": "^0.25.0"
+    }
+  }
 }

@@ -10,6 +10,15 @@ export async function GET() {
       contextModelVersion: CONTEXT_MODEL_VERSION,
       sourceMirror: SOURCE_MIRROR,
     },
+    sourceReliability: {
+      report: "/api/source-health",
+      primaryPromotion: "Manual review only, after at least 30 distinct observed days, >=99% matched daily checks and zero divergence.",
+      observationScope: "Checks on refresh, not a continuous availability monitor. Persisted macro editions retain validation evidence.",
+      vix: "FRED VIXCLS compared with official Cboe daily CLOSE; never VIX futures, VXO or ETFs.",
+      baa: "FRED BAA10Y compared with daily DBAA minus daily DGS10 on identical dates. Component route shares the FRED dependency; it is not an independent provider.",
+      sp500: "FRED SP500 compared with Cboe SPX close.",
+      safeguards: ["Missing values stay missing", "Exact frequency and units", "No annual World Bank substitutes for quarterly US data", "No PAXG substitution for gold", "No stale inputs in scores", "Bounded bodies and full-read timeouts", "HTML/invalid JSON rejected", "Retry-After respected", "Per-isolate single-flight"],
+    },
     methodology: {
       originalThreePillars: {
         source: "Original AustrianBusinessCycleMonitor implementation",

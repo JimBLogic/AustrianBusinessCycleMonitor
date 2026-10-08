@@ -33,7 +33,9 @@ async function coinbase(force: boolean): Promise<SpotObservation | null> {
     if (!response.ok) { await response.body?.cancel(); return null; }
     const payload = await response.json() as { price?: string; time?: string };
     const price = validPrice(payload.price);
-    return price == null ? null : { source: "coinbase", price, observedAt: payload.time ?? new Date().toISOString() };
+    const stamp = payload.time ? Date.parse(payload.time) : Number.NaN;
+    const fresh = Number.isFinite(stamp) && stamp <= Date.now() + 60_000 && Date.now() - stamp <= 15 * 60_000;
+    return price == null || !fresh ? null : { source: "coinbase", price, observedAt: payload.time! };
   } catch { return null; }
 }
 
@@ -44,7 +46,8 @@ async function kraken(force: boolean): Promise<SpotObservation | null> {
       ...(force ? {} : { cf: { cacheTtl: 60, cacheEverything: true } }),
     } as RequestInit, sourcePolicy("kraken"));
     if (!response.ok) { await response.body?.cancel(); return null; }
-    const payload = await response.json() as { result?: Record<string, { c?: string[] }> };
+    const payload = await response.json() as { error?: string[]; result?: Record<string, { c?: string[] }> };
+    if (payload.error?.length) return null;
     const ticker = payload.result ? Object.values(payload.result)[0] : null;
     const price = validPrice(ticker?.c?.[0]);
     return price == null ? null : { source: "kraken", price, observedAt: new Date().toISOString() };

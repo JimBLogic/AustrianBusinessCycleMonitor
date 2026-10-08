@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+const origin='https://austrian-business-cycle-monitor.jimblogic.chatgpt.site';
+const refresh=process.argv.includes('--refresh');
+const response=await fetch(`${origin}/api/data`,{method:refresh?'POST':'GET',signal:AbortSignal.timeout(120000)});
+assert.ok(response.ok,`data HTTP ${response.status}`);
+const data=await response.json();
+const required=['m2','cpi','fedFunds','treasury10y','treasury2y','creditSpread','oil','gold','sp500','vix','dollar','federalDebt','industrialProduction'];
+for(const key of required)assert.ok(data.series[key]?.some(p=>Number.isFinite(p.value)),`${key} has no validated observations`);
+assert.ok(Number.isFinite(data.bitcoin.price),'Bitcoin unavailable');
+assert.ok(data.provenance.modelInputsAvailable>=10,'insufficient model coverage');
+const health=await(await fetch(`${origin}/api/health`,{signal:AbortSignal.timeout(30000)})).json();
+assert.ok(health.persistence?.snapshotReadable,'durable snapshot unreadable');
+assert.ok(!['UNAVAILABLE'].includes(health.status),'data unavailable');
+console.log(JSON.stringify({checkedAt:new Date().toISOString(),release:data.siteRelease,snapshot:data.requestedAt,mode:data.provenance.mode,coverage:data.provenance.modelInputsAvailable,status:health.status,indicators:health.data.indicators},null,2));

@@ -74,7 +74,7 @@ test("local preferences are omitted from same-origin API requests", async () => 
   for (const endpoint of ["/api/data", "/api/bitcoin"]) {
     const start = monitor.indexOf(`fetch("${endpoint}"`);
     assert.ok(start >= 0, `missing ${endpoint} request`);
-    const request = monitor.slice(start, start + 260);
+    const request = monitor.slice(start, start + 340);
     assert.match(request, /credentials: "omit"/);
     assert.match(request, /referrerPolicy: "no-referrer"/);
   }

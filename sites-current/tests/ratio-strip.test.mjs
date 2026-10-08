@@ -46,7 +46,7 @@ test("aligns the nominal rate and CPI inflation to the same month", () => {
     "function alignedRealRate",
     "cpiLevels.has(month) && cpiLevels.has(previousYearMonth)",
     "nominalRate.value - inflationRate",
-    "realRate = alignedRealRate(series.fedFunds, series.cpi).value",
+    "realRate = alignedRealRate(modelSeries.fedFunds, modelSeries.cpi).value",
   ]) assert.ok(route.includes(expected), `missing real-rate alignment: ${expected}`);
   assert.ok(manifest.includes("for the same calendar month"));
 });

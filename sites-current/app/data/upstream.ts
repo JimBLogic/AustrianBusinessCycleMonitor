@@ -1,13 +1,17 @@
+import { boundedBody, validateTransportBody, retryAfterMilliseconds } from "@/lib/upstream-policy.mjs";
 import type { SourceDefinition } from "./source-registry";
 import { essentialServerUrl } from "@/lib/network-policy";
 
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
 const FAILURE_THRESHOLD = 2;
 const DEFAULT_COOLDOWN_MS = 5 * 60_000;
-const MAX_COOLDOWN_MS = 30 * 60_000;
 
 type CircuitState = {
   failures: number;
+  attempts: number;
+  successes: number;
+  totalLatencyMs: number;
+  lastLatencyMs: number | null;
   coolingUntil: number;
   lastFailureAt: string | null;
   lastSuccessAt: string | null;
@@ -21,6 +25,7 @@ function circuit(id: string) {
   if (existing) return existing;
   const created: CircuitState = {
     failures: 0,
+    attempts: 0, successes: 0, totalLatencyMs: 0, lastLatencyMs: null,
     coolingUntil: 0,
     lastFailureAt: null,
     lastSuccessAt: null,
@@ -31,17 +36,15 @@ function circuit(id: string) {
 }
 
 function retryAfterMs(response: Response | null) {
-  const value = response?.headers.get("retry-after");
-  if (!value) return 0;
-  const seconds = Number(value);
-  if (Number.isFinite(seconds)) return Math.min(Math.max(seconds * 1_000, 0), MAX_COOLDOWN_MS);
-  const date = Date.parse(value);
-  return Number.isFinite(date) ? Math.min(Math.max(date - Date.now(), 0), MAX_COOLDOWN_MS) : 0;
+  return retryAfterMilliseconds(response?.headers.get("retry-after"));
 }
 
-function recordSuccess(id: string) {
+function recordSuccess(id: string, latencyMs: number) {
   const state = circuit(id);
   state.failures = 0;
+  state.successes += 1;
+  state.lastLatencyMs = latencyMs;
+  state.totalLatencyMs += latencyMs;
   state.coolingUntil = 0;
   state.lastSuccessAt = new Date().toISOString();
   state.reason = null;
@@ -52,7 +55,7 @@ function recordFailure(id: string, reason: string, response: Response | null = n
   state.failures += 1;
   state.lastFailureAt = new Date().toISOString();
   state.reason = reason;
-  if (state.failures >= FAILURE_THRESHOLD) {
+  if ((state.failures >= FAILURE_THRESHOLD && (!response || RETRYABLE_STATUS.has(response.status))) || [401,403,429].includes(response?.status ?? 0)) {
     state.coolingUntil = Date.now() + Math.max(DEFAULT_COOLDOWN_MS, retryAfterMs(response));
   }
 }
@@ -63,6 +66,11 @@ export function getUpstreamHealth() {
     id,
     status: state.coolingUntil > now ? "cooldown" : state.failures ? "recovering" : "ready",
     failures: state.failures,
+    attempts: state.attempts,
+    successes: state.successes,
+    lastLatencyMs: state.lastLatencyMs,
+    meanSuccessLatencyMs: state.successes ? Math.round(state.totalLatencyMs / state.successes) : null,
+    scope: "current-worker-isolate-transport",
     coolingUntil: state.coolingUntil > now ? new Date(state.coolingUntil).toISOString() : null,
     lastFailureAt: state.lastFailureAt,
     lastSuccessAt: state.lastSuccessAt,
@@ -78,7 +86,7 @@ function retryDelayMs(response: Response | null, attempt: number) {
     const date = Date.parse(retryAfter);
     if (Number.isFinite(date)) return Math.min(Math.max(date - Date.now(), 0), 2_000);
   }
-  return Math.min(200 * 2 ** attempt, 1_000);
+  return Math.min(200 * 2 ** attempt + Math.floor(Math.random() * 150), 1_000);
 }
 
 function wait(milliseconds: number) {
@@ -96,16 +104,29 @@ export async function fetchUpstream(
   }
   let lastError: unknown = null;
   for (let attempt = 0; attempt < policy.maxAttempts; attempt++) {
+    state.attempts += 1;
+    const started = Date.now();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), policy.timeoutMs);
     let response: Response | null = null;
     try {
-      response = await fetch(essentialServerUrl(input), { ...init, signal: controller.signal });
-      if (response.ok) {
-        recordSuccess(policy.id);
-        return response;
+      response = await fetch(essentialServerUrl(input), { ...init, redirect: "manual", signal: controller.signal });
+      // workerd only supports follow/manual. Keep redirects blocked by inspecting
+      // the response instead of using the unsupported browser-only error mode.
+      if (response.status >= 300 && response.status < 400) {
+        await response.body?.cancel();
+        recordFailure(policy.id, `Redirect blocked (HTTP ${response.status})`, response);
+        throw new Error(`Redirect blocked (HTTP ${response.status})`);
       }
-      if (!RETRYABLE_STATUS.has(response.status) || attempt === policy.maxAttempts - 1) {
+      if (response.ok) {
+        const body = await boundedBody(response);
+        validateTransportBody(body, new Headers(init.headers).get("Accept") ?? "");
+        recordSuccess(policy.id, Date.now() - started);
+        const headers = new Headers(response.headers);
+        headers.delete("content-encoding"); headers.delete("content-length");
+        return new Response(body, {status: response.status, statusText: response.statusText, headers});
+      }
+      if (!RETRYABLE_STATUS.has(response.status) || attempt === policy.maxAttempts - 1 || retryAfterMilliseconds(response.headers.get("retry-after")) > 2_000) {
         recordFailure(policy.id, `HTTP ${response.status}`, response);
         return response;
       }
@@ -113,8 +134,8 @@ export async function fetchUpstream(
     } catch (error) {
       lastError = error;
       if (attempt === policy.maxAttempts - 1) {
-        recordFailure(policy.id, error instanceof Error ? error.message : "network failure");
-        throw error;
+        recordFailure(policy.id, error instanceof Error && /body exceeds|Invalid JSON|Unexpected HTML|Redirect blocked/.test(error.message) ? error.message : error instanceof TypeError ? "request runtime or transport TypeError" : "timeout or network failure");
+        throw new Error(`${policy.id}: timeout, invalid payload or network failure`);
       }
     } finally {
       clearTimeout(timer);

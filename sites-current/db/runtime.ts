@@ -1,3 +1,6 @@
+import { recoverSnapshot } from "../lib/snapshot-recovery.mjs";
+import { supportedSnapshot } from "../lib/snapshot-policy.mjs";
+
 type D1Statement = {
   bind(...values: unknown[]): D1Statement;
   run(): Promise<unknown>;
@@ -13,6 +16,8 @@ export type D1Binding = {
 type RuntimeBindings = {
   DB?: D1Binding;
   FRED_API_KEY?: string;
+  BLS_API_KEY?: string;
+  waitUntil?: (promise:Promise<unknown>) => void;
 };
 
 declare global {
@@ -94,22 +99,25 @@ export async function recordMacroSnapshot(snapshot: {
 export async function readLatestMacroSnapshot() {
   await ensureDatabase();
   const { db } = getBindings();
-  const row = await db.prepare(
+  const rows = await db.prepare(
     `SELECT requested_at AS requestedAt, refresh_mode AS refreshMode, regime,
             scores_json AS scoresJson, metrics_json AS metricsJson, provenance_json AS provenanceJson
-     FROM macro_snapshots ORDER BY requested_at DESC LIMIT 1`,
-  ).first<Record<string, string>>();
-  if (!row) return null;
-  const metrics = JSON.parse(row.metricsJson);
-  const hasUsableMetric = Boolean(metrics?.bitcoin?.price) ||
-    Object.values(metrics?.latest ?? {}).some((item) => Number.isFinite((item as { value?: number } | null)?.value));
-  if (!hasUsableMetric) return null;
-  return {
-    requestedAt: row.requestedAt,
-    refreshMode: row.refreshMode,
-    regime: row.regime,
-    scores: JSON.parse(row.scoresJson),
-    metrics,
-    provenance: JSON.parse(row.provenanceJson),
-  };
+     FROM macro_snapshots ORDER BY requested_at DESC LIMIT 8`,
+  ).all<Record<string, string>>();
+  return recoverSnapshot(rows.results);
+}
+
+export async function readSourceValidationHistory() {
+  await ensureDatabase();
+  const { db } = getBindings();
+  // Bounded use of the existing requested_at index; no visitor-level data.
+  const rows = await db.prepare(`SELECT requested_at AS checkedAt, provenance_json AS provenanceJson
+    FROM macro_snapshots ORDER BY requested_at DESC LIMIT 3000`).all<{checkedAt:string;provenanceJson:string}>();
+  return rows.results.flatMap(row => {
+    try {
+      const provenance = JSON.parse(row.provenanceJson);
+      if (!supportedSnapshot(provenance) || !Array.isArray(provenance.backupValidation)) return [];
+      return [{ checkedAt: row.checkedAt, checks: provenance.backupValidation }];
+    } catch { return []; }
+  });
 }

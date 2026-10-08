@@ -15,7 +15,7 @@ export default function PrivacyPage() {
     <main className="privacy-shell">
       <header className="privacy-header">
         <Link href="/" aria-label="Volver al monitor">← ABCM</Link>
-        <span>Última revisión · 6 septiembre 2026</span>
+        <span>Última revisión · 28 septiembre 2026</span>
       </header>
 
       <section className="privacy-intro" lang="es">
@@ -36,7 +36,7 @@ export default function PrivacyPage() {
           <h2>Información en español</h2>
 
           <section>
-            <h3>Responsable editorial y contacto</h3>
+            <h3>Responsable del Site y contacto</h3>
             <p>
               Austrian Business Cycle Monitor está editado por <strong>Jaime Ramsden de Frutos</strong>.
               Para cuestiones de privacidad relacionadas con el contenido o las funciones de esta web:
@@ -58,7 +58,7 @@ export default function PrivacyPage() {
               y el código no las envía a las APIs, las fuentes ni un servidor propio.
             </p>
             <p>
-              La versión actual no crea ni lee cookies. Vinext usa
+              El código de ABCM no crea ni lee cookies. Vinext usa
               <code> __vinext_rsc_initial_reload__ </code> en <code>sessionStorage</code> como guarda
               técnica de la pestaña frente a bucles de recarga; no identifica al visitante ni se
               envía a las APIs de ABCM.
@@ -68,13 +68,11 @@ export default function PrivacyPage() {
           <section>
             <h3>Métricas automáticas de Sites</h3>
             <p>
-              ChatGPT Sites registra automáticamente recuentos de visitantes únicos y páginas vistas
-              aunque ABCM no instale un SDK de analítica. ABCM no añade esa medición y su código no
+              El alojamiento puede generar métricas de uso y registros técnicos aunque ABCM no instale un SDK de analítica. ABCM no añade esa medición y su código no
               recibe una copia individualizada de esos datos.
             </p>
             <p>
-              A fecha de esta revisión, el manifiesto, la configuración documentada y las herramientas
-              publicadas de Sites no ofrecen un interruptor para desactivarla. Por eso no aparece un
+              Esta revisión del código no permite verificar las tecnologías ni los plazos de conservación de la medición del alojamiento. Por eso no aparece un
               banner que prometa “rechazar” una medición que esta web no puede controlar.
             </p>
           </section>
@@ -100,12 +98,19 @@ export default function PrivacyPage() {
           </section>
 
           <section>
+            <h3>Finalidades, base jurídica y conservación</h3>
+            <p>El editor trata los datos necesarios para atender consultas y mantener la disponibilidad y seguridad del Site sobre la base de su interés legítimo en responder y operar este recurso informativo (art. 6.1.f RGPD). Las solicitudes de derechos se atienden para cumplir obligaciones legales (art. 6.1.c). No se elaboran perfiles de visitantes ni decisiones automatizadas con efectos jurídicos. Reconocer el aviso educativo no autoriza publicidad ni seguimiento.</p>
+            <p>Si escribes al contacto, se reciben tu dirección y el contenido del mensaje. Se utilizan para responder y se conservan mientras se tramita la consulta y, cuando corresponda, durante los plazos legales aplicables a la defensa de reclamaciones. No envíes datos de salud, tarjetas, contraseñas o claves privadas.</p>
+            <p>OpenAI y los subencargados que correspondan prestan el alojamiento conforme a los términos y al acuerdo de tratamiento aplicables. No se promete alojamiento exclusivo en la UE: Sites no ofrece residencia de datos. Los países, mecanismos de transferencia y plazos de los registros del proveedor deben consultarse en la documentación contractual aplicable; no se ha verificado un plazo específico para esta cuenta.</p>
+            <p>Puedes ejercer acceso, rectificación, supresión, oposición, limitación y portabilidad cuando procedan escribiendo al contacto indicado. Puedes reclamar ante la <a href="https://www.aepd.es/" target="_blank" rel="noreferrer">AEPD</a> u otra autoridad competente. Las solicitudes se atienden, por regla general, en un mes; cualquier ampliación legal se comunica.</p>
+          </section>
+
+          <section>
             <h3>Tecnologías no esenciales y derechos</h3>
             <p>
               No hay anuncios, píxeles, fingerprinting, iframes, embeds, IndexedDB, service workers,
               formularios ni cuentas de visitante. Puedes solicitar información, acceso, rectificación,
-              supresión, limitación u oposición cuando proceda mediante el contacto editorial. Para el
-              tratamiento del proveedor, utiliza su Portal de Privacidad y sus políticas.
+              supresión, limitación u oposición cuando proceda mediante el contacto editorial. El editor atiende las solicitudes sobre datos de visitantes tratados para operar este Site; no es necesario acudir primero al proveedor. El portal de OpenAI también está disponible para los tratamientos de los que OpenAI sea responsable independiente.
             </p>
           </section>
         </article>
@@ -114,7 +119,7 @@ export default function PrivacyPage() {
           <h2>Information in English</h2>
 
           <section>
-            <h3>Publisher and contact</h3>
+            <h3>Site controller and contact</h3>
             <p>
               Austrian Business Cycle Monitor is published by <strong>Jaime Ramsden de Frutos</strong>.
               For privacy questions about this website&apos;s content or features, contact
@@ -136,7 +141,7 @@ export default function PrivacyPage() {
               to ABCM APIs, upstream sources or an app-owned server.
             </p>
             <p>
-              The current version creates and reads no cookies. Vinext uses
+              ABCM application code creates and reads no cookies. Vinext uses
               <code> __vinext_rsc_initial_reload__ </code> in <code>sessionStorage</code> as a tab-scoped
               reload-loop safeguard; it does not identify visitors or travel to ABCM APIs.
             </p>
@@ -145,12 +150,10 @@ export default function PrivacyPage() {
           <section>
             <h3>Automatic Sites metrics</h3>
             <p>
-              ChatGPT Sites automatically records unique-visitor and page-view counts even without an
-              analytics SDK. ABCM does not add that measurement and its code receives no visitor-level copy.
+              The hosting service may generate usage metrics and technical logs even without an analytics SDK installed by ABCM. ABCM does not add that measurement and its code receives no visitor-level copy.
             </p>
             <p>
-              At the review date, the manifest, documented settings and published Sites tools expose no
-              switch to disable it. No control therefore pretends to reject provider measurement that this
+              This code review cannot verify the technologies or retention periods used by hosting measurement. No control therefore pretends to reject provider measurement that this
               website cannot control.
             </p>
           </section>
@@ -176,23 +179,32 @@ export default function PrivacyPage() {
           </section>
 
           <section>
+            <h3>Purposes, legal basis and retention</h3>
+            <p>The publisher processes necessary data to answer enquiries and operate and secure this informational Site based on legitimate interests (GDPR Article 6(1)(f)); rights requests are handled to meet legal obligations (Article 6(1)(c)). There is no visitor profiling or automated decision-making with legal effects. Acknowledging the educational notice does not authorise advertising or tracking.</p>
+            <p>If you email the contact, your address and message are used to respond and retained while handling the enquiry and, where relevant, for legally applicable claims periods. Do not send health data, card details, passwords or private keys.</p>
+            <p>OpenAI and applicable subprocessors provide hosting under the applicable terms and data processing agreement. EU-only hosting is not promised: Sites does not offer data residency. Countries, transfer mechanisms and hosting-log retention depend on the applicable contractual documentation; an account-specific retention period has not been verified.</p>
+            <p>Contact the publisher to request access, correction, erasure, objection, restriction or portability where applicable. You may complain to the <a href="https://www.aepd.es/" target="_blank" rel="noreferrer">Spanish AEPD</a> or another competent authority. Requests are normally handled within one month; any lawful extension will be communicated.</p>
+          </section>
+
+          <section>
             <h3>Non-essential technology and rights</h3>
             <p>
               There are no ads, pixels, fingerprinting, iframes, embeds, IndexedDB, service workers, visitor
               forms or accounts. You may request information, access, correction, deletion, restriction or
-              objection where applicable through the publisher contact. Use OpenAI&apos;s Privacy Portal and
-              policies for provider processing.
+              objection where applicable through the publisher contact. The publisher handles requests about visitor data processed to operate this Site; you do not need to contact the host first. OpenAI’s portal is also available for processing for which OpenAI is an independent controller.
             </p>
           </section>
         </article>
       </div>
 
+      <p>Los enlaces externos solo se abren al pulsarlos; el destino recibe los datos técnicos necesarios para esa visita y aplica su propia política. / External destinations receive the technical data needed for your visit when you follow a link and apply their own policies.</p>
       <ClearLocalPreferencesButton />
 
       <nav className="privacy-provider-links" aria-label="Políticas del proveedor">
         <a href={OPENAI_SITES_GUIDE} target="_blank" rel="noreferrer">Guía oficial de ChatGPT Sites</a>
         <a href={OPENAI_PRIVACY_POLICY} target="_blank" rel="noreferrer">Política de privacidad de OpenAI (Europa)</a>
         <a href={OPENAI_COOKIE_POLICY} target="_blank" rel="noreferrer">Política de cookies de OpenAI</a>
+        <a href="https://help.openai.com/en/articles/20001340" target="_blank" rel="noreferrer">Protección de datos en Sites</a>
         <a href={OPENAI_PRIVACY_PORTAL} target="_blank" rel="noreferrer">Portal de privacidad de OpenAI</a>
       </nav>
     </main>

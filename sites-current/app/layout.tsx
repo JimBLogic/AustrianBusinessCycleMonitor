@@ -4,6 +4,7 @@ import "./fonts.css";
 import "./globals.css";
 import "./engine.css";
 import "./academy.css";
+import "./progressive.css";
 
 
 export const metadata: Metadata = {
@@ -61,10 +62,11 @@ export default function RootLayout({
           operatingSystem: "Web", url: SITE_ORIGIN,
           codeRepository: "https://github.com/JimBLogic/AustrianBusinessCycleMonitor",
           author: { "@type": "Person", name: "JimBLogic" }, isAccessibleForFree: true,
-          license: "https://opensource.org/licenses/MIT", inLanguage: ["es", "en"],
+          inLanguage: ["es", "en"],
           description: "Monitor verificable del ciclo económico con datos públicos e interpretación austriaca diferenciada.",
         }) }} />
         {children}
+        <footer className="site-legal-footer"><nav aria-label="Información legal / Legal information"><a href="/aviso-legal">Aviso legal · Legal notice</a><a href="/privacidad">Privacidad · Privacy</a><a href="mailto:jrf91@pm.me">Contacto · Contact</a></nav></footer>
       </body>
     </html>
   );

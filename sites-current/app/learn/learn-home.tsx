@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { MonitorGuide } from "./monitor-guide";
 import { useEffect, useState } from "react";
 import { ClearLocalPreferencesButton } from "../privacidad/ClearLocalPreferencesButton";
 import { libraryItems, type LibraryLevel, type LibraryTrack } from "./library";
@@ -13,7 +14,7 @@ const copy = {
     back: "Volver al monitor",
     layer: "CAPA ABIERTA DE APRENDIZAJE",
     title: "Entiende el sistema.",
-    titleEm: "Después reduce tu dependencia.",
+    titleEm: "Construye tu propio criterio.",
     intro: "Una ruta práctica e independiente para comprender el ciclo económico, Bitcoin y las herramientas de soberanía financiera. Sin promesas de riqueza rápida: modelos mentales, fuentes, contraste y responsabilidad personal.",
     path: "RUTA",
     modules: "MÓDULOS",
@@ -48,7 +49,7 @@ const copy = {
     back: "Back to monitor",
     layer: "OPEN LEARNING LAYER",
     title: "Understand the system.",
-    titleEm: "Then reduce your dependence on it.",
+    titleEm: "Build your own judgment.",
     intro: "A practical, independent path through the business cycle, Bitcoin and financial-sovereignty tools. No get-rich-quick promises: mental models, sources, counterarguments and personal responsibility.",
     path: "PATH",
     modules: "MODULES",
@@ -127,6 +128,7 @@ export default function LearnHome({ initialLang }: { initialLang: Lang }) {
         <h1>{t.title}<br/><em>{t.titleEm}</em></h1>
         <p>{t.intro}</p>
       </header>
+      <MonitorGuide lang={lang} />
       <section className="academy-paths">
         <Link href={`/learn/austrian-economics?lang=${lang}`} className="path-card austrian-path">
           <span>{t.path} 01 · 6 {t.modules} · 24 {lang === "es" ? "PREGUNTAS" : "QUESTIONS"}</span><b>🏛</b>

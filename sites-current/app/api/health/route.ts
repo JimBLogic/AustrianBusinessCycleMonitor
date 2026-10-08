@@ -1,4 +1,5 @@
-import { ensureDatabase, getBindings, getRuntimeBindings } from "../../../db/runtime";
+import { snapshotHealth } from "../../data/snapshot-health";
+import { ensureDatabase, getBindings, getRuntimeBindings, readLatestMacroSnapshot } from "../../../db/runtime";
 import { CONTEXT_MODEL_VERSION, DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "../../version";
 import { getUpstreamHealth } from "../../data/upstream";
 
@@ -15,9 +16,13 @@ export async function GET() {
   } catch {
     database = "unavailable";
   }
-  const status = database === "ready" ? "ok" : "degraded";
+  const snapshot = await readLatestMacroSnapshot().catch(() => null);
+  const data = snapshotHealth(snapshot);
+  const status = database === "ready" ? data.status : "UNAVAILABLE";
   return Response.json({
     status,
+    data,
+    persistence: {binding:"DB", status:database, snapshotReadable:Boolean(snapshot)},
     service: "austrian-business-cycle-monitor",
     siteRelease: SITE_RELEASE,
     engine: ENGINE_VERSION,
@@ -32,9 +37,9 @@ export async function GET() {
       macroFallback: "official-source-mesh",
       upstreamCircuits: getUpstreamHealth(),
     },
-    endpoints: ["/api/data", "/api/bitcoin", "/api/data-manifest", "/api/health"],
+    endpoints: ["/api/data", "/api/bitcoin", "/api/data-manifest", "/api/health", "/api/source-health"],
   }, {
-    status: status === "ok" ? 200 : 503,
+    status: status === "UNAVAILABLE" ? 503 : 200,
     headers: {
       "Cache-Control": "no-store, max-age=0",
       "X-Content-Type-Options": "nosniff",

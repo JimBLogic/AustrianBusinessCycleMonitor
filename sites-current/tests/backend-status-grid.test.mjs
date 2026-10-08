@@ -6,7 +6,7 @@ const monitor = readFileSync(new URL("../app/monitor.tsx", import.meta.url), "ut
 const styles = readFileSync(new URL("../app/engine.css", import.meta.url), "utf8");
 const backend = monitor.slice(
   monitor.indexOf('<div className="backend-grid">'),
-  monitor.indexOf('<section className="dashboard-section"'),
+  monitor.indexOf('</section>', monitor.indexOf('<div className="backend-grid">')),
 );
 
 test("excludes engines without coverage from extrema and divergence", () => {

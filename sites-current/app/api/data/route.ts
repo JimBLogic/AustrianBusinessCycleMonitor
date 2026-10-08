@@ -1,3 +1,6 @@
+import { snapshotHealth } from "../../data/snapshot-health";
+import { finiteObservation, normalizeSeries, parseFredCsv, parseCboeCsv, alignedDifference, compareSeries, seriesFresh } from "@/lib/series-quality.mjs";
+import { SOURCE_POLICY_VERSION } from "@/lib/snapshot-policy.mjs";
 import { getRuntimeBindings, readLatestMacroSnapshot, recordMacroSnapshot } from "../../../db/runtime";
 import { strFromU8, unzipSync } from "fflate";
 import {
@@ -28,7 +31,7 @@ type RatioEvidence = {
   denominatorObservations: number;
 };
 type RatioReading = RatioEvidence & { value: number | null };
-type SeriesSource = "api" | "csv" | "dbnomics" | "bls" | "cboe" | "worldbank" | "coinbase";
+type SeriesSource = "api" | "csv" | "dbnomics" | "bls" | "cboe" | "worldbank" | "coinbase" | "fred-derived";
 type SeriesResult = { points: Point[]; error: string | null; source?: SeriesSource };
 type EngineReadiness = {
   liquidity: boolean;
@@ -73,32 +76,11 @@ type SixForceContext = {
 const FRED: Record<FredSeriesKey, string> = FRED_SERIES;
 const WORLD_BANK_MONTHLY_PRICES_URL = "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx";
 
-function parseCsv(text: string): Point[] {
-  return text.trim().split(/\r?\n/).slice(1).map((row) => {
-    const comma = row.indexOf(",");
-    return { date: row.slice(0, comma), value: Number(row.slice(comma + 1)) };
-  }).filter((point) => point.date && Number.isFinite(point.value));
-}
-
-function parseFredBatchCsv(text: string): Record<string, Point[]> {
-  const rows = text.trim().split(/\r?\n/);
-  const headers = rows.shift()?.split(",") ?? [];
-  const output = Object.fromEntries(Object.values(FRED).map((id) => [id, [] as Point[]]));
-  for (const row of rows) {
-    const columns = row.split(",");
-    const date = columns[0];
-    if (!date || date < "2015-01-01") continue;
-    headers.slice(1).forEach((id, index) => {
-      const value = Number(columns[index + 1]);
-      if (output[id] && columns[index + 1] !== "" && Number.isFinite(value)) {
-        output[id].push({ date, value });
-      }
-    });
-  }
-  return output;
-}
+function parseCsv(text: string): Point[] { return Object.values(parseFredCsv(text))[0] ?? []; }
+function parseFredBatchCsv(text: string): Record<string, Point[]> { return parseFredCsv(text); }
 
 async function fredSeries(series: string, force: boolean): Promise<SeriesResult> {
+  if (series === "GOLDAMGBD228NLBM") return { points: [], error: "Former FRED gold series retired; use World Bank monthly gold" };
   const fredApiKey = getRuntimeBindings()?.FRED_API_KEY;
   if (fredApiKey) {
     try {
@@ -115,8 +97,8 @@ async function fredSeries(series: string, force: boolean): Promise<SeriesResult>
         const payload = await apiResponse.json() as { observations?: Array<{ date: string; value: string }> };
         const points = (payload.observations ?? []).map((item) => ({
           date: item.date,
-          value: Number(item.value),
-        })).filter((point) => Number.isFinite(point.value));
+          value: finiteObservation(item.value),
+        })).filter((point): point is Point => point.value != null);
         if (points.length) return { points, error: null, source: "api" };
       }
       await apiResponse.body?.cancel();
@@ -148,7 +130,7 @@ async function fredSeries(series: string, force: boolean): Promise<SeriesResult>
 async function fredBatch(force: boolean): Promise<Record<string, SeriesResult>> {
   try {
     const url = new URL("https://fred.stlouisfed.org/graph/fredgraph.csv");
-    url.searchParams.set("id", Object.values(FRED).join(","));
+    url.searchParams.set("id", Object.values(FRED).filter((id) => id !== "GOLDAMGBD228NLBM").join(","));
     url.searchParams.set("cosd", "2015-01-01");
     const response = await fetchUpstream(url, {
       headers: { Accept: "text/csv" },
@@ -273,8 +255,8 @@ function parseWorldBankGoldWorkbook(buffer: ArrayBuffer): Point[] {
   if (!goldColumn) return [];
   return parsedRows.flatMap((cells) => {
     const period = cells.get("A") ?? "";
-    const value = Number(cells.get(goldColumn));
-    if (!Number.isFinite(value)) return [];
+    const value = finiteObservation(cells.get(goldColumn));
+    if (value == null || value <= 0) return [];
     const monthlyPeriod = period.match(/^(\d{4})M(0[1-9]|1[0-2])$/);
     const serial = Number(period);
     const date = monthlyPeriod
@@ -310,27 +292,23 @@ async function dbnomicsSeries(provider: string, dataset: string, code: string, f
   if (!document?.period || !document.value) return { points: [], error: "DBnomics unavailable" };
   const points = document.period.map((period, index) => ({
     date: normalizedDate(period),
-    value: Number(document.value?.[index]),
-  })).filter((point) => point.date >= "2015-01-01" && Number.isFinite(point.value));
+    value: finiteObservation(document.value?.[index]),
+  })).filter((point): point is Point => point.date >= "2015-01-01" && point.value != null);
   return { points, error: points.length ? null : "empty series", source: "dbnomics" };
 }
 
-function differenceSeries(left: Point[], right: Point[]) {
-  const rightByDate = new Map(right.map((point) => [point.date, point.value]));
-  return left.flatMap((point) => {
-    const other = rightByDate.get(point.date);
-    return other == null ? [] : [{ date: point.date, value: point.value - other }];
-  });
-}
+function differenceSeries(left: Point[], right: Point[]) { return alignedDifference(left, right); }
 
 async function blsMacro(): Promise<{ cpi: SeriesResult; unemployment: SeriesResult }> {
   try {
     const endYear = new Date().getUTCFullYear();
-    const response = await fetchUpstream("https://api.bls.gov/publicAPI/v2/timeseries/data/", {
+    const blsKey = getRuntimeBindings()?.BLS_API_KEY;
+    const response = await fetchUpstream(`https://api.bls.gov/publicAPI/${blsKey ? "v2" : "v1"}/timeseries/data/`, {
       method: "POST",
       headers: { Accept: "application/json", "Content-Type": "application/json" },
       body: JSON.stringify({
         seriesid: ["CUSR0000SA0", "LNS14000000"],
+        ...(blsKey ? { registrationkey: blsKey } : {}),
         startyear: String(endYear - 9),
         endyear: String(endYear),
       }),
@@ -342,13 +320,15 @@ async function blsMacro(): Promise<{ cpi: SeriesResult; unemployment: SeriesResu
       return { cpi: error, unemployment: error };
     }
     const payload = await response.json() as {
+      status?: string;
       Results?: { series?: Array<{ seriesID: string; data?: Array<{ year: string; period: string; value: string }> }> };
     };
+    if (payload.status !== "REQUEST_SUCCEEDED") return { cpi: { points: [], error: "BLS application error" }, unemployment: { points: [], error: "BLS application error" } };
     const parse = (seriesId: string): SeriesResult => {
       const rows = payload.Results?.series?.find((item) => item.seriesID === seriesId)?.data ?? [];
       const points = rows.flatMap((item) => /^M(0[1-9]|1[0-2])$/.test(item.period)
-        ? [{ date: `${item.year}-${item.period.slice(1)}-01`, value: Number(item.value) }]
-        : []).filter((point) => Number.isFinite(point.value)).sort((a, b) => a.date.localeCompare(b.date));
+        ? [{ date: `${item.year}-${item.period.slice(1)}-01`, value: finiteObservation(item.value) }]
+        : []).filter((point): point is Point => point.value != null).sort((a, b) => a.date.localeCompare(b.date));
       return { points, error: points.length ? null : "empty series", source: "bls" };
     };
     return { cpi: parse("CUSR0000SA0"), unemployment: parse("LNS14000000") };
@@ -361,120 +341,83 @@ async function blsMacro(): Promise<{ cpi: SeriesResult; unemployment: SeriesResu
 }
 
 async function cboeSeries(code: "SPX" | "VIX"): Promise<SeriesResult> {
-  const text = await safeText(`https://cdn.cboe.com/api/global/us_indices/daily_prices/${code}_History.csv`, 12000);
-  if (!text) return { points: [], error: "Cboe unavailable" };
-  const points = text.trim().split(/\r?\n/).slice(1).flatMap((row) => {
-    const columns = row.split(",");
-    const match = columns[0]?.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-    const value = Number(columns.at(-1));
-    if (!match || !Number.isFinite(value)) return [];
-    return [{ date: `${match[3]}-${match[1]}-${match[2]}`, value }];
-  }).filter((point) => point.date >= "2015-01-01");
-  return { points, error: points.length ? null : "empty series", source: "cboe" };
+  for (const host of ["cdn-api.cboe.com", "cdn.cboe.com"]) {
+    const text = await safeText(`https://${host}/api/global/us_indices/daily_prices/${code}_History.csv`, 12000);
+    if (!text) continue;
+    const points = parseCboeCsv(text, code);
+    if (seriesFresh(points, 14)) return { points, error: null, source: "cboe" };
+  }
+  return { points: [], error: "Cboe missing, invalid or stale" };
 }
 
-async function worldBankSeries(indicator: string, force: boolean): Promise<SeriesResult> {
-  const payload = await safeJson(
-    `https://api.worldbank.org/v2/country/USA/indicator/${encodeURIComponent(indicator)}?format=json&per_page=100`,
-    force,
-    12000,
-  );
-  const rows = Array.isArray(payload?.[1]) ? payload[1] as Array<{ date?: string; value?: number | null }> : [];
-  const points = rows.flatMap((item) => item.date && Number.isFinite(item.value)
-    ? [{ date: `${item.date}-01-01`, value: Number(item.value) }]
-    : []).filter((point) => point.date >= "2015-01-01").sort((a, b) => a.date.localeCompare(b.date));
-  return { points, error: points.length ? null : "World Bank unavailable", source: "worldbank" };
+async function baaComponents(force: boolean): Promise<SeriesResult> {
+  const [baa, treasury] = await Promise.all([fredSeries("DBAA", force), fredSeries("DGS10", force)]);
+  const points = differenceSeries(baa.points, treasury.points);
+  return { points, error: points.length ? null : "Daily DBAA and DGS10 unavailable", source: "fred-derived" };
 }
 
 async function fillMacroFallbacks(results: Record<string, SeriesResult>, force: boolean) {
-  const [m2, fedFunds, tenYear, twoYear, baa, dollar, industrial, capacity, oil] = await runLimited([
-    () => dbnomicsSeries("FED", "H6_H6_M2", "M2.M", force),
-    () => dbnomicsSeries("FED", "H15", "RIFSPFF_N.M", force),
-    () => dbnomicsSeries("FED", "H15", "RIFLGFCY10_N.M", force),
-    () => dbnomicsSeries("FED", "H15", "RIFLGFCY02_N.M", force),
-    () => dbnomicsSeries("FED", "H15_discontinued", "RIMLPBAAR_N.M", force),
-    () => dbnomicsSeries("FED", "H10", "JRXWTFB_N.M", force),
-    () => dbnomicsSeries("FED", "G17_IP_MAJOR_INDUSTRY_GROUPS", "IP.B50001.S", force),
-    () => dbnomicsSeries("FED", "G17_CAPUTL", "CAPUTL.B50001.S", force),
-    () => dbnomicsSeries("EIA", "PET", "RWTC.D", force),
-  ], 3);
-
-  if (!results.m2.points.length) results.m2 = m2;
-  if (!results.fedFunds.points.length) results.fedFunds = fedFunds;
-  if (!results.yieldCurve.points.length) {
-    const points = differenceSeries(tenYear.points, twoYear.points);
-    results.yieldCurve = { points, error: points.length ? null : "yield curve unavailable", source: "dbnomics" };
-  }
-  if (!results.creditSpread.points.length) {
-    const points = differenceSeries(baa.points, tenYear.points);
-    const cutoff = new Date();
-    cutoff.setUTCFullYear(cutoff.getUTCFullYear() - 1);
-    results.creditSpread = points.at(-1)?.date && points.at(-1)!.date >= cutoff.toISOString().slice(0, 10)
-      ? { points, error: null, source: "dbnomics" }
-      : { points: [], error: "BAA source is stale" };
-  }
-  if (!results.dollar.points.length) results.dollar = dollar;
-  if (!results.industrialProduction.points.length) results.industrialProduction = industrial;
-  if (!results.capacityUtilization.points.length) results.capacityUtilization = capacity;
-  if (!results.oil.points.length) results.oil = oil;
-
-  const [labour, sp500, vix] = await Promise.all([blsMacro(), cboeSeries("SPX"), cboeSeries("VIX")]);
-  if (!results.cpi.points.length) results.cpi = labour.cpi;
-  if (!results.unemployment.points.length) results.unemployment = labour.unemployment;
-  if (!results.sp500.points.length) results.sp500 = sp500;
-  if (!results.vix.points.length) results.vix = vix;
-  // VIX and the BAA–10Y spread describe different markets. If the spread is
-  // unavailable it remains unavailable; ABCM does not synthesize one from VIX.
-
-  const [debtToGdp, gdpGrowth, nominalGdp] = await Promise.all([
-    worldBankSeries("GC.DOD.TOTL.GD.ZS", force),
-    worldBankSeries("NY.GDP.MKTP.KD.ZG", force),
-    worldBankSeries("NY.GDP.MKTP.CD", force),
-  ]);
-  if (!results.debtToGdp.points.length) results.debtToGdp = debtToGdp;
-  if (!results.realGdpGrowth.points.length) results.realGdpGrowth = gdpGrowth;
-  if (!results.federalDebt.points.length) {
-    const debtRatio = new Map(debtToGdp.points.map((point) => [point.date, point.value]));
-    const points = nominalGdp.points.flatMap((point) => {
-      const ratio = debtRatio.get(point.date);
-      return ratio == null ? [] : [{ date: point.date, value: point.value * ratio / 100 / 1_000_000_000 }];
-    });
-    results.federalDebt = { points, error: points.length ? null : "debt unavailable", source: "worldbank" };
-  }
-
-  if (!results.gold.points.length) {
-    const worldBankGold = await worldBankGoldSeries(force);
-    if (worldBankGold.points.length) {
-      results.gold = worldBankGold;
-    } else {
-      const paxg = await safeJson("https://api.coinbase.com/v2/prices/PAXG-USD/spot", true);
-      const value = Number(paxg?.data?.amount);
-      if (Number.isFinite(value)) {
-        results.gold = {
-          points: [{ date: new Date().toISOString().slice(0, 10), value }],
-          error: "historical gold series unavailable; current PAXG proxy only",
-          source: "coinbase",
-        };
-      }
+  const needs = (key: FredSeriesKey) => !seriesFresh(results[key].points, MAX_OBSERVATION_AGE_DAYS[key]);
+  const select = (key: FredSeriesKey, candidate: SeriesResult) => {
+    // Keep verified historical observations even when their publication is late.
+    // Freshness labels and modelSeries still exclude stale inputs from scoring.
+    const points = normalizePoints(candidate.points);
+    if (points.length && (!results[key].points.length || (points.at(-1)?.date ?? "") >= (results[key].points.at(-1)?.date ?? ""))) {
+      results[key] = { ...candidate, points };
     }
+  };
+  // Retry missing individual series when one batch response was partial. Keep exact units/frequency.
+  await runLimited(Object.entries(FRED).filter(([key]) => key !== "gold" && needs(key as FredSeriesKey)).map(([key,id]) => async () => select(key as FredSeriesKey, await fredSeries(id, force))), 3);
+  const previous = await readLatestMacroSnapshot().catch(() => null);
+  let blsCheckedAt = previous?.provenance?.blsCheckedAt as string | undefined;
+  const blsRecentlyChecked = blsCheckedAt && Date.now() - Date.parse(blsCheckedAt) < 2 * 60 * 60_000;
+  const jobs: Array<() => Promise<void>> = [];
+  const add = (key: FredSeriesKey, provider: string, dataset: string, code: string) => {
+    if (needs(key)) jobs.push(async () => select(key, await dbnomicsSeries(provider,dataset,code,force)));
+  };
+  add("m2","FED","H6_H6_M2","M2.M");
+  add("fedFunds","FED","H15","RIFSPFF_N.M");
+  add("treasury10y","FED","H15","RIFLGFCY10_N.B");
+  add("treasury2y","FED","H15","RIFLGFCY02_N.B");
+  add("dollar","FED","H10","JRXWTFB_N.B");
+  add("industrialProduction","FED","G17_IP_MAJOR_INDUSTRY_GROUPS","IP.B50001.S");
+  add("capacityUtilization","FED","G17_CAPUTL","CAPUTL.B50001.S");
+  add("oil","EIA","PET","RWTC.D");
+  if (needs("yieldCurve")) jobs.push(async () => {
+    const [ten,two]=await Promise.all([dbnomicsSeries("FED","H15","RIFLGFCY10_N.B",force),dbnomicsSeries("FED","H15","RIFLGFCY02_N.B",force)]);
+    select("yieldCurve",{points:differenceSeries(ten.points,two.points),error:null,source:"dbnomics"});
+  });
+  if (needs("cpi") || needs("unemployment")) jobs.push(async () => {
+    if (blsRecentlyChecked) {
+      for (const key of ["cpi","unemployment"] as const) {
+        const source = previous?.metrics?.freshness?.find((item: {key:string}) => item.key === key)?.source;
+        if (needs(key) && source === "bls") select(key,{ points:previous?.metrics?.series?.[key] ?? [],error:null,source:"bls" });
+      }
+      return;
+    }
+    blsCheckedAt = new Date().toISOString();
+    const labour=await blsMacro(); if(needs("cpi")) select("cpi",labour.cpi); if(needs("unemployment")) select("unemployment",labour.unemployment);
+  });
+  if (needs("gold")) jobs.push(async () => select("gold",await worldBankGoldSeries(force)));
+  await runLimited(jobs,3);
+  // Run these candidates even when primary data works: record independent comparisons before promotion.
+  const [vixBackup, baaBackup, spxBackup] = await Promise.all([cboeSeries("VIX"), baaComponents(force), cboeSeries("SPX")]);
+  const checks = [
+    { key:"vix", candidate:"Cboe official daily close", independence:"different delivery origin; same index producer", ...compareSeries(results.vix.points.length ? results.vix.points : previous?.metrics?.series?.vix ?? [],vixBackup.points) },
+    { key:"creditSpread", candidate:"DBAA − DGS10 on identical dates", independence:"same FRED dependency; alternative component calculation", ...compareSeries(results.creditSpread.points.length ? results.creditSpread.points : previous?.metrics?.series?.creditSpread ?? [],baaBackup.points) },
+    { key:"sp500", candidate:"Cboe SPX daily history", independence:"different delivery origin; same underlying index", ...compareSeries(results.sp500.points.length ? results.sp500.points : previous?.metrics?.series?.sp500 ?? [],spxBackup.points) },
+  ];
+  for (const [key,candidate,check] of [["vix",vixBackup,checks[0]],["creditSpread",baaBackup,checks[1]],["sp500",spxBackup,checks[2]]] as const) {
+    if (needs(key) && !["divergent","stale-comparison"].includes(check.status)) select(key,candidate);
   }
+  return { checks, blsCheckedAt };
 }
 
 function latest(points: Point[]) {
   return points.at(-1) ?? null;
 }
 
-function normalizePoints(points: Point[]) {
-  const byDate = new Map<string, number>();
-  for (const point of points) {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(point.date) && Number.isFinite(point.value)) {
-      byDate.set(point.date, point.value);
-    }
-  }
-  return [...byDate.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([date, value]) => ({ date, value }));
-}
+function normalizePoints(points: Point[]) { return normalizeSeries(points); }
 
 function freshnessStatus(key: FredSeriesKey, result: SeriesResult) {
   if (result.error === "live providers unavailable; last verified snapshot") return "last-known-good";
@@ -841,13 +784,8 @@ function dailyMadridWindow(now = new Date()) {
   return { currentBoundary, nextBoundary };
 }
 
-export async function GET(request: Request) {
+export async function readPersistedEdition(request: Request) {
   const manual = request.method === "POST";
-  // Public reads always use the shared refresh window. A query parameter must
-  // never let one visitor fan out uncached requests to every upstream provider.
-  const force = manual;
-  const runtimeIsSites = Boolean(getRuntimeBindings()?.DB);
-
   // Fast path: every visitor receives the latest durable edition immediately.
   // Normal reads create one main edition after 12:00 Europe/Madrid; an explicit
   // visitor refresh is allowed after 15 minutes. The persisted edition remains
@@ -857,10 +795,14 @@ export async function GET(request: Request) {
     const persistedAt = persisted?.requestedAt ? Date.parse(persisted.requestedAt) : Number.NaN;
     const minimumAgeMs = 15 * 60_000;
     const madridWindow = dailyMadridWindow();
-    const persistedGold = (persisted?.metrics as { series?: Record<string, Point[]> } | undefined)?.series?.gold;
-    const persistedHasGoldHistory = Array.isArray(persistedGold) && persistedGold.length > 1;
     const currentMainEdition = Number.isFinite(persistedAt) && persistedAt >= madridWindow.currentBoundary.getTime();
-    if (persisted && persistedHasGoldHistory && currentMainEdition && (!manual || Date.now() - persistedAt < minimumAgeMs)) {
+    // A normal page load must never wait for the upstream refresh pipeline.
+    // Serve the last verified edition immediately even after its daily window
+    // elapsed; the client then starts one gated POST in the background.
+    // Regenerate pre-repair editions once; otherwise their empty quarterly
+    // history survives a deployment until the next daily/manual refresh.
+    const currentSourcePolicy = persisted?.provenance?.sourcePolicyVersion === SOURCE_POLICY_VERSION;
+    if (persisted && currentSourcePolicy && (!manual || (currentMainEdition && Date.now() - persistedAt < minimumAgeMs))) {
       const metrics = persisted.metrics as {
         latest?: Record<string, Point | null>;
         series?: Record<string, Point[]>;
@@ -871,7 +813,7 @@ export async function GET(request: Request) {
       };
       const storedSeries = metrics.series ?? {};
       const storedCorrelationModel = buildCorrelations(storedSeries);
-      const storedDebtSeries = storedSeries.treasuryDebt?.length ? storedSeries.treasuryDebt : storedSeries.federalDebt ?? [];
+      const storedDebtSeries = storedSeries.treasuryDebt?.length ? storedSeries.treasuryDebt : (storedSeries.federalDebt ?? []).map(point => ({...point,value:point.value/1000}));
       const storedRatioModel = buildRatioModel(storedSeries, storedDebtSeries);
       const storedLatest = metrics.latest ?? {};
       const storedBitcoin = metrics.bitcoin ?? {};
@@ -884,13 +826,13 @@ export async function GET(request: Request) {
         Number.isFinite(storedBitcoin.blockHeight) || Number.isFinite(storedBitcoin.feeFast) || Number.isFinite(storedBitcoin.feeHour),
         Number.isFinite(storedBitcoin.supply) || Number.isFinite(storedBitcoin.hashRate) || Number.isFinite(storedBitcoin.difficulty),
       );
+      const health = snapshotHealth(persisted);
       const storedFreshness = (metrics.freshness ?? []).map((item) => {
-        const observedAt = typeof item.observedAt === "string" ? item.observedAt : null;
-        if (item.key !== "gold" || item.source !== "worldbank" || !observedAt) return item;
-        const ageDays = (Date.now() - Date.parse(observedAt)) / 86_400_000;
-        return { ...item, status: ageDays <= 75 ? "live" : "stale" };
+        const audited = health.indicators.find(row => row.indicator === item.key);
+        return { ...item, status: audited?.status === "STALE" ? "stale" : item.status };
       });
       const storedScores = persisted.scores as Record<string, number>;
+      const storedModelExpired = Date.now() - persistedAt > 36 * 60 * 60_000;
       // Versions written before v33 contained the five parent engines only.
       // Preserve instant availability during the transition, explicitly mark
       // the reading provisional, and let the background daily refresh replace
@@ -911,7 +853,7 @@ export async function GET(request: Request) {
       const hasNativeTenSignals = Number.isFinite(storedScores.money);
       const generatedAt = persisted.requestedAt;
       const nextManualAt = new Date(persistedAt + 15 * 60_000).toISOString();
-      const nextDailyAt = madridWindow.nextBoundary.toISOString();
+      const nextDailyAt = (currentMainEdition ? madridWindow.nextBoundary : madridWindow.currentBoundary).toISOString();
       return Response.json({
         schemaVersion: DATA_SCHEMA_VERSION,
         engineVersion: ENGINE_VERSION,
@@ -919,7 +861,7 @@ export async function GET(request: Request) {
         siteRelease: SITE_RELEASE,
         requestedAt: generatedAt,
         observedAt: generatedAt,
-        refreshMode: manual ? "manual-cooldown" : "daily-edition",
+        refreshMode: manual ? "manual-cooldown" : currentMainEdition ? "daily-edition" : "stale-while-refresh",
         cache: {
           generatedAt,
           validUntil: nextManualAt,
@@ -943,17 +885,19 @@ export async function GET(request: Request) {
           sixForce: storedSixForce,
         },
         freshness: storedFreshness,
+        health,
         upstreams: getUpstreamHealth(),
         provenance: {
           ...persisted.provenance,
           bitcoinNetwork: storedBitcoinNetwork,
-          mode: "daily-persisted",
-          modelStatus: hasNativeTenSignals ? persisted.provenance.modelStatus : "provisional",
+          mode: currentMainEdition ? "daily-persisted" : "stale-persisted",
+          modelStatus: storedModelExpired ? "withheld" : hasNativeTenSignals ? persisted.provenance.modelStatus : "provisional",
+          ...(storedModelExpired ? { modelReady: false, signalReady: Object.fromEntries(Object.keys(persisted.provenance.signalReady ?? {}).map(key => [key,false])), engineReady: Object.fromEntries(Object.keys(persisted.provenance.engineReady ?? {}).map(key => [key,false])) } : {}),
         },
       }, {
         headers: {
           "Cache-Control": "public, max-age=60, s-maxage=900, stale-while-revalidate=86400",
-          "X-ABCM-Refresh": manual ? "manual-cooldown" : "daily-edition",
+          "X-ABCM-Refresh": manual ? "manual-cooldown" : currentMainEdition ? "daily-edition" : "stale-while-refresh",
           "X-ABCM-Next-Manual-Refresh": nextManualAt,
           "X-ABCM-Next-Daily-Edition": nextDailyAt,
           "X-Content-Type-Options": "nosniff",
@@ -963,6 +907,15 @@ export async function GET(request: Request) {
   } catch {
     // The live pipeline remains available when persistence is temporarily down.
   }
+
+  return null;
+}
+
+async function generateEdition(request: Request) {
+  const manual = request.method === "POST";
+  const force = false;
+  const runtimeIsSites = Boolean(getRuntimeBindings()?.DB);
+  const attemptAt = new Date().toISOString();
 
   let results: Record<string, SeriesResult>;
   if (getRuntimeBindings()?.FRED_API_KEY) {
@@ -978,9 +931,7 @@ export async function GET(request: Request) {
   } else {
     results = await fredBatch(force);
   }
-  if (Object.values(results).some((result) => !result.points.length)) {
-    await fillMacroFallbacks(results, force);
-  }
+  const { checks: backupValidation, blsCheckedAt } = await fillMacroFallbacks(results, force);
   for (const [key, result] of Object.entries(results)) {
     results[key] = { ...result, points: normalizePoints(result.points) };
   }
@@ -992,11 +943,11 @@ export async function GET(request: Request) {
     if (persistedSeries) {
       for (const [key, result] of Object.entries(results)) {
         const backup = persistedSeries[key];
-        if (!result.points.length && Array.isArray(backup) && backup.length) {
+        if (Array.isArray(backup) && backup.length && (!result.points.length || (backup.at(-1)?.date ?? "") > (result.points.at(-1)?.date ?? ""))) {
           results[key] = {
-            points: backup,
+            points: normalizePoints(backup),
             error: "live providers unavailable; last verified snapshot",
-            source: result.source,
+            source: (persistedSnapshot?.metrics?.freshness as Array<{key: string; source?: SeriesSource}> | undefined)?.find(item => item.key === key)?.source ?? result.source,
           };
         }
       }
@@ -1006,58 +957,60 @@ export async function GET(request: Request) {
   }
   const series = Object.fromEntries(Object.entries(results).map(([key, result]) => [key, result.points])) as Record<string, Point[]>;
 
-  const [bitcoinSpot, coin, chain] = await Promise.all([
+  // Keep the independent enrichments in one parallel wave. Previously the
+  // network calls ran in two serial waves and could exceed the Worker budget.
+  const treasuryPromise = safeJson("https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny?filter=record_date:gte:2015-01-01&sort=record_date&page%5Bsize%5D=10000", force, 12000);
+  const [bitcoinSpot, coin, chain, fees, heightText, bitcoinChart] = await Promise.all([
     loadBitcoinSpot(true),
     runtimeIsSites
       ? Promise.resolve(null)
       : safeJson("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_last_updated_at=true", true),
     safeJson("https://blockchain.info/stats?format=json", true),
-  ]);
-  const [fees, heightText, bitcoinChart] = await Promise.all([
     safeJson("https://mempool.space/api/v1/fees/recommended", true),
     safeText("https://mempool.space/api/blocks/tip/height"),
     safeJson("https://api.blockchain.info/charts/market-price?timespan=5years&format=json&sampled=true", force),
   ]);
-  const treasury = runtimeIsSites
-    ? null
-    : await safeJson("https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny?filter=record_date:gte:2015-01-01&sort=record_date&page%5Bsize%5D=10000", force);
+  const treasury = await treasuryPromise;
 
   const bitcoinHistory: Point[] = Array.isArray(bitcoinChart?.values)
     ? normalizePoints(bitcoinChart.values.map((item: { x: number; y: number }) => ({
         date: new Date(item.x * 1000).toISOString().slice(0, 10),
-        value: Number(item.y),
-      })))
-    : [];
+        value: finiteObservation(item.y),
+      })).filter((point: {date:string;value:number|null}): point is Point => point.value != null && point.value > 0))
+    : normalizePoints(persistedSnapshot?.metrics?.series?.bitcoin ?? []);
 
   const treasuryDebt: Point[] = Array.isArray(treasury?.data)
     ? normalizePoints(treasury.data.map((item: { record_date?: string; tot_pub_debt_out_amt?: string }) => ({
         date: String(item.record_date ?? ""),
-        value: Number(item.tot_pub_debt_out_amt) / 1_000_000_000,
-      })))
-    : [];
+        value: finiteObservation(item.tot_pub_debt_out_amt) == null ? null : Number(item.tot_pub_debt_out_amt) / 1_000_000_000,
+      })).filter((point: {date:string;value:number|null}): point is Point => point.value != null && point.value > 0))
+    : normalizePoints(persistedSnapshot?.metrics?.series?.treasuryDebt ?? []);
   if (treasuryDebt.length) series.treasuryDebt = treasuryDebt;
 
-  const bitcoinPrice = bitcoinSpot.price ?? coin?.bitcoin?.usd ?? chain?.market_price_usd ?? latest(bitcoinHistory)?.value ?? null;
+  const bitcoinPrice = bitcoinSpot.price ?? persistedSnapshot?.metrics?.bitcoin?.price ?? null;
   const supply = coin?.bitcoin?.usd_market_cap && bitcoinPrice
     ? coin.bitcoin.usd_market_cap / bitcoinPrice
-    : chain?.totalbc ? chain.totalbc / 100_000_000 : 0;
+    : chain?.totalbc ? chain.totalbc / 100_000_000 : null;
   const annualFlow = 3.125 * 144 * 365;
 
-  const m2Growth = change(series.m2, 365);
-  const rateChange = delta(series.fedFunds, 365);
-  const cpiGrowth = change(series.cpi, 365);
-  const oilMomentum = change(series.oil, 90);
-  const dollarMomentum = change(series.dollar, 90);
-  const industrialGrowth = change(series.industrialProduction, 365);
-  const unemploymentChange = delta(series.unemployment, 365);
-  const capacityChange = delta(series.capacityUtilization, 365);
-  const debtSeries = treasuryDebt.length ? treasuryDebt : series.federalDebt;
+  const modelSeries = Object.fromEntries(Object.entries(series).map(([key, points]) => [key,
+    seriesFresh(points, key === "gold" && results.gold.source === "worldbank" ? 75 : MAX_OBSERVATION_AGE_DAYS[key as FredSeriesKey] ?? 14) ? points : [],
+  ])) as Record<string, Point[]>;
+  const m2Growth = change(modelSeries.m2, 365);
+  const rateChange = delta(modelSeries.fedFunds, 365);
+  const cpiGrowth = change(modelSeries.cpi, 365);
+  const oilMomentum = change(modelSeries.oil, 90);
+  const dollarMomentum = change(modelSeries.dollar, 90);
+  const industrialGrowth = change(modelSeries.industrialProduction, 365);
+  const unemploymentChange = delta(modelSeries.unemployment, 365);
+  const capacityChange = delta(modelSeries.capacityUtilization, 365);
+  const debtSeries = treasuryDebt.length ? treasuryDebt : modelSeries.federalDebt.map(point => ({...point,value:point.value/1000}));
   const debtGrowth = change(debtSeries, 365);
-  const debtToGdp = latest(series.debtToGdp)?.value ?? null;
-  const realRate = alignedRealRate(series.fedFunds, series.cpi).value;
+  const debtToGdp = latest(modelSeries.debtToGdp)?.value ?? null;
+  const realRate = alignedRealRate(modelSeries.fedFunds, modelSeries.cpi).value;
   const engineReady: EngineReadiness = {
     liquidity: [m2Growth, rateChange, realRate].every(Number.isFinite),
-    credit: [latest(series.creditSpread)?.value, latest(series.yieldCurve)?.value, latest(series.vix)?.value].every(Number.isFinite),
+    credit: [latest(modelSeries.creditSpread)?.value, latest(modelSeries.yieldCurve)?.value, latest(modelSeries.vix)?.value].every(Number.isFinite),
     realEconomy: [industrialGrowth, unemploymentChange, capacityChange].every(Number.isFinite),
     inflation: [cpiGrowth, oilMomentum, dollarMomentum].every(Number.isFinite),
     fiscal: [debtToGdp, debtGrowth].every(Number.isFinite),
@@ -1065,8 +1018,8 @@ export async function GET(request: Request) {
   const signalReady: SignalReadiness = {
     money: Number.isFinite(m2Growth),
     monetaryStance: [rateChange, realRate].every(Number.isFinite),
-    creditRisk: [latest(series.creditSpread)?.value, latest(series.vix)?.value].every(Number.isFinite),
-    termStructure: Number.isFinite(latest(series.yieldCurve)?.value),
+    creditRisk: [latest(modelSeries.creditSpread)?.value, latest(modelSeries.vix)?.value].every(Number.isFinite),
+    termStructure: Number.isFinite(latest(modelSeries.yieldCurve)?.value),
     production: [industrialGrowth, capacityChange].every(Number.isFinite),
     labour: Number.isFinite(unemploymentChange),
     consumerPrices: Number.isFinite(cpiGrowth),
@@ -1075,8 +1028,8 @@ export async function GET(request: Request) {
     fiscalImpulse: Number.isFinite(debtGrowth),
   };
   const modelInputs = [
-    m2Growth, rateChange, realRate, latest(series.creditSpread)?.value,
-    latest(series.yieldCurve)?.value, latest(series.vix)?.value,
+    m2Growth, rateChange, realRate, latest(modelSeries.creditSpread)?.value,
+    latest(modelSeries.yieldCurve)?.value, latest(modelSeries.vix)?.value,
     industrialGrowth, unemploymentChange, capacityChange, cpiGrowth,
     oilMomentum, dollarMomentum, debtToGdp, debtGrowth,
   ];
@@ -1087,8 +1040,8 @@ export async function GET(request: Request) {
   const signalScores = {
     money: clamp(50 + n(m2Growth) * 6),
     monetaryStance: clamp(45 - n(rateChange) * 8 - n(realRate) * 3),
-    creditRisk: clamp(15 + n(latest(series.creditSpread)?.value) * 17 + n(latest(series.vix)?.value) * 0.9),
-    termStructure: clamp(35 + Math.max(0, -n(latest(series.yieldCurve)?.value)) * 35),
+    creditRisk: clamp(15 + n(latest(modelSeries.creditSpread)?.value) * 17 + n(latest(modelSeries.vix)?.value) * 0.9),
+    termStructure: clamp(35 + Math.max(0, -n(latest(modelSeries.yieldCurve)?.value)) * 35),
     production: clamp(45 - n(industrialGrowth) * 6 - n(capacityChange) * 5),
     labour: clamp(35 + n(unemploymentChange) * 25),
     consumerPrices: clamp(25 + n(cpiGrowth) * 12),
@@ -1135,6 +1088,10 @@ export async function GET(request: Request) {
     key, id, observedAt: latest(series[key])?.date ?? null,
     status: freshnessStatus(key as FredSeriesKey, results[key]),
     error: results[key].error,
+    last_attempt: attemptAt,
+    last_success: results[key].error === "live providers unavailable; last verified snapshot"
+      ? persistedSnapshot?.metrics?.freshness?.find((item: {key:string}) => item.key === key)?.last_success ?? persistedSnapshot?.requestedAt ?? null
+      : series[key].length ? new Date().toISOString() : null,
     source: results[key].source ?? null,
   }));
   const fredAvailable = freshness.filter((item) => item.status === "live").length;
@@ -1148,7 +1105,7 @@ export async function GET(request: Request) {
   const cacheTtlSeconds = 900;
   const editionTtlSeconds = 86_400;
   const madridWindow = dailyMadridWindow(new Date(requestedAt));
-  let payload = {
+  const payload = {
     schemaVersion: DATA_SCHEMA_VERSION,
     engineVersion: ENGINE_VERSION,
     contextModelVersion: CONTEXT_MODEL_VERSION,
@@ -1171,12 +1128,12 @@ export async function GET(request: Request) {
       price: bitcoinPrice,
       change24h: coin?.bitcoin?.usd_24h_change ?? null,
       marketCap: coin?.bitcoin?.usd_market_cap ?? null,
-      priceObservedAt: bitcoinSpot.observedAt ?? (coin?.bitcoin?.last_updated_at ? new Date(coin.bitcoin.last_updated_at * 1000).toISOString() : null),
-      priceConsensus: bitcoinSpot.consensus,
+      priceObservedAt: bitcoinSpot.observedAt ?? persistedSnapshot?.metrics?.bitcoin?.priceObservedAt ?? null,
+      priceConsensus: bitcoinSpot.price == null && bitcoinPrice != null ? "stale" : bitcoinSpot.consensus,
       priceSpreadPercent: bitcoinSpot.spreadPercent,
       priceSources: bitcoinSpot.sources,
       supply,
-      stockToFlow: supply / annualFlow,
+      stockToFlow: supply == null ? null : supply / annualFlow,
       blockHeight: heightText ? Number(heightText) : null,
       hashRate: chain?.hash_rate ?? null,
       difficulty: chain?.difficulty ?? null,
@@ -1196,8 +1153,13 @@ export async function GET(request: Request) {
     freshness,
     upstreams: getUpstreamHealth(),
     provenance: {
+      sourcePolicyVersion: SOURCE_POLICY_VERSION,
+      persistence: "ready",
+      backupValidation,
+      blsCheckedAt,
+      transportHealth: getUpstreamHealth(),
       fred: fredProvenance,
-      bitcoinPrice: bitcoinSpot.price ? bitcoinSpot.provider : coin?.bitcoin ? "CoinGecko" : chain ? "Blockchain.com" : "unavailable",
+      bitcoinPrice: bitcoinSpot.price ? bitcoinSpot.provider : bitcoinPrice != null ? persistedSnapshot?.provenance?.bitcoinPrice ?? "last-known-good" : "unavailable",
       bitcoinNetwork: bitcoinNetworkProvenance(Boolean(heightText || fees), Boolean(chain)),
       bitcoinHistory: bitcoinHistory.length ? "Blockchain.com Charts" : "unavailable",
       federalDebt: treasuryDebt.length
@@ -1220,28 +1182,6 @@ export async function GET(request: Request) {
     },
   };
 
-  if (fredAvailable === 0 && !bitcoinPrice) {
-    try {
-      const persisted = persistedSnapshot ?? await readLatestMacroSnapshot();
-      if (persisted) {
-        payload = {
-          ...payload,
-          latest: persisted.metrics.latest ?? payload.latest,
-          bitcoin: persisted.metrics.bitcoin ?? payload.bitcoin,
-          derived: {
-            ...payload.derived,
-            changes: persisted.metrics.changes ?? payload.derived.changes,
-            scores: persisted.scores ?? payload.derived.scores,
-            regime: persisted.regime ?? payload.derived.regime,
-          },
-          provenance: { ...payload.provenance, ...persisted.provenance, mode: "stale-persisted" },
-        };
-      }
-    } catch {
-      // The client will retain its last valid in-memory snapshot.
-    }
-  }
-
   if (fredAvailable > 0 || bitcoinPrice || treasuryDebt.length) {
     try {
       await recordMacroSnapshot({
@@ -1253,11 +1193,12 @@ export async function GET(request: Request) {
         provenance: payload.provenance,
       }, force);
     } catch {
-      // Persistence must never make the public read-only macro endpoint unavailable.
+      console.error("[snapshot] Durable write failed; serving observations without claiming persistence");
+      payload.provenance.persistence = "failed";
     }
   }
 
-  return Response.json(payload, {
+  return Response.json({...payload, health:snapshotHealth({requestedAt,metrics:{series:payload.series,freshness:payload.freshness,bitcoin:payload.bitcoin},provenance:payload.provenance})}, {
     headers: {
       "Cache-Control": `public, max-age=60, s-maxage=${cacheTtlSeconds}, stale-while-revalidate=${editionTtlSeconds}`,
       "X-ABCM-Refresh": payload.refreshMode,
@@ -1266,6 +1207,31 @@ export async function GET(request: Request) {
       "X-Content-Type-Options": "nosniff",
     },
   });
+}
+
+type BufferedEdition = {body:string;status:number;headers:Array<[string,string]>};
+let editionInFlight: Promise<BufferedEdition> | null = null;
+export async function GET(request: Request) {
+  const stored = await readPersistedEdition(request);
+  if (stored) return stored;
+  // Workers response streams belong to the originating request. Share only
+  // immutable buffered bytes, then create a fresh Response for each visitor.
+  if (!editionInFlight) {
+    const pending = generateEdition(request).then(async response => ({
+      body:await response.text(),status:response.status,headers:[...response.headers.entries()],
+    }));
+    editionInFlight = pending;
+    getRuntimeBindings()?.waitUntil?.(pending.catch(() => undefined));
+    void pending.finally(() => { if (editionInFlight === pending) editionInFlight = null; }).catch(() => undefined);
+  }
+  try {
+    const result = await editionInFlight;
+    return new Response(result.body,{status:result.status,headers:result.headers});
+  } catch {
+    console.error("[snapshot] Edition delivery failed; attempting durable recovery");
+    const recovered = await readPersistedEdition(new Request(request.url));
+    return recovered ?? Response.json({status:"UNAVAILABLE",error:"No durable edition and live refresh failed"},{status:503,headers:{"Cache-Control":"no-store"}});
+  }
 }
 
 export async function POST(request: Request) {

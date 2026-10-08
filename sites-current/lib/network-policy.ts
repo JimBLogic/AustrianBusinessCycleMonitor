@@ -4,6 +4,7 @@ export const ESSENTIAL_SERVER_HOSTS = Object.freeze([
   "api.db.nomics.world",
   "api.bls.gov",
   "cdn.cboe.com",
+  "cdn-api.cboe.com",
   "api.worldbank.org",
   "thedocs.worldbank.org",
   "api.coinbase.com",
@@ -20,7 +21,7 @@ const essentialServerHosts = new Set<string>(ESSENTIAL_SERVER_HOSTS);
 
 export function essentialServerUrl(input: string | URL) {
   const url = input instanceof URL ? input : new URL(input);
-  if (url.protocol !== "https:" || !essentialServerHosts.has(url.hostname)) {
+  if (url.protocol !== "https:" || !essentialServerHosts.has(url.hostname) || url.username || url.password || (url.port && url.port !== "443")) {
     throw new Error(`Blocked outbound host: ${url.hostname}`);
   }
   return url;
