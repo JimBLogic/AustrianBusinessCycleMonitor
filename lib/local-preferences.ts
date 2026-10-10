@@ -74,17 +74,17 @@ export function saveLanguagePreference(language: LanguagePreference) {
   }
 }
 
-export function readWatchlistPreference(): WatchPreference[] {
+export function readWatchlistPreference(): WatchPreference[] | null {
   try {
     const value = localStorageOrNull()?.getItem(WATCHLIST_STORAGE_KEY);
-    if (!value) return [];
+    if (!value) return null;
     const parsed: unknown = JSON.parse(value);
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed)) return null;
     return [...new Set(parsed.filter(
       (key): key is WatchPreference => typeof key === "string" && WATCH_KEYS.includes(key as WatchPreference),
     ))].slice(0, 4);
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -93,9 +93,12 @@ export function saveWatchlistPreference(keys: Iterable<WatchPreference>) {
     .filter((key) => WATCH_KEYS.includes(key))
     .slice(0, 4);
   try {
-    localStorageOrNull()?.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(safeKeys));
+    const storage = localStorageOrNull();
+    if (!storage) return false;
+    storage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(safeKeys));
+    return storage.getItem(WATCHLIST_STORAGE_KEY) === JSON.stringify(safeKeys);
   } catch {
-    // The in-memory watchlist still works.
+    return false;
   }
 }
 
@@ -132,14 +135,17 @@ export function saveManualRefreshPreference(
   previousSnapshot: VisitBaselinePreference,
   nextAllowedAt: number,
 ) {
-  if (!Number.isFinite(nextAllowedAt) || !parseVisitBaseline(previousSnapshot)) return;
+  if (!Number.isFinite(nextAllowedAt) || !parseVisitBaseline(previousSnapshot)) return false;
   try {
-    localStorageOrNull()?.setItem(
+    const storage = localStorageOrNull();
+    if (!storage) return false;
+    storage.setItem(
       MANUAL_REFRESH_STORAGE_KEY,
       JSON.stringify({ previousSnapshot, nextAllowedAt }),
     );
+    return storage.getItem(MANUAL_REFRESH_STORAGE_KEY) === JSON.stringify({ previousSnapshot, nextAllowedAt });
   } catch {
-    // Manual refresh and comparison still work for the current page view.
+    return false;
   }
 }
 

@@ -19,7 +19,9 @@ export function resolveBitcoinConsensus(observations) {
   const confirmed = spreadPercent != null && spreadPercent <= 2;
   return {
     price: confirmed ? midpoint : primary.price,
-    observedAt: usable.map((item) => item.observedAt).sort().at(-1) ?? primary.observedAt,
+    // A combined quote cannot be fresher than its oldest constituent. A
+    // divergent quote retains the timestamp of the selected primary venue.
+    observedAt: confirmed ? usable.map((item) => item.observedAt).sort()[0] : primary.observedAt,
     provider: confirmed ? "Coinbase + Kraken" : primary.source === "coinbase" ? "Coinbase Exchange" : "Kraken",
     consensus: confirmed ? "confirmed" : "divergent",
     spreadPercent,

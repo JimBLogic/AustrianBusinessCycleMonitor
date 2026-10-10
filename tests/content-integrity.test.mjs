@@ -38,8 +38,8 @@ test("retains complete Spanish and English navigation paths", () => {
 
 test("identifies the next immutable Sites release and its canonical repository mirror", () => {
   assert.match(source, /SITE_RELEASE = [1-9][0-9]*/);
-  assert.match(source, /DATA_SCHEMA_VERSION = "1\.4\.0"/);
-  assert.match(source, /CONTEXT_MODEL_VERSION = "abcm-six-force-1"/);
+  assert.match(source, /DATA_SCHEMA_VERSION = "1\.5\.0"/);
+  assert.match(source, /CONTEXT_MODEL_VERSION = "abcm-six-force-2"/);
   assert.match(source, /sites-current/);
   assert.equal(source.includes("Manual refresh uses no-store"), false);
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { retainDashboardSeries } from "@/lib/dashboard-recovery.mjs";
+import { validChartPoints, timePosition, chartSegments } from "@/lib/chart-geometry.mjs";
 import { manualRefreshBlocked } from "@/lib/refresh-policy.mjs";
 import { validTimestamp } from "@/lib/timestamp.mjs";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -207,6 +208,7 @@ function marketFormat(value: number | null | undefined, lang: Lang, digits = 2) 
 }
 
 function sixForceStateLabel(state: string, lang: Lang) {
+  if (state === "stale") return lang === "es" ? "DESACTUALIZADO · NO CONFIRMA" : "STALE · NOT CONFIRMING";
   const labels: Record<string, [string, string]> = {
     "yields-rising": ["YIELDS RISING", "RENDIMIENTOS AL ALZA"],
     "yields-falling": ["YIELDS FALLING", "RENDIMIENTOS A LA BAJA"],
@@ -403,11 +405,7 @@ function sourceStatusLabel(status: string, lang: Lang) {
 }
 
 function prepareChartPoints(points: Point[]) {
-  const byDate = new Map<string, Point>();
-  for (const point of points) {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(point.date) && Number.isFinite(point.value)) byDate.set(point.date, point);
-  }
-  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+  return validChartPoints(points) as Point[];
 }
 
 function formatChartDate(date: string | undefined, lang: Lang) {
@@ -440,11 +438,14 @@ function LineChart({ points, color, unit, horizon, lang, status, state }: { poin
   const plotMin = min - rawRange * 0.08;
   const plotMax = max + rawRange * 0.08;
   const range = plotMax - plotMin || 1;
-  const coords = shown.map((p, i) => ({
-    ...p, x: shown.length === 1 ? 50 : 5 + (i / (shown.length - 1)) * 90,
+  const coords = shown.map((p) => ({
+    ...p, x: timePosition(p.date, shown[0].date, shown.at(-1)!.date),
     y: 88 - ((p.value - plotMin) / range) * 74,
   }));
-  const path = coords.map((p) => `${p.x},${p.y}`).join(" ");
+  const gaps = shown.slice(1).map((point,index)=>(Date.parse(point.date)-Date.parse(shown[index].date))/86400000).sort((a,b)=>a-b);
+  const typicalGap = gaps[Math.floor((gaps.length-1)/2)] ?? 1;
+  // Daily series allow weekends/holidays; monthly/quarterly gaps remain visible.
+  const segments = chartSegments(coords, typicalGap < 7 ? 7 : typicalGap * 1.6) as typeof coords[];
   const selectedIndex = coords.length ? Math.min(cursor ?? coords.length - 1, coords.length - 1) : 0;
   const selected = coords[selectedIndex];
   const start = coords[0];
@@ -457,8 +458,8 @@ function LineChart({ points, color, unit, horizon, lang, status, state }: { poin
   function move(event: React.PointerEvent<SVGSVGElement>) {
     if (!svgRef.current || !coords.length) return;
     const rect = svgRef.current.getBoundingClientRect();
-    const percent = ((event.clientX - rect.left) / rect.width - 0.05) / 0.9;
-    setCursor(Math.max(0, Math.min(coords.length - 1, Math.round(percent * (coords.length - 1)))));
+    const x = (event.clientX - rect.left) / rect.width * 100;
+    setCursor(coords.reduce((nearest,point,index)=>Math.abs(point.x-x)<Math.abs(coords[nearest].x-x)?index:nearest,0));
   }
   function inspectWithKeyboard(event: React.KeyboardEvent<SVGSVGElement>) {
     if (!coords.length) return;
@@ -486,11 +487,12 @@ function LineChart({ points, color, unit, horizon, lang, status, state }: { poin
             <desc id="macro-chart-description">{summary} {lang === "es" ? "Usa las flechas, Inicio y Fin para inspeccionar puntos." : "Use the arrow, Home and End keys to inspect points."}</desc>
             {[14, 32.5, 51, 69.5, 88].map((y) => <line key={y} x1="5" x2="95" y1={y} y2={y} className="grid-line" />)}
             <defs><linearGradient id="macro-chart-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={color} stopOpacity=".32"/><stop offset="1" stopColor={color} stopOpacity="0"/></linearGradient><clipPath id="macro-chart-clip"><rect x="5" y="14" width="90" height="74" /></clipPath></defs>
-            <g clipPath="url(#macro-chart-clip)"><polygon points={`5,88 ${path} 95,88`} fill="url(#macro-chart-area)" /><polyline points={path} fill="none" stroke={color} strokeWidth="1.2" vectorEffect="non-scaling-stroke" /></g>
+            <g clipPath="url(#macro-chart-clip)">{segments.map((segment,index)=><g key={index}><polyline points={segment.map(p=>`${p.x},${p.y}`).join(" ")} fill="none" stroke={color} strokeWidth="1.2" vectorEffect="non-scaling-stroke" />{segment.length === 1 && <circle cx={segment[0].x} cy={segment[0].y} r="1" fill={color}/>}</g>)}</g>
             {selected && <><line x1={selected.x} x2={selected.x} y1="10" y2="90" className="hover-line"/><circle cx={selected.x} cy={selected.y} r="1.5" fill={color}/></>}
           </svg>
         </div>
         <div className="chart-x-axis"><time dateTime={start?.date}>{formatChartDate(start?.date, lang)}</time><b>{lang === "es" ? "DESLIZA PARA INSPECCIONAR" : "SLIDE TO INSPECT"}</b><time dateTime={end?.date}>{formatChartDate(end?.date, lang)}</time></div>
+        <p className="chart-scale-note">{lang === "es" ? "Eje temporal proporcional · escala vertical ajustada al rango observado; no parte necesariamente de cero." : "Proportional time axis · vertical scale fits the observed range and does not necessarily start at zero."}{segments.length > 1 ? (lang === "es" ? " Los huecos largos se muestran sin unir." : " Long gaps are not connected.") : ""}</p>
         <div className="chart-scrubber"><input type="range" min="0" max={Math.max(0, coords.length - 1)} value={selectedIndex} onChange={(event) => setCursor(Number(event.currentTarget.value))} aria-label={lang === "es" ? "Seleccionar una observación de la serie" : "Select a series observation"} aria-valuetext={`${formatChartDate(selected?.date, lang)} · ${marketFormat(selected?.value, lang)} ${unit}`} /><button type="button" onClick={() => setCursor(null)} disabled={selectedIndex === coords.length - 1}>{lang === "es" ? "ÚLTIMO DATO" : "LATEST"} →</button></div>
       </>
         : <div className="chart-empty" role="status"><b>{lang === "es" ? "Histórico no disponible" : "History unavailable"}</b><span>{lang === "es" ? "Se muestra la última observación verificada, sin inventar una tendencia." : "The latest verified observation is shown without inventing a trend."}</span></div>}
@@ -560,9 +562,9 @@ function NormalizedChart({ data, selected, lang }: { data: Data; selected: strin
     const base = series.observations.get(commonMonths[0])!.value;
     return {
       key: series.key,
-      normalized: commonMonths.map((month, index) => ({
+      normalized: commonMonths.map((month) => ({
         month,
-        x: 5 + (index / (commonMonths.length - 1)) * 90,
+        x: timePosition(month, commonMonths[0], commonMonths.at(-1)!),
         normalized: (series.observations.get(month)!.value / base) * 100,
       })),
     };
@@ -602,7 +604,7 @@ function NormalizedChart({ data, selected, lang }: { data: Data; selected: strin
       </div>
       {ready ? <>
         <div className="normal-plot">
-          <div className="normal-y-scale" aria-hidden="true"><span>{Math.round(max)}</span><b>100</b><span>{Math.round(min)}</span></div>
+          <div className="normal-y-scale" aria-hidden="true"><span>{Math.round(max)}</span><b>{Math.round((max+min)/2)}</b><span>{Math.round(min)}</span></div>
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-labelledby="normalized-chart-title normalized-chart-description">
             <title id="normalized-chart-title">{lang === "es" ? "Comparación mensual con base 100" : "Monthly base-100 comparison"}</title>
             <desc id="normalized-chart-description">{summary}</desc>
@@ -611,8 +613,8 @@ function NormalizedChart({ data, selected, lang }: { data: Data; selected: strin
             <g clipPath="url(#normalized-plot-clip)">
               <line x1="5" x2="95" y1={y(100)} y2={y(100)} className="normal-base-line" />
               {lines.map((line, index) => {
-                const path = line.normalized.map((point) => `${point.x},${y(point.normalized)}`).join(" ");
-                return <polyline key={line.key} points={path} fill="none" stroke={mixMeta[line.key].color} strokeDasharray={dash[index]} strokeLinecap="round" strokeWidth="1.45" vectorEffect="non-scaling-stroke" />;
+                const segments = chartSegments(line.normalized.map(point => ({...point,date:`${point.month}-01`})), 32);
+                return <g key={line.key}>{segments.map((segment, segmentIndex) => <g key={segmentIndex}><polyline points={segment.map(point => `${point.x},${y(point.normalized)}`).join(" ")} fill="none" stroke={mixMeta[line.key].color} strokeDasharray={dash[index]} strokeLinecap="round" strokeWidth="1.45" vectorEffect="non-scaling-stroke" />{segment.length === 1 && <circle cx={segment[0].x} cy={y(segment[0].normalized)} r="1" fill={mixMeta[line.key].color}/>}</g>)}</g>;
               })}
             </g>
           </svg>
@@ -807,6 +809,8 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
   const [detail, setDetail] = useState<Detail | null>(null);
   const [visitBaseline, setVisitBaseline] = useState<VisitBaseline | null>(null);
   const [baselineSavedThisVisit, setBaselineSavedThisVisit] = useState(false);
+  const [baselineSessionOnly, setBaselineSessionOnly] = useState(false);
+  const [watchlistSessionOnly, setWatchlistSessionOnly] = useState(false);
   const [watchlist, setWatchlist] = useState<WatchKey[]>(["m2", "creditSpread", "bitcoin"]);
   const [diagnosticScenario, setDiagnosticScenario] = useState(0);
   const previousData = useRef<Data>(initialData ?? fallback);
@@ -834,7 +838,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
   const dataRequestPending = useRef(false);
   useEffect(() => { requestState.current = {lang, manualRefreshNext}; }, [lang, manualRefreshNext]);
   useEffect(() => {
-    const clear = () => { setWatchlist([]); setVisitBaseline(null); setManualRefreshNext(null); setBaselineSavedThisVisit(false); setDisclaimerOpen(true); };
+    const clear = () => { setWatchlist([]); setVisitBaseline(null); setManualRefreshNext(null); setBaselineSavedThisVisit(false); setBaselineSessionOnly(false); setWatchlistSessionOnly(false); setDisclaimerOpen(true); };
     window.addEventListener("abcm:preferences-cleared", clear);
     return () => window.removeEventListener("abcm:preferences-cleared", clear);
   }, []);
@@ -864,8 +868,9 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
       if (manual && userInitiated) {
         const previousSnapshot = snapshotBaseline(old);
         const nextAllowedAt = Date.now() + 30 * 60_000;
-        saveManualRefreshPreference(previousSnapshot, nextAllowedAt);
-        setBaselineSavedThisVisit(true);
+        const saved = saveManualRefreshPreference(previousSnapshot, nextAllowedAt);
+        setBaselineSavedThisVisit(saved);
+        setBaselineSessionOnly(!saved);
         setManualRefreshNext(nextAllowedAt);
         setVisitBaseline(previousSnapshot);
       }
@@ -931,7 +936,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
         if (refreshPreference.nextAllowedAt > Date.now()) setManualRefreshNext(refreshPreference.nextAllowedAt);
       }
       const savedWatchlist = readWatchlistPreference();
-      if (savedWatchlist.length) setWatchlist(savedWatchlist);
+      if (savedWatchlist !== null) setWatchlist(savedWatchlist);
       setClock(Date.now());
       void load(false);
     }, 0);
@@ -1397,7 +1402,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
       const next = current.includes(key)
         ? (current.length === 1 ? current : current.filter((item) => item !== key))
         : current.length >= 4 ? current : [...current, key];
-      saveWatchlistPreference(next);
+      setWatchlistSessionOnly(!saveWatchlistPreference(next));
       return next;
     });
   }
@@ -1491,13 +1496,15 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
       dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Madrid",
     }).format(new Date(visitBaseline.capturedAt))
     : null;
-  const visitStatusLabel = visitBaseline
+  const visitStatusLabel = baselineSessionOnly
+    ? (lang === "es" ? "SÓLO ESTA SESIÓN" : "THIS SESSION ONLY")
+    : visitBaseline
     ? visitAgeLabel
     : loading
       ? (lang === "es" ? "PREPARANDO BASE" : "PREPARING BASELINE")
       : baselineSavedThisVisit
         ? (lang === "es" ? "BASE GUARDADA" : "BASELINE SAVED")
-        : (lang === "es" ? "MEMORIA NO DISPONIBLE" : "MEMORY UNAVAILABLE");
+        : (lang === "es" ? "SIN BASE GUARDADA" : "NO SAVED BASELINE");
   const releasedSinceVisit = visitBaseline
     ? Object.entries(data.latest).filter(([key, point]) => point?.date && point.date !== visitBaseline.latestDates[key]).length
     : null;
@@ -1669,7 +1676,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
       )}
 
       <section className="hero" id="top">
-        <div className="eyebrow"><span className={`live-dot ${loading ? "pulse" : ""}`} /> {t.live} · {data.provenance.mode === "live" || data.provenance.mode === "daily-persisted" ? (lang === "es" ? "AL DÍA" : "CURRENT") : data.provenance.mode === "stale-persisted" ? (lang === "es" ? "ÚLTIMO DATO VÁLIDO" : "LAST VALID DATA") : (lang === "es" ? "ESPERANDO FUENTES" : "AWAITING SOURCES")}</div>
+        <div className="eyebrow"><span className={`live-dot ${loading ? "pulse" : ""}`} /> {t.live} · {data.health?.status === "DEGRADED" ? (lang === "es" ? "DATOS PARCIALES" : "DEGRADED DATA") : data.health?.status === "STALE" ? (lang === "es" ? "DATOS DESACTUALIZADOS" : "STALE DATA") : data.provenance.mode === "live" || data.provenance.mode === "daily-persisted" ? (lang === "es" ? "AL DÍA" : "CURRENT") : data.provenance.mode === "stale-persisted" ? (lang === "es" ? "ÚLTIMO DATO VÁLIDO" : "LAST VALID DATA") : (lang === "es" ? "ESPERANDO FUENTES" : "AWAITING SOURCES")}</div>
         <div className="hero-grid">
           <div>
             <h1>{t.title}</h1><p className="hero-thesis">{t.subtitle}</p>
@@ -1699,12 +1706,14 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
             {refreshNotice && <div className={`refresh-notice ${refreshNotice.includes("failed") || refreshNotice.includes("No se") ? "error" : ""}`} role="status" aria-live="polite">{refreshNotice}</div>}
           </div>
           <article className="regime-card">
-            <div className="card-top"><span>{t.regime}</span><span className="status">{regimeStatus}</span></div>
+            <div className="card-top"><span>{lang === "es" ? "BANDA DEL ÍNDICE" : "INDEX SCORE BAND"}</span><span className="status">{regimeStatus}</span></div>
             <div className="score-row">
               <button className="score-ring" type="button" onClick={openCycleMethodology} style={{"--risk": `${modelAvailable ? cycleScore * 3.6 : 0}deg`} as React.CSSProperties} aria-label={lang === "es" ? "Abrir la metodología del índice" : "Open index methodology"} aria-describedby="regime-summary"><strong>{modelAvailable ? cycleScore : "—"}</strong></button>
               <div><span>{t.risk}</span><b>{t.confidence}: {data.provenance.modelInputsAvailable ?? 0}/{data.provenance.modelInputsTotal ?? 14} {lang === "es" ? "ENTRADAS" : "INPUTS"}</b></div>
             </div>
             <p className="index-boundary">{lang === "es" ? "Escala experimental 0–100. No es una probabilidad de recesión. La cobertura indica datos disponibles, no certeza." : "Experimental 0–100 scale. Not a recession probability. Coverage describes available data, not certainty."}</p>
+            <p className="coverage-scope">{readySignalCount}/10 {lang === "es" ? "señales puntuadas" : "scored signals"} · {availableWeightPercent}% {lang === "es" ? "del peso original" : "of original weight"}</p>
+            <p className="classification-scope">{lang === "es" ? "La banda resume la intensidad del índice; el patrón de los pilares describe su combinación y puede diferir." : "The band summarizes index intensity; the pillar pattern describes its composition and can differ."}</p>
             <div className="score-adaptive" id="regime-summary">
               <span>{modelAvailable ? `${cycle.range} · ${cycle.title}${modelProvisional ? " · PROVISIONAL" : ""}` : (lang === "es" ? "MODELO NO CALCULADO" : "MODEL NOT CALCULATED")}</span>
               <p>{modelAvailable
@@ -1717,7 +1726,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
 
               </div>
             </div>
-            <small>{t.updated}: {snapshotDate ? `${snapshotDate.toISOString().replace("T"," ").slice(0,19)} UTC` : "—"} · {data.provenance.fredAvailable ?? 0}/{data.provenance.fredTotal ?? 0} {lang === "es" ? "SERIES MACRO" : "MACRO SERIES"}</small>
+            <small>{t.updated}: {snapshotDate ? `${snapshotDate.toISOString().replace("T"," ").slice(0,19)} UTC` : "—"} · {data.provenance.fredAvailable ?? 0}/{data.provenance.fredTotal ?? 0} {lang === "es" ? "SERIES MACRO AL DÍA" : "CURRENT MACRO SERIES"}</small>
           </article>
         </div>
       </section>
@@ -1882,7 +1891,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
               <div className="visit-meta"><b>{visitStatusLabel}</b>{visitBaseline && baselineDateLabel && <time dateTime={visitBaseline.capturedAt}>{lang === "es" ? "Base" : "Baseline"}: {baselineDateLabel}</time>}</div>
             </div>
             <div className="change-cells" role="list" aria-label={lang === "es" ? "Cambios desde el punto de comparación" : "Changes since the comparison baseline"}>
-              <div role="listitem"><span>{lang === "es" ? "RÉGIMEN" : "REGIME"}</span><strong>{regimeChanged ? (lang === "es" ? "CAMBIÓ" : "CHANGED") : visitBaseline ? (lang === "es" ? "SIN CAMBIO" : "UNCHANGED") : "—"}</strong><small>{regime.title}</small></div>
+              <div role="listitem"><span>{lang === "es" ? "PATRÓN DE LOS PILARES" : "PILLAR PATTERN"}</span><strong>{regimeChanged ? (lang === "es" ? "CAMBIÓ" : "CHANGED") : visitBaseline ? (lang === "es" ? "SIN CAMBIO" : "UNCHANGED") : "—"}</strong><small>{regime.title}</small></div>
               <div role="listitem"><span>{lang === "es" ? "ÍNDICE" : "INDEX"}</span><strong>{compositeDelta == null ? "—" : `${compositeDelta >= 0 ? "+" : ""}${compositeDelta}`}</strong><small>{modelAvailable ? `${cycleScore}/100` : (lang === "es" ? "No calculado" : "Withheld")}</small></div>
               <div role="listitem"><span>{lang === "es" ? "NUEVAS PUBLICACIONES" : "NEW RELEASES"}</span><strong>{releasedSinceVisit ?? "—"}</strong><small>{lang === "es" ? "Series con una fecha nueva" : "Series with a new date"}</small></div>
               <div role="listitem"><span>BITCOIN</span><strong>{bitcoinDelta == null ? "—" : `${bitcoinDelta >= 0 ? "+" : ""}${marketFormat(bitcoinDelta, lang)}%`}</strong><small>{lang === "es" ? "Desde el punto guardado" : "Since saved baseline"}</small></div>
@@ -1891,7 +1900,8 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
               ? (lang === "es" ? "Punto de comparación guardado en este dispositivo. Los cambios aparecerán aquí cuando regreses." : "Comparison baseline saved on this device. Changes will appear here when you return.")
               : loading
                 ? (lang === "es" ? "Preparando el primer punto de comparación con datos verificados…" : "Preparing the first comparison baseline with verified data…")
-                : (lang === "es" ? "No se pudo guardar un punto de comparación en este dispositivo; el monitor sigue funcionando sin memoria local." : "A comparison baseline could not be saved on this device; the monitor still works without local memory.")}</p>}
+                : (lang === "es" ? "Aún no has guardado un punto de comparación. Usa Actualizar datos para guardar la comparación en este dispositivo." : "You have not saved a comparison baseline yet. Use Refresh data to save the comparison on this device.")}</p>}
+            {baselineSessionOnly && <p role="status">{lang === "es" ? "El navegador no permitió guardar la comparación. Está disponible sólo durante esta sesión." : "The browser could not save the comparison. It is available for this session only."}</p>}
             <div className="brief-reading">
               <b>{lang === "es" ? "LECTURA CONDICIONAL ACTUAL" : "CURRENT CONDITIONAL READING"}</b>
               <p>{modelAvailable
@@ -1905,6 +1915,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
           <aside className="personal-watch" aria-labelledby="watch-title">
             <div><span id="watch-title">{lang === "es" ? "MI RADAR · EN ESTE DISPOSITIVO" : "MY RADAR · ON THIS DEVICE"}</span><b>{watchlist.length}/4</b></div>
             <p>{lang === "es" ? "Elige hasta cuatro variables para encontrarlas juntas cuando vuelvas." : "Choose up to four variables to find together when you return."}</p>
+            {watchlistSessionOnly && <p role="status">{lang === "es" ? "Selección sólo para esta sesión: no se pudo guardar en el navegador." : "Session-only selection: browser storage could not save it."}</p>}
             <div className="watch-picker" role="group" aria-labelledby="watch-title" aria-describedby="watch-limit">{watchChoices.map((item) => {
               const selected = watchlist.includes(item.key);
               return <button type="button" className={selected ? "active" : ""} onClick={() => toggleWatch(item.key)} key={item.key} aria-pressed={selected} disabled={!selected && watchlist.length >= 4}>{selected ? "✓ " : "+ "}{item.label}</button>;
@@ -2327,7 +2338,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
         <div className="proof-grid">
           <a href="/api/health" target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? `Estado de fuentes: ${macroAvailable} de ${macroTotal} series macro disponibles. Abrir estado técnico en una pestaña nueva.` : `Source health: ${macroAvailable} of ${macroTotal} macro series available. Open technical status in a new tab.`}>
             <div className="proof-card-head"><span>01 · {lang === "es" ? "ESTADO DE FUENTES" : "SOURCE HEALTH"}</span><i className={`proof-card-state ${sourceHealthState}`}>{sourceHealthState === "ok" ? (lang === "es" ? "COMPLETO" : "COMPLETE") : sourceHealthState === "partial" ? (lang === "es" ? "PARCIAL" : "PARTIAL") : (lang === "es" ? "SIN COBERTURA" : "NO COVERAGE")}</i></div>
-            <div className="proof-value"><strong>{macroAvailable}/{macroTotal}</strong><small>{lang === "es" ? "SERIES MACRO" : "MACRO SERIES"}</small></div>
+            <div className="proof-value"><strong>{macroAvailable}/{macroTotal}</strong><small>{lang === "es" ? "SERIES MACRO AL DÍA" : "CURRENT MACRO SERIES"}</small></div>
             <p>{lang === "es" ? `${upstreamReady}/${upstreamTotal} proveedores listos · ${upstreamRecovering} reintentando · ${upstreamCooling} en pausa.` : `${upstreamReady}/${upstreamTotal} providers ready · ${upstreamRecovering} retrying · ${upstreamCooling} cooling down.`}</p><b>{lang === "es" ? "Abrir estado" : "Open status"} ↗</b>
           </a>
           <a href="/api/data-manifest" target="_blank" rel="noopener noreferrer" aria-label={lang === "es" ? `Contrato de datos, esquema ${DATA_SCHEMA_VERSION}. Abrir contrato técnico en una pestaña nueva.` : `Data contract, schema ${DATA_SCHEMA_VERSION}. Open the technical contract in a new tab.`}>
