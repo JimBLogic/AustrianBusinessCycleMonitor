@@ -7,11 +7,15 @@ on:
     paths:
       - "sites-current/**"
       - ".github/workflows/sites-current.yml"
+      - "automation/production-daily*"
+      - ".github/workflows/production-data.yml"
   pull_request:
     branches: [master]
     paths:
       - "sites-current/**"
       - ".github/workflows/sites-current.yml"
+      - "automation/production-daily*"
+      - ".github/workflows/production-data.yml"
   workflow_dispatch:
 
 permissions:
@@ -44,6 +48,7 @@ jobs:
 
       - name: Validate maintained source
         run: |
+          node --test ../automation/production-daily.test.mjs
           npm run lint
           npm test
           npm audit --omit=dev --audit-level=high

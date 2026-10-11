@@ -1,0 +1,13 @@
+✔ a delayed October cron catches up instead of silently skipping after noon (21.869479ms)
+✔ an existing post-noon edition is verified without a duplicate refresh (0.338821ms)
+✔ pre-noon observations and missing, corrupt or future timestamps require recovery (0.729678ms)
+✔ winter and summer UTC slots preserve the Madrid noon boundary (0.478908ms)
+✔ a previous Madrid date is not mistaken for the current edition (0.286804ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 145.905706
