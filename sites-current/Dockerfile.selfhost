@@ -9,6 +9,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./
+COPY vendor/braces-bounded ./vendor/braces-bounded
 RUN npm ci
 
 COPY . .

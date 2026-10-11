@@ -1,0 +1,286 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> austrian-business-cycle-monitor@0.1.0 test
+> npm run build && node --test tests/*.test.mjs
+
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> austrian-business-cycle-monitor@0.1.0 build
+> bash scripts/build-verified.sh
+
+Checking TypeScript...
+Running bounded vinext build...
+
+  vinext build  (Vite 8.2.1)
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - JSON import "./.openai/hosting.json" without import attributes (vite.config.ts:3:27). Add `with { type: 'json' }`
+  - import "./build/sites-vite-plugin" without a file extension (vite.config.ts:4:23). Add the file extension
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProxy environment variables detected. We'll use your proxy for fetch requests.[0m
+
+
+[1/5] analyze client references...
+[2K
+transforming...✓ 171 modules transformed.
+rendering chunks...
+✓ built in 516ms
+[2/5] analyze server references...
+[2K
+transforming...✓ 74 modules transformed.
+rendering chunks...
+✓ built in 128ms
+[3/5] build rsc environment...
+[2K
+transforming...✓ 177 modules transformed.
+rendering chunks...
+computing gzip size...
+✓ built in 473ms
+[4/5] build client environment...
+[2K
+transforming...✓ 81 modules transformed.
+rendering chunks...
+computing gzip size...
+✓ built in 195ms
+[5/5] build ssr environment...
+[2K
+transforming...✓ 80 modules transformed.
+rendering chunks...
+computing gzip size...
+✓ built in 302ms
+[0m
+  Route (app)
+  ┌ ƒ /
+  ├ λ /api/bitcoin
+  ├ λ /api/data
+  ├ λ /api/data-manifest
+  ├ λ /api/health
+  ├ λ /api/source-health
+  ├ ? /aviso-legal
+  ├ ? /learn
+  ├ ? /learn/austrian-economics
+  ├ ? /learn/bitcoin-sovereignty
+  └ ? /privacidad
+
+  λ API  ƒ Dynamic  ? Unknown
+
+  ? Some routes could not be classified. vinext currently uses static analysis
+    and cannot detect dynamic API usage (headers(), cookies(), etc.) at build time.
+    Automatic classification will be improved in a future release.
+
+  Build complete. Run `vinext start` to start the production server.
+
+Validated Sites artifact: ESM Worker default.fetch and hosting manifest are present.
+✔ labels the Ammous section and its editorial boundary (0.763649ms)
+✔ exposes the three numbered layers as an ordered analysis (0.133408ms)
+✔ keeps fact, thesis and counterpoint explicitly separated (0.117443ms)
+✔ names the academic publication instead of using a generic link (0.095661ms)
+✔ opens all six evidence links safely and accessibly (0.16288ms)
+✔ makes every evidence link touch-sized with visible keyboard focus (0.119607ms)
+✔ keeps three equal cards and removes the correct responsive borders (0.123623ms)
+✔ excludes engines without coverage from extrema and divergence (0.990664ms)
+✔ withholds unavailable engine values without disabling their explanation (0.236951ms)
+✔ reports partial source coverage and explicit state counts (0.141579ms)
+✔ source evidence links follow the actual provider and expose dates semantically (0.131004ms)
+✔ five engine cards remain balanced and keyboard focus stays visible (0.299182ms)
+✔ resolves confirmed, divergent and single-source Bitcoin quotes (1.741553ms)
+✔ every installed glob consumer uses the pinned security backport (10.995405ms)
+✔ string and direct AST guards protect all recursive public entry points (16.384767ms)
+✔ published stack-exhaustion payload is rejected in a bounded child process (75.430448ms)
+✔ cyclic expansion parent chains stop before an unbounded loop (3.872126ms)
+✔ normal globs, ranges and escaping retain published semantics (32.372997ms)
+✔ describes the four cases as a documented counterfactual matrix (1.060787ms)
+✔ states that the matrix is neither causal evidence nor a backtest (0.210441ms)
+✔ provides a distinct layer, mechanism, lag, falsifier and exclusion for every case (0.204152ms)
+✔ implements the complete keyboard tab pattern (0.574548ms)
+✔ labels each expected classification without claiming runtime success (0.206725ms)
+✔ balances scenario tabs without breakpoint-specific border hacks (0.40635ms)
+✔ labels the Cava section and keeps its decorative index out of the accessibility tree (1.378237ms)
+✔ restores focus after opening the contextual dialog (0.179636ms)
+✔ keeps the three-pillar reconstruction exact and explicitly contextual (0.173486ms)
+✔ states inspiration without implying authorship, affiliation or endorsement (0.160447ms)
+✔ makes external destinations explicit and safe (0.280114ms)
+✔ provides balanced, readable and touch-sized controls (0.199254ms)
+✔ retains complete Spanish and English navigation paths (1.798627ms)
+✔ identifies the next immutable Sites release and its canonical repository mirror (2.4026ms)
+✔ publishes ten auditable signals with durable daily editions (0.520208ms)
+✔ aligns the main edition to Madrid noon and preserves per-browser comparisons (0.448873ms)
+✔ documents resilient Bitcoin sourcing and truthful initial UI states (0.646735ms)
+✔ removes personal routes and applies browser hardening headers (0.609019ms)
+✔ documents the maintained release and a reproducible local full-stack rebuild (0.907561ms)
+✔ ships the exact Sites application as a persistent local container mirror (8.428412ms)
+✔ documents path-scoped CI without weakening either deployment gate (1.349253ms)
+✔ does not reintroduce retired or access-blocked public links (1.388141ms)
+✔ does not reintroduce removed starter or generated artifacts (1.643748ms)
+✔ pairs equal, consecutive calendar months before calculating returns (0.886559ms)
+✔ withholds small samples and caps the moving window (0.176651ms)
+✔ returns auditable sample size and period for every pair (0.284821ms)
+✔ uses a centered signed meter instead of a left-aligned absolute bar (0.312142ms)
+✔ makes all six cards honest, accessible dialog triggers (0.178734ms)
+✔ keeps the card grid balanced at desktop, tablet and phone widths (0.245553ms)
+✔ uses the current data contract instead of a stale methodology badge (0.785681ms)
+✔ states the 70 percent publication rule with signal, weight and input coverage (0.162089ms)
+✔ keeps verified components visible while withholding only the composite (0.153667ms)
+✔ never activates a low-distortion band without a published score (0.145816ms)
+✔ labels the article, calculation and external evidence semantically (0.218763ms)
+✔ preserves direct keyboard-friendly navigation to methodology and sources (0.178113ms)
+✔ balances ten calculation cards as five, two and one columns (0.229079ms)
+✔ all three educational series retain primary and fallback data paths (6.493313ms)
+✔ never presents fallback zeros as verified signal readings (1.058314ms)
+✔ keeps an individually verified signal auditable when the composite is withheld (0.309748ms)
+✔ exposes the signal strip and each dialog trigger to assistive technology (0.586666ms)
+✔ moves focus into the dialog, traps Tab and restores the signal trigger (0.318431ms)
+✔ balances cards with independent borders at every breakpoint (0.31802ms)
+✔ keeps English signal inputs and readings fully localized (0.312311ms)
+✔ monthly World Bank gold health does not claim a daily LBMA equivalent (8.689097ms)
+✔ uses the aligned monthly Bitcoin-gold ratio instead of mixing spot dates (1.266651ms)
+✔ removes arbitrary visual rankings and explains qualitative dependencies (0.135149ms)
+✔ cites current inputs for the 2025 gold stock-to-flow estimate (0.145515ms)
+✔ reports Bitcoin price and network provenance without conflating providers (0.15554ms)
+✔ withholds unavailable market or network readings instead of rendering zero (0.13592ms)
+✔ uses semantic headings, definitions and secure evidence links (0.173246ms)
+✔ localizes values, dates and every dependency description (0.12875ms)
+✔ keeps the three-card composition balanced through responsive breakpoints (0.519418ms)
+✔ exposes the influence map as a labelled bibliography (0.701657ms)
+✔ keeps the eight selected voices and public sources intact (0.25704ms)
+✔ preserves the boundary between influence, protocol facts and ABCM authorship (0.133096ms)
+✔ opens every source safely with a concise accessible name (0.099597ms)
+✔ keeps the card grid balanced and resilient (0.191463ms)
+✔ provides an explicit keyboard focus state without changing the palette (0.177602ms)
+✔ 48 bilingual questions have stable unique IDs, four choices and explicit sources (1.321302ms)
+✔ randomization varies question and choice order without mutating content or grading (7.619717ms)
+✔ invalid answers cannot inflate scores and retry rounds start empty (0.375354ms)
+✔ loaded snapshots have valid timestamps without epoch fallback (0.607237ms)
+✔ a manual request before Madrid noon cannot block the scheduled edition (0.712012ms)
+✔ empty watchlist persists, and blocked storage never reports a successful save (1.421821ms)
+✔ replaces fixed risk decoration with verified model pressure (1.352848ms)
+✔ keeps missing observations visibly unavailable rather than neutral (0.173146ms)
+✔ shows localized value units, observation dates and source state (0.31785ms)
+✔ links the inspector to the provider that actually supplied the observation (0.199675ms)
+✔ implements complete keyboard selection and an accessible reading panel (0.563052ms)
+✔ exposes the two lenses as pressed controls with visible focus (0.172895ms)
+✔ keeps ten cards balanced at desktop, tablet and phone widths (0.393081ms)
+✔ sanitizes, deduplicates and orders verified observations (1.096139ms)
+✔ never substitutes fallback history for an unavailable live series (0.20343ms)
+✔ uses the selected series actual provider and evidence destination (0.221618ms)
+✔ implements the complete keyboard pattern for series tabs (0.618985ms)
+✔ localizes the horizons, values, dates and units (0.158434ms)
+✔ supports pointer, keyboard and touch-friendly slider inspection (0.152025ms)
+✔ labels and clips both axes without allowing chart overflow (0.380302ms)
+✔ keeps the terminal balanced from desktop to narrow phones (0.363767ms)
+✔ aligns mixed-frequency series on shared calendar months before normalization (1.602418ms)
+✔ withholds the chart when a verifiable common period is unavailable (0.59601ms)
+✔ clamps and clips every plotted line inside the chart rectangle (0.346442ms)
+✔ documents the scale, period and non-return interpretation (0.122491ms)
+✔ exposes an accessible multi-select control and chart description (1.621205ms)
+✔ keeps controls balanced and touch-sized across breakpoints (0.238713ms)
+✔ corrupt Bitcoin timestamps cannot abort a refresh (2.307159ms)
+✔ empty, corrupt and older provider histories retain last known good observations (9.081797ms)
+✔ unavailable scores are null while an eligible true zero remains zero (0.310109ms)
+✔ Bitcoin status and timestamps describe the quotes actually used (0.402825ms)
+✔ quarterly debt comparisons align end-of-period dates without mutating source observations (0.512748ms)
+✔ charts reject impossible dates and preserve elapsed time and missing intervals (0.366531ms)
+✔ localizes all three pillar labels while preserving their order (0.754424ms)
+✔ describes a conditional transmission chain without claiming proven causality (0.141118ms)
+✔ withholds unsupported pillar readings instead of formatting a false score (0.52139ms)
+✔ uses semantic section, list and card structure (0.149271ms)
+✔ declares the dialog interaction and restores focus to its trigger (0.256239ms)
+✔ explains what the experimental score does and does not mean (0.126587ms)
+✔ keeps three balanced cards and four readable process steps (0.152064ms)
+✔ source contains no app cookies, tracking, fingerprinting, embeds or forms (88.814533ms)
+✔ browser persistence is centralized and limited to four documented preferences (71.650587ms)
+✔ local preferences are omitted from same-origin API requests (4.050975ms)
+✔ server requests pass through the explicit HTTPS host allowlist (10.738735ms)
+✔ personal workspace, authentication and file APIs are not shipped (2.299257ms)
+✔ production client contains no cookie, tracking or hidden browser databases (29.039684ms)
+✔ uses the canonical schema version instead of a stale label (1.185531ms)
+✔ explains source coverage and endpoint state (0.516373ms)
+✔ opens verified evidence safely with explicit accessible names (0.613216ms)
+✔ keeps proof cards balanced and visibly stateful (0.255628ms)
+✔ uses monthly averages from the latest shared calendar month (1.041249ms)
+✔ withholds stale debt instead of dividing observations from different years (0.233875ms)
+✔ aligns the nominal rate and CPI inflation to the same month (0.174097ms)
+✔ returns auditable evidence and recomputes it for durable snapshots (0.227546ms)
+✔ separates ratios from the provisional composite pressure score (0.319061ms)
+✔ makes every card an accessible dialog trigger with focus restoration (0.169861ms)
+✔ balances five cards across desktop, tablet and phone widths (0.342516ms)
+✔ renders the public monitor with production security headers (292.850078ms)
+✔ serves every public learning route in both languages (138.059678ms)
+✔ font styles refer to portable public assets that exist in the production bundle (17.642384ms)
+✔ validates device-local return data before using it (1.163359ms)
+✔ keeps the four-variable limit explicit and non-destructive (0.266153ms)
+✔ labels radar units, freshness and observation dates (0.842094ms)
+✔ balances one to four selected radar cards without empty grid cells (0.181248ms)
+✔ models exactly six descriptive forces without a scored color (1.09ms)
+✔ uses official Treasury and Chicago Fed series with truthful semantics (2.226509ms)
+✔ publishes conditional patterns, divergence and falsification (7.96013ms)
+✔ renders sources, observation dates and responsive accessible cards (0.364919ms)
+✔ writer policy is accepted, incompatible policy is not (1.047858ms)
+✔ corrupt, empty and invalid rows cannot mask a usable snapshot (1.184349ms)
+✔ partial newer editions retain independent history explicitly stale (0.266023ms)
+✔ partial browser refresh preserves series and the newer independent BTC pulse (4.660325ms)
+[upstream:FRED_CSV_BATCH] fred-csv: timeout, invalid payload or network failure
+[upstream:FRED_CSV] M2SL fred-csv: timeout, invalid payload or network failure
+[upstream:FRED_CSV] FEDFUNDS fred-csv: timeout, invalid payload or network failure
+[upstream:FRED_CSV] DGS10 fred-csv: timeout, invalid payload or network failure
+[upstream:FRED_CSV] DGS2 fred-csv is cooling down after repeated upstream failures
+[upstream:FRED_CSV] T10Y2Y fred-csv is cooling down after repeated upstream failures
+[upstream:FRED_CSV] BAA10Y fred-csv is cooling down after repeated upstream failures
+[upstream:FRED_CSV] CPIAUCSL fred-csv is cooling down after repeated upstream failures
+[upstream:FRED_CSV] UNRATE fred-csv is cooling down after repeated upstream failures
+[upstream:FRED_CSV] GFDEBTN fred-csv is cooling down after repeated upstream failures
+[upstream:FRED_CSV] GFDEGDQ188S fred-csv is cooling down after repeated upstream failures
+[upstream:FRED_CSV] DCOILWTICO fred-csv is cooling down after repeated upstream failures
+[upstream:FRED_CSV] DTWEXBGS fred-csv is cooling down after repeated upstream failures
+[upstream:FRED_CSV] SP500 fred-csv is cooling down after repeated upstream failures
+[upstream:FRED_CSV] VIXCLS fred-csv is cooling down after repeated upstream failures
+[upstream:FRED_CSV] INDPRO fred-csv is cooling down after repeated upstream failures
+[upstream:FRED_CSV] TCU fred-csv is cooling down after repeated upstream failures
+[upstream:FRED_CSV] A191RL1Q225SBEA fred-csv is cooling down after repeated upstream failures
+[upstream:FRED_CSV] CFSBCACTIVITYMFG fred-csv is cooling down after repeated upstream failures
+[upstream:api.db.nomics.world/v22/series/FED/H15/RIFLGFCY10_N.B] api.db.nomics.world: timeout, invalid payload or network failure
+[upstream:api.db.nomics.world/v22/series/FED/H6_H6_M2/M2.M] api.db.nomics.world: timeout, invalid payload or network failure
+[upstream:api.db.nomics.world/v22/series/FED/H10/JRXWTFB_N.B] api.db.nomics.world is cooling down after repeated upstream failures
+[upstream:api.db.nomics.world/v22/series/FED/G17_IP_MAJOR_INDUSTRY_GROUPS/IP.B50001.S] api.db.nomics.world is cooling down after repeated upstream failures
+[upstream:api.db.nomics.world/v22/series/FED/G17_CAPUTL/CAPUTL.B50001.S] api.db.nomics.world is cooling down after repeated upstream failures
+[upstream:api.db.nomics.world/v22/series/EIA/PET/RWTC.D] api.db.nomics.world is cooling down after repeated upstream failures
+[upstream:api.db.nomics.world/v22/series/FED/H15/RIFLGFCY10_N.B] api.db.nomics.world is cooling down after repeated upstream failures
+[upstream:api.db.nomics.world/v22/series/FED/H15/RIFLGFCY02_N.B] api.db.nomics.world is cooling down after repeated upstream failures
+[upstream:api.db.nomics.world/v22/series/FED/H15/RIFSPFF_N.M] api.db.nomics.world: timeout, invalid payload or network failure
+[upstream:api.db.nomics.world/v22/series/FED/H15/RIFLGFCY02_N.B] api.db.nomics.world: timeout, invalid payload or network failure
+[upstream:api.bls.gov/publicAPI/v2/timeseries/data] bls: timeout, invalid payload or network failure
+[upstream:FRED_CSV] DBAA fred-csv is cooling down after repeated upstream failures
+[upstream:FRED_CSV] DGS10 fred-csv is cooling down after repeated upstream failures
+[upstream:cdn-api.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv] cdn-api.cboe.com: timeout, invalid payload or network failure
+[upstream:cdn-api.cboe.com/api/global/us_indices/daily_prices/SPX_History.csv] cdn-api.cboe.com: timeout, invalid payload or network failure
+[upstream:cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv] cdn.cboe.com: timeout, invalid payload or network failure
+[upstream:cdn.cboe.com/api/global/us_indices/daily_prices/SPX_History.csv] cdn.cboe.com: timeout, invalid payload or network failure
+[upstream:mempool.space/api/v1/fees/recommended] mempool.space: timeout, invalid payload or network failure
+[upstream:mempool.space/api/blocks/tip/height] mempool.space: timeout, invalid payload or network failure
+[upstream:blockchain.info/stats] blockchain.info: timeout, invalid payload or network failure
+[upstream:api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny] api.fiscaldata.treasury.gov: timeout, invalid payload or network failure
+[upstream:api.blockchain.info/charts/market-price] api.blockchain.info: timeout, invalid payload or network failure
+✔ cold-start pipeline preserves sources, runs comparisons and rejects fake spot fallbacks (2177.381941ms)
+✔ missing, null, blank and sentinels do not become fake zeros (2.126892ms)
+✔ Cboe parser selects CLOSE by header and validates date/schema (0.979767ms)
+✔ Baa spread uses exact observation dates, never nearest day or monthly proxy (11.470125ms)
+✔ comparison distinguishes failure, stale observations, disagreement and matching data (0.756578ms)
+✔ transport rejects HTML 200, malformed JSON and oversized bodies (4.626225ms)
+✔ promotion evidence counts distinct days, not repeated requests, and never switches automatically (0.472478ms)
+✔ serves the last verified edition immediately while a daily refresh is pending (0.700845ms)
+✔ keeps independent enrichment requests in one bounded parallel wave (0.294415ms)
+✔ uses the three documented pillars in their transmission order (0.874692ms)
+✔ keeps asset prices and CPI outside the three-pillar evidence chain (0.12917ms)
+✔ withholds unsupported metrics and the regime instead of formatting false zeros (0.225193ms)
+✔ labels the sequence as conditional rather than proven causation (0.161959ms)
+✔ uses semantic ordered data and exposes the framework link (0.120358ms)
+✔ keeps metrics readable on narrow screens (0.245112ms)
+✔ actual Workers transport accepts valid JSON and blocks redirects before a second host (3340.856641ms)
+ℹ tests 164
+ℹ suites 0
+ℹ pass 164
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 6118.711776
