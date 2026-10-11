@@ -1,0 +1,50 @@
+name: Sites v25
+
+on:
+  pull_request:
+    paths:
+      - "sites-v25/**"
+      - ".github/workflows/sites-v25.yml"
+  push:
+    branches:
+      - master
+    paths:
+      - "sites-v25/**"
+      - ".github/workflows/sites-v25.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sites-v25-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Build, tests, and container
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sites-v25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.0"
+          cache: npm
+          cache-dependency-path: sites-v25/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm run install:ci
+
+      - name: Build and test the Sites artifact
+        run: npm test
+
+      - name: Validate Docker Compose
+        run: docker compose config
+
+      - name: Build the reproducible container
+        run: docker build --target validate .

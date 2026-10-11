@@ -1,0 +1,81 @@
+version: "2026-07-16.1"
+metrics:
+  fed_funds_effective_pct:
+    name: Effective Federal Funds Rate
+    unit: percent
+    method: latest
+    required_series: [us_fed_funds_effective]
+    description: Latest monthly effective federal funds rate available as of the snapshot date.
+
+  treasury_10y_pct:
+    name: 10-Year Treasury Rate
+    unit: percent
+    method: latest
+    required_series: [us_treasury_10y]
+    description: Latest monthly 10-year Treasury constant maturity rate.
+
+  treasury_2y_pct:
+    name: 2-Year Treasury Rate
+    unit: percent
+    method: latest
+    required_series: [us_treasury_2y]
+    description: Latest monthly 2-year Treasury constant maturity rate.
+
+  capacity_utilization_pct:
+    name: Capacity Utilization
+    unit: percent
+    method: latest
+    required_series: [us_capacity_utilization]
+    description: Latest total industry capacity utilization reading.
+
+  m2_yoy_pct:
+    name: M2 Year-over-Year Growth
+    unit: percent
+    method: percent_change
+    required_series: [us_m2]
+    parameters:
+      lag_months: 12
+    description: Percentage change in the M2 level from the same month one year earlier.
+
+  cpi_yoy_pct:
+    name: CPI Year-over-Year Inflation
+    unit: percent
+    method: percent_change
+    required_series: [us_cpi_all_urban]
+    parameters:
+      lag_months: 12
+    description: Percentage change in CPI from the same month one year earlier.
+
+  industrial_production_yoy_pct:
+    name: Industrial Production Year-over-Year Growth
+    unit: percent
+    method: percent_change
+    required_series: [us_industrial_production]
+    parameters:
+      lag_months: 12
+    description: Percentage change in industrial production from the same month one year earlier.
+
+  total_debt_yoy_pct:
+    name: Total Debt Year-over-Year Growth
+    unit: percent
+    method: percent_change
+    required_series: [us_total_debt]
+    parameters:
+      lag_months: 12
+    description: Percentage change in total debt securities and loans from four quarters earlier.
+
+  yield_curve_10y_2y_spread_pp:
+    name: 10-Year Minus 2-Year Treasury Spread
+    unit: percentage_points
+    method: difference
+    required_series: [us_treasury_10y, us_treasury_2y]
+    description: Difference between aligned monthly 10-year and 2-year Treasury rates.
+
+  real_fed_funds_proxy_pp:
+    name: Ex-Post Real Federal Funds Rate Proxy
+    unit: percentage_points
+    method: policy_rate_minus_yoy_inflation
+    required_series: [us_fed_funds_effective, us_cpi_all_urban]
+    parameters:
+      inflation_lag_months: 12
+    description: Effective federal funds rate minus contemporaneous year-over-year CPI inflation; an ex-post proxy, not an estimate of the natural rate.

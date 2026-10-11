@@ -1,0 +1,6 @@
+{
+  "mises_human_action": "https://mises.org/library/human-action",
+  "mises_case_for_genuine_gold_dollar": "https://mises.org/mises-daily/case-genuine-gold-dollar",
+  "jeff_booth_price_of_tomorrow": "https://www.jeffbooth.com/the-price-of-tomorrow",
+  "notes": "Centralized list of canonical source URLs used across the app to reduce link rot. Prefer these over deep anchors."
+}

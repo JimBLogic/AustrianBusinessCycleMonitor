@@ -1,0 +1,87 @@
+{
+  "production": {
+    "brand": {
+      "title": "Austrian Business Cycle Monitor",
+      "subtitle": "Auditable macroeconomic indicators built from official data and versioned formulas",
+      "badge": "Evidence-first economic monitoring"
+    },
+    "status": {
+      "complete": "Complete",
+      "degraded": "Partial coverage",
+      "unavailable": "Unavailable",
+      "available": "Current",
+      "stale": "Stale",
+      "loading": "Loading verified data",
+      "storeUnavailable": "Verified data store unavailable",
+      "firstSnapshot": "Waiting for the first verified snapshot",
+      "invalidContract": "The verified-data response could not be validated"
+    },
+    "actions": {
+      "retry": "Retry",
+      "revalidate": "Revalidate",
+      "showAll": "Show all {{count}} indicators",
+      "showLess": "Show fewer indicators",
+      "source": "Primary source"
+    },
+    "snapshot": {
+      "eyebrow": "Verified macroeconomic snapshot",
+      "title": "Trusted economic data",
+      "description": "The figures below are read from a persisted, deterministic snapshot. Opening this page does not call FRED, recalculate indicators, or activate the legacy analysis engine.",
+      "coverage": "Coverage",
+      "asOf": "Knowledge date",
+      "generated": "Generated",
+      "methodology": "Methodology",
+      "observation": "Observation date",
+      "freshness": "Age",
+      "days": "{{count}} days",
+      "notAvailable": "Not available",
+      "formula": "Formula and provenance",
+      "noSource": "No source observation was available for this indicator.",
+      "technicalReason": "Technical reason",
+      "snapshotId": "Snapshot",
+      "registry": "Registry",
+      "inputs": "Inputs",
+      "emptyMessage": "The application is online, but no deterministic snapshot has been persisted yet. The operator must run the trusted FRED ingestion and snapshot build.",
+      "storeMessage": "The read-only SQLite store cannot be opened. No simulated or replacement figures are displayed.",
+      "contractMessage": "The API returned data that did not match the versioned frontend contract. The dashboard rejected it rather than displaying uncertain values."
+    },
+    "methodology": {
+      "title": "How to read this monitor",
+      "intro": "This is an evidence layer, not an automatic investment signal. It separates measured data, deterministic transformations, and economic interpretation.",
+      "official": {
+        "title": "Official observations",
+        "body": "Series are ingested from FRED and stored with observation dates, real-time vintages, retrieval timestamps, source URLs, and payload hashes."
+      },
+      "deterministic": {
+        "title": "Versioned calculations",
+        "body": "Year-over-year changes and spreads use explicit formulas and exact date alignment. Missing inputs remain unavailable instead of being interpolated."
+      },
+      "interpretation": {
+        "title": "Interpretation boundary",
+        "body": "The monitor does not claim to estimate the natural interest rate, predict recessions with certainty, or provide personalised financial advice."
+      }
+    },
+    "metrics": {
+      "fed_funds_effective_pct": {"name": "Effective federal funds rate", "context": "Observed policy rate in the federal funds market."},
+      "treasury_10y_pct": {"name": "10-year Treasury yield", "context": "Long-term US Treasury benchmark yield."},
+      "treasury_2y_pct": {"name": "2-year Treasury yield", "context": "Shorter-term US Treasury benchmark yield."},
+      "capacity_utilization_pct": {"name": "Capacity utilisation", "context": "Share of available industrial capacity currently in use."},
+      "m2_yoy_pct": {"name": "M2 annual growth", "context": "Year-over-year change in the broad M2 money stock."},
+      "cpi_yoy_pct": {"name": "CPI annual inflation", "context": "Year-over-year change in the consumer price index."},
+      "industrial_production_yoy_pct": {"name": "Industrial production annual growth", "context": "Year-over-year change in the industrial production index."},
+      "total_debt_yoy_pct": {"name": "Total debt annual growth", "context": "Year-over-year change in total debt securities and loans."},
+      "yield_curve_10y_2y_spread_pp": {"name": "10Y–2Y Treasury spread", "context": "Difference between aligned 10-year and 2-year Treasury yields."},
+      "real_fed_funds_proxy_pp": {"name": "Ex-post real federal funds proxy", "context": "Effective federal funds rate minus contemporaneous annual CPI inflation. This is not an estimate of the natural rate."}
+    },
+    "errorBoundary": {
+      "title": "The dashboard could not be rendered",
+      "description": "An unexpected browser error interrupted the verified-data view.",
+      "action": "Reload the page. If the problem persists, record the message below and the browser version."
+    },
+    "footer": {
+      "scope": "Educational and analytical project. Not financial advice.",
+      "privacy": "No account, tracking profile, or personal financial data is required.",
+      "source": "Open-source implementation with verifiable primary-source lineage."
+    }
+  }
+}

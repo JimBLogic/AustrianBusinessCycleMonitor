@@ -1,0 +1,63 @@
+{
+  "name": "austrian-business-cycle-monitor",
+  "version": "0.2.0",
+  "description": "Austrian Business Cycle Monitor - Modern Monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\" --names \"backend,frontend\" --prefix-colors \"blue,green\"",
+    "start:backend": "cd packages/backend && poetry run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000",
+    "start:frontend": "cd packages/frontend && npm run dev",
+    "dev": "npm run start",
+    "dev:backend": "npm run start:backend",
+    "dev:frontend": "npm run start:frontend",
+    "install:all": "npm run install:backend && npm run install:frontend",
+    "install:backend": "cd packages/backend && poetry install",
+    "install:frontend": "cd packages/frontend && npm install",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd packages/backend && poetry run pytest",
+    "test:frontend": "cd packages/frontend && npm test",
+    "test:e2e": "cd packages/e2e && npm test",
+    "test:coverage": "npm run test:backend -- --cov && npm run test:frontend -- --coverage",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd packages/backend && poetry run ruff check . && poetry run black --check .",
+    "lint:frontend": "cd packages/frontend && npm run lint",
+    "lint:fix": "npm run lint:backend -- --fix && npm run lint:frontend -- --fix",
+    "format": "npm run format:backend && npm run format:frontend",
+    "format:backend": "cd packages/backend && poetry run black . && poetry run ruff check . --fix",
+    "format:frontend": "cd packages/frontend && npm run format",
+    "type-check": "npm run type-check:frontend",
+    "type-check:frontend": "cd packages/frontend && npm run type-check",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:backend": "cd packages/backend && poetry build",
+    "build:frontend": "cd packages/frontend && npm run build",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "clean": "npm run clean:backend && npm run clean:frontend",
+    "clean:backend": "cd packages/backend && rm -rf .pytest_cache __pycache__ .coverage htmlcov dist",
+    "clean:frontend": "cd packages/frontend && rm -rf node_modules dist .vite"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "keywords": [
+    "austrian-economics",
+    "business-cycle",
+    "economic-monitoring",
+    "financial-analysis",
+    "market-analysis"
+  ],
+  "author": "Austrian Business Cycle Monitor Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor.git"
+  }
+}
