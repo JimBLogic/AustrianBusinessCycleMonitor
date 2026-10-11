@@ -45,3 +45,7 @@ Dependencies: eight high findings traced to one vulnerable braces parser. Vulner
 Build and test log, lint log, audit JSON and compact public health evidence are included. Source/SSR tests do not count as visual browser verification. Reports under `../audit-20261010/` are historical checkpoints; this review supersedes their open gold-metadata item, not their captured production evidence.
 
 Release remains blocked until the dependency gate is remediated or explicitly dispositioned after further evidence, compatible browser QA passes (desktop/mobile, ES/EN, charts, refresh, console/network), relevant GitHub checks are reviewed, and a separate publication decision is made. Creating this PR is not authorization to merge or deploy.
+
+## CI follow-up
+
+The first GitHub run (38128000476) exposed a test-loader portability issue: Node 22.14 rejected a direct `.ts` import in the new local-preferences test, despite local Node 24 passing. The test now transpiles the actual implementation with the locked TypeScript compiler, as the gold test already does; it neither duplicates application logic nor relies on experimental Node flags. Production code and dependency versions are unchanged. Full CI is rerun on this correction. Log whitespace was normalized for clean diff checks without altering test outcomes.
