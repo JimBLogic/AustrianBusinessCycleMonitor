@@ -4,6 +4,7 @@ import { retainDashboardSeries } from "@/lib/dashboard-recovery.mjs";
 import { validChartPoints, timePosition, chartSegments } from "@/lib/chart-geometry.mjs";
 import { manualRefreshBlocked } from "@/lib/refresh-policy.mjs";
 import { validTimestamp } from "@/lib/timestamp.mjs";
+import { validBitcoinQuote } from "@/lib/bitcoin-quote.mjs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   hasAcceptedEducationalNotice,
@@ -884,6 +885,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
   const loadBitcoin = useCallback(async () => {
     try {
       const response = await fetch("/api/bitcoin", {
+        signal: AbortSignal.timeout(20_000),
         cache: "no-store",
         credentials: "omit",
         referrerPolicy: "no-referrer",
@@ -895,8 +897,9 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
         priceSpreadPercent: number | null; priceSources: string[];
         upstreams?: Data["upstreams"];
       };
-      if (!Number.isFinite(pulse.price)) return;
+      if (!validBitcoinQuote(pulse)) return;
       setData((current) => {
+        if (validBitcoinQuote(current.bitcoin) && Date.parse(current.bitcoin.priceObservedAt!) > Date.parse(pulse.priceObservedAt!)) return current;
         const next = {
           ...current,
           bitcoin: {

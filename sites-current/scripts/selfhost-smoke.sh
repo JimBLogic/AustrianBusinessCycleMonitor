@@ -22,7 +22,8 @@ ABCM_DATA_DIR="${runtime_dir}/data" ABCM_INTERNAL_PORT="${port}" ABCM_BIND_IP="1
 server_pid=$!
 
 for _ in $(seq 1 45); do
-  if curl -fsS "http://127.0.0.1:${port}/api/health" >"${runtime_dir}/health.json"; then
+  if node scripts/check-runtime-health.mjs "http://127.0.0.1:${port}/api/health" >"${runtime_dir}/readiness.json" 2>/dev/null; then
+    curl -sS --max-time 5 "http://127.0.0.1:${port}/api/health" >"${runtime_dir}/health.json"
     break
   fi
   if ! kill -0 "${server_pid}" 2>/dev/null; then

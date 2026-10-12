@@ -50,7 +50,9 @@ jobs:
         run: |
           node --test ../automation/production-daily.test.mjs
           npm run lint
+          npm run typecheck
           npm test
+          bash scripts/selfhost-smoke.sh
           npm audit --omit=dev --audit-level=high
 
       - name: Validate exact self-host Compose

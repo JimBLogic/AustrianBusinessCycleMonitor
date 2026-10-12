@@ -8,7 +8,8 @@ const moduleUrl = source => 'data:text/javascript;base64,' + Buffer.from(ts.tran
 const registry = moduleUrl(await readFile(new URL('../app/data/source-registry.ts',import.meta.url),'utf8'));
 const source = (await readFile(new URL('../app/data/snapshot-health.ts',import.meta.url),'utf8'))
   .replace("'./source-registry'",JSON.stringify(registry))
-  .replace("'../../lib/gold-metadata.mjs'",JSON.stringify(new URL('../lib/gold-metadata.mjs',import.meta.url).href));
+  .replace("'../../lib/gold-metadata.mjs'",JSON.stringify(new URL('../lib/gold-metadata.mjs',import.meta.url).href))
+  .replace("'../../lib/bitcoin-quote.mjs'",JSON.stringify(new URL('../lib/bitcoin-quote.mjs',import.meta.url).href));
 const {snapshotHealth} = await import(moduleUrl(source));
 
 test('monthly World Bank gold health does not claim a daily LBMA equivalent', () => {
@@ -30,4 +31,20 @@ test('monthly World Bank gold health does not claim a daily LBMA equivalent', ()
   const daily=snapshotHealth(snapshot,Date.parse('2026-10-10T12:00:00Z')).indicators.find(x=>x.indicator==='gold');
   assert.equal(daily.metric,'GOLDAMGBD228NLBM');
   assert.match(daily.unit,/daily LBMA/);
+});
+
+test('health never reports corrupt quotes as fresh and respects explicit recovered STALE status', () => {
+  const now=Date.parse('2026-10-12T10:00:00Z');
+  const quote={price:80000,priceObservedAt:'2026-10-12T09:59:00Z',priceConsensus:'confirmed'};
+  const snapshot={requestedAt:'2026-10-12T10:00:00Z',metrics:{series:{},freshness:[],bitcoin:quote},provenance:{}};
+  assert.equal(snapshotHealth(snapshot,now).indicators.at(-1).status,'HEALTHY');
+  snapshot.metrics.bitcoin={...quote,priceConsensus:'stale'};
+  assert.equal(snapshotHealth(snapshot,now).indicators.at(-1).status,'STALE');
+  for (const priceObservedAt of ['broken','2999-01-01T00:00:00Z','2026-02-30T10:00:00Z']) {
+    snapshot.metrics.bitcoin={...quote,priceObservedAt};
+    const health=snapshotHealth(snapshot,now);
+    assert.equal(health.indicators.at(-1).status,'UNAVAILABLE');
+    assert.equal(health.indicators.at(-1).last_valid_value,null);
+    assert.equal(health.status,'UNAVAILABLE');
+  }
 });

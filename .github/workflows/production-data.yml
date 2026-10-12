@@ -5,6 +5,9 @@ on:
     paths:
       - '.github/workflows/production-data.yml'
       - 'sites-current/scripts/verify-production.mjs'
+      - 'sites-current/scripts/production-daily.mjs'
+      - 'sites-current/lib/production-verification.mjs'
+      - 'sites-current/lib/timestamp.mjs'
       - 'automation/production-daily.mjs'
   schedule:
     - cron: '0 10,11 * * *'

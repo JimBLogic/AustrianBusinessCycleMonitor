@@ -17,12 +17,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Refresh at noon Europe/Madrid and verify actual data
-        shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = schedule ] && [ "$(TZ=Europe/Madrid date +%H)" != 12 ]; then exit 0; fi
-          if [ -f sites-current/scripts/verify-production.mjs ]; then
-            node sites-current/scripts/verify-production.mjs --refresh
-          else
-            node scripts/verify-production.mjs --refresh
-          fi
+      - name: Validate daily recovery policy
+        run: node --test tests/daily-production.test.mjs
+      - name: Refresh or verify Madrid edition, including delayed scheduled runs
+        run: node scripts/production-daily.mjs

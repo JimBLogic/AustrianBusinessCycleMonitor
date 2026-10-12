@@ -1,3 +1,5 @@
+import { validBitcoinQuote } from './bitcoin-quote.mjs';
+
 /** Preserve independently verified series if a later partial response loses them.
  * Model readiness remains that of the new response; recovery never invents scores.
  */
@@ -13,8 +15,9 @@ export function retainDashboardSeries(previous, incoming) {
     next.freshness.push({...old,key,status:'last-known-good',error:'Partial refresh; retained last verified observations',observedAt:points.at(-1).date});
   }
   const prior=previous.bitcoin;
-  if(prior?.price!=null && (incoming.bitcoin.price==null || Date.parse(prior.priceObservedAt)>Date.parse(incoming.bitcoin.priceObservedAt))) {
-    next.bitcoin={...incoming.bitcoin,price:prior.price,priceObservedAt:prior.priceObservedAt,priceConsensus:incoming.bitcoin.price==null?'stale':prior.priceConsensus,priceSources:prior.priceSources};
+  const incomingQuoteValid=validBitcoinQuote(incoming.bitcoin);
+  if(validBitcoinQuote(prior) && (!incomingQuoteValid || Date.parse(prior.priceObservedAt)>Date.parse(incoming.bitcoin.priceObservedAt))) {
+    next.bitcoin={...incoming.bitcoin,price:prior.price,priceObservedAt:prior.priceObservedAt,priceConsensus:incomingQuoteValid?prior.priceConsensus:'stale',priceSources:prior.priceSources};
   }
   return next;
 }

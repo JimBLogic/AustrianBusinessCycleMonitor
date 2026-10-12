@@ -1,4 +1,5 @@
 import { WORLD_BANK_GOLD } from '../../lib/gold-metadata.mjs';
+import { validBitcoinQuote } from '../../lib/bitcoin-quote.mjs';
 import { FRED_SERIES, MAX_OBSERVATION_AGE_DAYS } from './source-registry';
 
 type Point = {date:string;value:number};
@@ -34,13 +35,13 @@ export function snapshotHealth(snapshot:Snapshot|null, now=Date.now()) {
       unit:key==='federalDebt'?'USD millions':key==='gold'?(monthlyGold?WORLD_BANK_GOLD.unit:'USD per troy ounce, daily LBMA AM fixing'):null};
   });
   const btc=snapshot?.metrics.bitcoin;
-  const price=typeof btc?.price==='number'&&Number.isFinite(btc.price)?btc.price:null;
-  const stamp=btc?.priceObservedAt;
-  const stale=!stamp||now-Date.parse(stamp)>15*60_000;
+  const price=validBitcoinQuote(btc, now)?btc!.price!:null;
+  const stamp=price==null?undefined:btc?.priceObservedAt;
+  const stale=!stamp||btc?.priceConsensus==='stale'||now-Date.parse(stamp)>15*60_000;
   indicators.push({indicator:'bitcoin',metric:'BTC-USD spot',source:snapshot?.provenance.bitcoinPrice as string??'Coinbase + Kraken',status:price==null?'UNAVAILABLE':stale?'STALE':btc?.priceConsensus==='confirmed'?'HEALTHY':'DEGRADED',
     last_attempt:snapshot?.requestedAt??null,last_success:stamp??null,last_valid_value:price,observation_date:stamp??null,
-    freshness:{state:price==null?'UNAVAILABLE':stale?'STALE':'FRESH',age_days:stamp?(now-Date.parse(stamp))/86400000:null,max_age_days:15/1440},
-    failure_reason:price==null?'Both spot providers unavailable':stale?'Last verified spot quote; live pulse has a separate timestamp':null,
+    freshness:{state:price==null?'UNAVAILABLE':stale?'STALE':'FRESH',age_days:stamp?Math.max(0,now-Date.parse(stamp))/86400000:null,max_age_days:15/1440},
+    failure_reason:price==null?'No verified spot quote in durable snapshot':stale?'Last verified spot quote; live pulse has a separate timestamp':null,
     fallback:{configured:'Coinbase ↔ Kraken, same BTC/USD spot; then durable last-known-good',active:stale?'last-known-good':null},unit:'USD per BTC'});
   const available=indicators.filter(row=>row.last_valid_value!=null).length;
   const fresh=indicators.filter(row=>row.freshness.state==='FRESH').length;

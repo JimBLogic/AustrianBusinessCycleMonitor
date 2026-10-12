@@ -189,12 +189,20 @@ docker compose --env-file .env.selfhost -f compose.selfhost.yml ps
 Verify it through the configured domain:
 
 ```bash
-curl -fsS https://YOUR_DOMAIN/api/health
+curl -sS https://YOUR_DOMAIN/api/health
 curl -fsS https://YOUR_DOMAIN/api/data-manifest
 ```
 
 The `abcm-worker-data` volume preserves shared macro editions across image
 replacements. Back it up before host migrations or major runtime upgrades.
+Startup applies the versioned, idempotent self-host schema before starting the
+Worker. It can adopt a v86/v88 database without deleting its observations.
+Public requests validate the schema; they never create or alter tables.
+An empty database correctly returns HTTP 503 and `UNAVAILABLE` from data health
+while reporting the database as ready. Container liveness and the smoke test
+use `scripts/check-runtime-health.mjs` to distinguish that state from a failed
+Worker/database; they do not declare the data healthy. After the first refresh,
+check values, dates and explicit stale/failure fields independently.
 Run one `monitor` replica: the local D1 emulator is a
 single-host persistence layer, not a distributed database.
 
