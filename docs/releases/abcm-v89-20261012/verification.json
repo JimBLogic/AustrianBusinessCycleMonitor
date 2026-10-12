@@ -1,0 +1,21 @@
+{
+  "publicURL": "https://austrian-business-cycle-monitor.jimblogic.chatgpt.site/?lang=es#top",
+  "release": 89,
+  "snapshot": "2026-10-12T05:23:09.378Z",
+  "availability": "20/20",
+  "freshAtCheck": 15,
+  "status": "DEGRADED",
+  "cooldown": "manual-cooldown",
+  "sameDurableEdition": true,
+  "publicReload": "PASS: values and 30-minute browser cooldown restored after hydration",
+  "charts": "12 actual public chart tabs: PASS",
+  "ES_EN": "PASS: selection and values retained on language switching",
+  "mobile": "UNVERIFIED: cloud browser has no viewport emulation",
+  "siteOriginWarningsOrErrorsCaptured": 0,
+  "browserExtensionMetadataErrorsExcluded": true,
+  "persistenceBeforeReview": "2026-10-11T21:40:28.667Z",
+  "sitesSource": "94c74d5d8a61338c1096f725271aba4d58414a23",
+  "GitHubReleaseCommit": "ce1edfd051f4a2e32b8269efee81de1b37f34484",
+  "exactAppTree": "418dda6ea167c518898c2638e76e1dc989b1d056",
+  "deployID": "appgdep_6acc6e6b8cbc8191886ee92f76736fc7"
+}
