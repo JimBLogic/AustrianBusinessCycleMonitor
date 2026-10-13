@@ -8,6 +8,13 @@ const health=await(await fetch(`${origin}/api/health`,{signal:AbortSignal.timeou
 verifyProduction(data,health);
 const metrics={latest:data.latest,series:data.series,bitcoin:data.bitcoin,changes:data.derived.changes,derived:{correlations:data.derived.correlations,correlationEvidence:data.derived.correlationEvidence,ratios:data.derived.ratios,ratioEvidence:data.derived.ratioEvidence,sixForce:data.derived.sixForce},freshness:data.freshness};
 const quote=value=>`'${String(value).replaceAll("'","''")}'`;
-const values=['ci-real-public-snapshot',data.requestedAt,data.refreshMode,data.derived.regime,JSON.stringify(data.derived.scores),JSON.stringify(metrics),JSON.stringify(data.provenance),new Date().toISOString()];
-await writeFile(process.argv[2],`INSERT INTO macro_snapshots (id,requested_at,refresh_mode,regime,scores_json,metrics_json,provenance_json,created_at) VALUES (${values.map(quote).join(',')});\n`);
+const id='ci-real-public-snapshot';
+const values=[id,data.requestedAt,data.refreshMode,data.derived.regime,'','','',new Date().toISOString()];
+// Wrangler's SQL import has a per-statement size limit. Append bounded chunks
+// without truncating histories or altering observations to make tests pass.
+const statements=[`INSERT INTO macro_snapshots (id,requested_at,refresh_mode,regime,scores_json,metrics_json,provenance_json,created_at) VALUES (${values.map(quote).join(',')});`];
+for (const [column,value] of Object.entries({scores_json:JSON.stringify(data.derived.scores),metrics_json:JSON.stringify(metrics),provenance_json:JSON.stringify(data.provenance)})) {
+  for (let offset=0;offset<value.length;offset+=16000) statements.push(`UPDATE macro_snapshots SET ${column}=${column} || ${quote(value.slice(offset,offset+16000))} WHERE id=${quote(id)};`);
+}
+await writeFile(process.argv[2],statements.join('\n')+'\n');
 console.log(JSON.stringify({seed:'real-public-observations',release:data.siteRelease,snapshot:data.requestedAt,coverage:data.provenance.modelInputsAvailable}));
