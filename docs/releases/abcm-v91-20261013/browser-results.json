@@ -1,0 +1,1289 @@
+{
+  "config": {
+    "argv": [
+      "/opt/hostedtoolcache/node/22.14.0/x64/bin/node",
+      "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/node_modules/.bin/playwright",
+      "test"
+    ],
+    "configFile": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/playwright.config.ts",
+    "rootDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests",
+    "failOnFlakyTests": false,
+    "forbidOnly": true,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 1200000,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/commit/9937e3156c053615822e41b48acc65b2c30e079c",
+        "commitHash": "9937e3156c053615822e41b48acc65b2c30e079c",
+        "buildHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/actions/runs/38386248950"
+      },
+      "gitCommit": {
+        "shortHash": "9937e31",
+        "hash": "9937e3156c053615822e41b48acc65b2c30e079c",
+        "subject": "Merge v91 atomic durable refresh and production verification (#24)",
+        "body": "Merge v91 atomic durable refresh and production verification (#24)\n\nReturn the durable edition after concurrent refreshes; verify v91",
+        "author": {
+          "name": "Jaime Ramsden De Frutos",
+          "email": "59376321+JimBLogic@users.noreply.github.com",
+          "time": 1791888703000
+        },
+        "committer": {
+          "name": "GitHub",
+          "email": "noreply@github.com",
+          "time": 1791888703000
+        },
+        "branch": "master"
+      },
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/commit/9937e3156c053615822e41b48acc65b2c30e079c",
+            "commitHash": "9937e3156c053615822e41b48acc65b2c30e079c",
+            "buildHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/actions/runs/38386248950"
+          },
+          "gitCommit": {
+            "shortHash": "9937e31",
+            "hash": "9937e3156c053615822e41b48acc65b2c30e079c",
+            "subject": "Merge v91 atomic durable refresh and production verification (#24)",
+            "body": "Merge v91 atomic durable refresh and production verification (#24)\n\nReturn the durable edition after concurrent refreshes; verify v91",
+            "author": {
+              "name": "Jaime Ramsden De Frutos",
+              "email": "59376321+JimBLogic@users.noreply.github.com",
+              "time": 1791888703000
+            },
+            "committer": {
+              "name": "GitHub",
+              "email": "noreply@github.com",
+              "time": 1791888703000
+            },
+            "branch": "master"
+          },
+          "actualWorkers": 1
+        },
+        "id": "desktop-chromium",
+        "name": "desktop-chromium",
+        "testDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/commit/9937e3156c053615822e41b48acc65b2c30e079c",
+            "commitHash": "9937e3156c053615822e41b48acc65b2c30e079c",
+            "buildHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/actions/runs/38386248950"
+          },
+          "gitCommit": {
+            "shortHash": "9937e31",
+            "hash": "9937e3156c053615822e41b48acc65b2c30e079c",
+            "subject": "Merge v91 atomic durable refresh and production verification (#24)",
+            "body": "Merge v91 atomic durable refresh and production verification (#24)\n\nReturn the durable edition after concurrent refreshes; verify v91",
+            "author": {
+              "name": "Jaime Ramsden De Frutos",
+              "email": "59376321+JimBLogic@users.noreply.github.com",
+              "time": 1791888703000
+            },
+            "committer": {
+              "name": "GitHub",
+              "email": "noreply@github.com",
+              "time": 1791888703000
+            },
+            "branch": "master"
+          },
+          "actualWorkers": 1
+        },
+        "id": "desktop-firefox",
+        "name": "desktop-firefox",
+        "testDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/commit/9937e3156c053615822e41b48acc65b2c30e079c",
+            "commitHash": "9937e3156c053615822e41b48acc65b2c30e079c",
+            "buildHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/actions/runs/38386248950"
+          },
+          "gitCommit": {
+            "shortHash": "9937e31",
+            "hash": "9937e3156c053615822e41b48acc65b2c30e079c",
+            "subject": "Merge v91 atomic durable refresh and production verification (#24)",
+            "body": "Merge v91 atomic durable refresh and production verification (#24)\n\nReturn the durable edition after concurrent refreshes; verify v91",
+            "author": {
+              "name": "Jaime Ramsden De Frutos",
+              "email": "59376321+JimBLogic@users.noreply.github.com",
+              "time": 1791888703000
+            },
+            "committer": {
+              "name": "GitHub",
+              "email": "noreply@github.com",
+              "time": 1791888703000
+            },
+            "branch": "master"
+          },
+          "actualWorkers": 1
+        },
+        "id": "iphone-webkit",
+        "name": "iphone-webkit",
+        "testDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      },
+      {
+        "outputDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/commit/9937e3156c053615822e41b48acc65b2c30e079c",
+            "commitHash": "9937e3156c053615822e41b48acc65b2c30e079c",
+            "buildHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/actions/runs/38386248950"
+          },
+          "gitCommit": {
+            "shortHash": "9937e31",
+            "hash": "9937e3156c053615822e41b48acc65b2c30e079c",
+            "subject": "Merge v91 atomic durable refresh and production verification (#24)",
+            "body": "Merge v91 atomic durable refresh and production verification (#24)\n\nReturn the durable edition after concurrent refreshes; verify v91",
+            "author": {
+              "name": "Jaime Ramsden De Frutos",
+              "email": "59376321+JimBLogic@users.noreply.github.com",
+              "time": 1791888703000
+            },
+            "committer": {
+              "name": "GitHub",
+              "email": "noreply@github.com",
+              "time": 1791888703000
+            },
+            "branch": "master"
+          },
+          "actualWorkers": 1
+        },
+        "id": "android-chromium",
+        "name": "android-chromium",
+        "testDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 120000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/commit/9937e3156c053615822e41b48acc65b2c30e079c",
+            "commitHash": "9937e3156c053615822e41b48acc65b2c30e079c",
+            "buildHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/actions/runs/38386248950"
+          },
+          "gitCommit": {
+            "shortHash": "9937e31",
+            "hash": "9937e3156c053615822e41b48acc65b2c30e079c",
+            "subject": "Merge v91 atomic durable refresh and production verification (#24)",
+            "body": "Merge v91 atomic durable refresh and production verification (#24)\n\nReturn the durable edition after concurrent refreshes; verify v91",
+            "author": {
+              "name": "Jaime Ramsden De Frutos",
+              "email": "59376321+JimBLogic@users.noreply.github.com",
+              "time": 1791888703000
+            },
+            "committer": {
+              "name": "GitHub",
+              "email": "noreply@github.com",
+              "time": 1791888703000
+            },
+            "branch": "master"
+          },
+          "actualWorkers": 1
+        },
+        "name": "desktop-chromium",
+        "testDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests",
+        "snapshotDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 120000,
+        "use": {
+          "baseURL": "https://austrian-business-cycle-monitor.jimblogic.chatgpt.site",
+          "actionTimeout": 20000,
+          "navigationTimeout": 45000,
+          "screenshot": "only-on-failure",
+          "trace": "retain-on-failure",
+          "reducedMotion": "reduce",
+          "locale": "en-US",
+          "timezoneId": "Europe/Madrid",
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.8078.4 Safari/537.36",
+          "viewport": {
+            "width": 1440,
+            "height": 900
+          },
+          "screen": {
+            "width": 1920,
+            "height": 1080
+          },
+          "deviceScaleFactor": 1,
+          "isMobile": false,
+          "hasTouch": false,
+          "defaultBrowserType": "chromium"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "desktop-chromium"
+      },
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/commit/9937e3156c053615822e41b48acc65b2c30e079c",
+            "commitHash": "9937e3156c053615822e41b48acc65b2c30e079c",
+            "buildHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/actions/runs/38386248950"
+          },
+          "gitCommit": {
+            "shortHash": "9937e31",
+            "hash": "9937e3156c053615822e41b48acc65b2c30e079c",
+            "subject": "Merge v91 atomic durable refresh and production verification (#24)",
+            "body": "Merge v91 atomic durable refresh and production verification (#24)\n\nReturn the durable edition after concurrent refreshes; verify v91",
+            "author": {
+              "name": "Jaime Ramsden De Frutos",
+              "email": "59376321+JimBLogic@users.noreply.github.com",
+              "time": 1791888703000
+            },
+            "committer": {
+              "name": "GitHub",
+              "email": "noreply@github.com",
+              "time": 1791888703000
+            },
+            "branch": "master"
+          },
+          "actualWorkers": 1
+        },
+        "name": "desktop-firefox",
+        "testDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests",
+        "snapshotDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 120000,
+        "use": {
+          "baseURL": "https://austrian-business-cycle-monitor.jimblogic.chatgpt.site",
+          "actionTimeout": 20000,
+          "navigationTimeout": 45000,
+          "screenshot": "only-on-failure",
+          "trace": "retain-on-failure",
+          "reducedMotion": "reduce",
+          "locale": "en-US",
+          "timezoneId": "Europe/Madrid",
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:157.0) Gecko/20100101 Firefox/157.0",
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "screen": {
+            "width": 1920,
+            "height": 1080
+          },
+          "deviceScaleFactor": 1,
+          "isMobile": false,
+          "hasTouch": false,
+          "defaultBrowserType": "firefox"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "desktop-firefox"
+      },
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/commit/9937e3156c053615822e41b48acc65b2c30e079c",
+            "commitHash": "9937e3156c053615822e41b48acc65b2c30e079c",
+            "buildHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/actions/runs/38386248950"
+          },
+          "gitCommit": {
+            "shortHash": "9937e31",
+            "hash": "9937e3156c053615822e41b48acc65b2c30e079c",
+            "subject": "Merge v91 atomic durable refresh and production verification (#24)",
+            "body": "Merge v91 atomic durable refresh and production verification (#24)\n\nReturn the durable edition after concurrent refreshes; verify v91",
+            "author": {
+              "name": "Jaime Ramsden De Frutos",
+              "email": "59376321+JimBLogic@users.noreply.github.com",
+              "time": 1791888703000
+            },
+            "committer": {
+              "name": "GitHub",
+              "email": "noreply@github.com",
+              "time": 1791888703000
+            },
+            "branch": "master"
+          },
+          "actualWorkers": 1
+        },
+        "name": "iphone-webkit",
+        "testDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests",
+        "snapshotDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 120000,
+        "use": {
+          "baseURL": "https://austrian-business-cycle-monitor.jimblogic.chatgpt.site",
+          "actionTimeout": 20000,
+          "navigationTimeout": 45000,
+          "screenshot": "only-on-failure",
+          "trace": "retain-on-failure",
+          "reducedMotion": "reduce",
+          "locale": "en-US",
+          "timezoneId": "Europe/Madrid",
+          "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/27.2 Mobile/15E148 Safari/604.1",
+          "viewport": {
+            "width": 390,
+            "height": 664
+          },
+          "screen": {
+            "width": 390,
+            "height": 844
+          },
+          "deviceScaleFactor": 3,
+          "isMobile": true,
+          "hasTouch": true,
+          "defaultBrowserType": "webkit"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "iphone-webkit"
+      },
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/commit/9937e3156c053615822e41b48acc65b2c30e079c",
+            "commitHash": "9937e3156c053615822e41b48acc65b2c30e079c",
+            "buildHref": "https://github.com/JimBLogic/AustrianBusinessCycleMonitor/actions/runs/38386248950"
+          },
+          "gitCommit": {
+            "shortHash": "9937e31",
+            "hash": "9937e3156c053615822e41b48acc65b2c30e079c",
+            "subject": "Merge v91 atomic durable refresh and production verification (#24)",
+            "body": "Merge v91 atomic durable refresh and production verification (#24)\n\nReturn the durable edition after concurrent refreshes; verify v91",
+            "author": {
+              "name": "Jaime Ramsden De Frutos",
+              "email": "59376321+JimBLogic@users.noreply.github.com",
+              "time": 1791888703000
+            },
+            "committer": {
+              "name": "GitHub",
+              "email": "noreply@github.com",
+              "time": 1791888703000
+            },
+            "branch": "master"
+          },
+          "actualWorkers": 1
+        },
+        "name": "android-chromium",
+        "testDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests",
+        "snapshotDir": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 120000,
+        "use": {
+          "baseURL": "https://austrian-business-cycle-monitor.jimblogic.chatgpt.site",
+          "actionTimeout": 20000,
+          "navigationTimeout": 45000,
+          "screenshot": "only-on-failure",
+          "trace": "retain-on-failure",
+          "reducedMotion": "reduce",
+          "locale": "en-US",
+          "timezoneId": "Europe/Madrid",
+          "userAgent": "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.8078.4 Mobile Safari/537.36",
+          "viewport": {
+            "width": 412,
+            "height": 839
+          },
+          "screen": {
+            "width": 412,
+            "height": 915
+          },
+          "deviceScaleFactor": 2.625,
+          "isMobile": true,
+          "hasTouch": true,
+          "defaultBrowserType": "chromium"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": "android-chromium"
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "html",
+        {
+          "open": "never"
+        }
+      ],
+      [
+        "json",
+        {
+          "outputFile": "results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.64.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "dashboard.spec.ts",
+      "file": "dashboard.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "en: real data, all charts, layout and navigation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-chromium",
+              "projectName": "desktop-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 8406,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:53:01.123Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-976ae913869c0468a203",
+          "file": "dashboard.spec.ts",
+          "line": 19,
+          "column": 33
+        },
+        {
+          "title": "es: real data, all charts, layout and navigation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-chromium",
+              "projectName": "desktop-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 8006,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:53:10.493Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-e77c3140c2d206ee2bc9",
+          "file": "dashboard.spec.ts",
+          "line": 19,
+          "column": 33
+        },
+        {
+          "title": "real API edition is durable across reads and browser reload",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-chromium",
+              "projectName": "desktop-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 9712,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:53:18.514Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "health.json",
+                      "contentType": "application/json",
+                      "evidence": "See browser-health.json, browser-refresh-proof.json and CI artifact for original attachment."
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-a38efcd5beef3f387088",
+          "file": "dashboard.spec.ts",
+          "line": 93,
+          "column": 1
+        },
+        {
+          "title": "failed refresh retains visible data and allows retry",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-chromium",
+              "projectName": "desktop-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4506,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:53:28.236Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-2f969c383fa224768ca9",
+          "file": "dashboard.spec.ts",
+          "line": 113,
+          "column": 1
+        },
+        {
+          "title": "manual refresh, persisted edition and cooldown survive reload",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 180000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-chromium",
+              "projectName": "desktop-chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 40087,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:53:32.752Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "refresh-proof.json",
+                      "contentType": "application/json",
+                      "evidence": "See browser-health.json, browser-refresh-proof.json and CI artifact for original attachment."
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-3f286c6475e3ebc300b6",
+          "file": "dashboard.spec.ts",
+          "line": 124,
+          "column": 1
+        },
+        {
+          "title": "en: real data, all charts, layout and navigation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-firefox",
+              "projectName": "desktop-firefox",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 19766,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:54:13.416Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hosting-cookie-warning.json",
+                      "contentType": "application/json",
+                      "evidence": "See browser-health.json, browser-refresh-proof.json and CI artifact for original attachment."
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-d1053ce4453b8a753c82",
+          "file": "dashboard.spec.ts",
+          "line": 19,
+          "column": 33
+        },
+        {
+          "title": "es: real data, all charts, layout and navigation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-firefox",
+              "projectName": "desktop-firefox",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 18103,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:54:33.718Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "hosting-cookie-warning.json",
+                      "contentType": "application/json",
+                      "evidence": "See browser-health.json, browser-refresh-proof.json and CI artifact for original attachment."
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-da4c790d536e23829d1d",
+          "file": "dashboard.spec.ts",
+          "line": 19,
+          "column": 33
+        },
+        {
+          "title": "real API edition is durable across reads and browser reload",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-firefox",
+              "projectName": "desktop-firefox",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 15663,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:54:51.831Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "health.json",
+                      "contentType": "application/json",
+                      "evidence": "See browser-health.json, browser-refresh-proof.json and CI artifact for original attachment."
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-a4e9de7c139be2ddec20",
+          "file": "dashboard.spec.ts",
+          "line": 93,
+          "column": 1
+        },
+        {
+          "title": "failed refresh retains visible data and allows retry",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop-firefox",
+              "projectName": "desktop-firefox",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4917,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:55:07.508Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-a9509145a4dd55f66bd6",
+          "file": "dashboard.spec.ts",
+          "line": 113,
+          "column": 1
+        },
+        {
+          "title": "manual refresh, persisted edition and cooldown survive reload",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "one refresh avoids provider storms across device profiles",
+                  "location": {
+                    "file": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests/dashboard.spec.ts",
+                    "line": 126,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "desktop-firefox",
+              "projectName": "desktop-firefox",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 0,
+                  "status": "skipped",
+                  "duration": 266,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:55:12.438Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "one refresh avoids provider storms across device profiles",
+                      "location": {
+                        "file": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests/dashboard.spec.ts",
+                        "line": 126,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-e8eec47a24e172f65fcb",
+          "file": "dashboard.spec.ts",
+          "line": 124,
+          "column": 1
+        },
+        {
+          "title": "en: real data, all charts, layout and navigation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "iphone-webkit",
+              "projectName": "iphone-webkit",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 25461,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:55:13.553Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-bf41ad73ea31ac4c8816",
+          "file": "dashboard.spec.ts",
+          "line": 19,
+          "column": 33
+        },
+        {
+          "title": "es: real data, all charts, layout and navigation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "iphone-webkit",
+              "projectName": "iphone-webkit",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 20530,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:55:39.538Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-ff4d71932d53b8c8b920",
+          "file": "dashboard.spec.ts",
+          "line": 19,
+          "column": 33
+        },
+        {
+          "title": "real API edition is durable across reads and browser reload",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "iphone-webkit",
+              "projectName": "iphone-webkit",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 10880,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:56:00.077Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "health.json",
+                      "contentType": "application/json",
+                      "evidence": "See browser-health.json, browser-refresh-proof.json and CI artifact for original attachment."
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-24ec85030a06fbc64cac",
+          "file": "dashboard.spec.ts",
+          "line": 93,
+          "column": 1
+        },
+        {
+          "title": "failed refresh retains visible data and allows retry",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "iphone-webkit",
+              "projectName": "iphone-webkit",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 5685,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:56:10.969Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-d1a7ebf63bd924ee969a",
+          "file": "dashboard.spec.ts",
+          "line": 113,
+          "column": 1
+        },
+        {
+          "title": "manual refresh, persisted edition and cooldown survive reload",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "one refresh avoids provider storms across device profiles",
+                  "location": {
+                    "file": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests/dashboard.spec.ts",
+                    "line": 126,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "iphone-webkit",
+              "projectName": "iphone-webkit",
+              "results": [
+                {
+                  "workerIndex": 2,
+                  "parallelIndex": 0,
+                  "status": "skipped",
+                  "duration": 346,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:56:16.672Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "one refresh avoids provider storms across device profiles",
+                      "location": {
+                        "file": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests/dashboard.spec.ts",
+                        "line": 126,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-b74953d85e4d91f3c13a",
+          "file": "dashboard.spec.ts",
+          "line": 124,
+          "column": 1
+        },
+        {
+          "title": "en: real data, all charts, layout and navigation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "android-chromium",
+              "projectName": "android-chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 8159,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:56:17.619Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-5c2ab98878f6d930a8e0",
+          "file": "dashboard.spec.ts",
+          "line": 19,
+          "column": 33
+        },
+        {
+          "title": "es: real data, all charts, layout and navigation",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "android-chromium",
+              "projectName": "android-chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 7941,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:56:25.872Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-df8faadc30bf415c1b4b",
+          "file": "dashboard.spec.ts",
+          "line": 19,
+          "column": 33
+        },
+        {
+          "title": "real API edition is durable across reads and browser reload",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "android-chromium",
+              "projectName": "android-chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 9249,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:56:33.823Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "health.json",
+                      "contentType": "application/json",
+                      "evidence": "See browser-health.json, browser-refresh-proof.json and CI artifact for original attachment."
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-e65ee546c9cc0c06580e",
+          "file": "dashboard.spec.ts",
+          "line": 93,
+          "column": 1
+        },
+        {
+          "title": "failed refresh retains visible data and allows retry",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "android-chromium",
+              "projectName": "android-chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 4469,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:56:43.082Z",
+                  "annotations": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-44e3493c6a86705cb3c0",
+          "file": "dashboard.spec.ts",
+          "line": 113,
+          "column": 1
+        },
+        {
+          "title": "manual refresh, persisted edition and cooldown survive reload",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "one refresh avoids provider storms across device profiles",
+                  "location": {
+                    "file": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests/dashboard.spec.ts",
+                    "line": 126,
+                    "column": 8
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "android-chromium",
+              "projectName": "android-chromium",
+              "results": [
+                {
+                  "workerIndex": 3,
+                  "parallelIndex": 0,
+                  "status": "skipped",
+                  "duration": 117,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-13T10:56:47.564Z",
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "one refresh avoids provider storms across device profiles",
+                      "location": {
+                        "file": "/home/runner/work/AustrianBusinessCycleMonitor/AustrianBusinessCycleMonitor/qa/tests/dashboard.spec.ts",
+                        "line": 126,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "attachments": []
+                }
+              ],
+              "status": "skipped"
+            }
+          ],
+          "id": "90cda532ab82d274b30b-af8ee2f8418bf18367ba",
+          "file": "dashboard.spec.ts",
+          "line": 124,
+          "column": 1
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-13T10:53:00.450Z",
+    "duration": 227286.98,
+    "expected": 17,
+    "skipped": 3,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

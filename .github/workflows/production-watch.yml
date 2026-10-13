@@ -2,7 +2,7 @@ name: Hourly production integrity watch
 on:
   push:
     branches: [master]
-    paths: ['automation/production-watch.mjs', '.github/workflows/production-watch.yml']
+    paths: ['automation/production-watch.mjs', '.github/workflows/production-watch.yml', 'sites-current/app/version.ts']
   schedule:
     - cron: '37 * * * *'
   workflow_dispatch:

@@ -1,0 +1,68 @@
+{
+  "publishedRelease": 91,
+  "githubMerge": {
+    "sha": "9937e3156c053615822e41b48acc65b2c30e079c",
+    "merged": true,
+    "message": "Pull Request successfully merged"
+  },
+  "site": {
+    "id": "appgprj_6a630a89bf208191bc7915a9410ae47a~appgver_5e32bb33bafc81918cbf461922f29e72",
+    "project_id": "appgprj_6a630a89bf208191bc7915a9410ae47a",
+    "version_number": 91,
+    "source": {
+      "commit_sha": "32e9cec31b01994523bb817e2d52158917f248c9"
+    },
+    "archive_storage": {
+      "archive_format": "tar",
+      "sediment_file_id": "file_00000000303081f98e475b1e145f8c90",
+      "content_hash": "sha256:cd4baf12d6cf8f671eb10877e39908b537d820ed84b8903520b3575351a5724a",
+      "size_bytes": 2959360,
+      "file_count": 54
+    },
+    "screenshot_url": null,
+    "deployment_id": null
+  },
+  "deployment": {
+    "id": "appgdep_6ace0d443af08191a19cbd16af542485",
+    "project_id": "appgprj_6a630a89bf208191bc7915a9410ae47a",
+    "title": "Austrian Business Cycle Monitor",
+    "version_id": "appgprj_6a630a89bf208191bc7915a9410ae47a~appgver_5e32bb33bafc81918cbf461922f29e72",
+    "type": "publish",
+    "status": "succeeded",
+    "url": "https://austrian-business-cycle-monitor.jimblogic.chatgpt.site",
+    "has_mcp": false,
+    "screenshot_asset_pointer": null,
+    "provider_deployment_id": "jimblogic--austrian-business-cycle-monitor",
+    "failure_message": null,
+    "env_set_revision": 0,
+    "updated_at": "2026-10-13T10:52:08.029361+00:00"
+  },
+  "appTree": "b63c0537deb91ae48ca9b888ee616d1026f315a3",
+  "validation": {
+    "unitTests": 192,
+    "siteAudit": 0,
+    "qaAudit": 0,
+    "lint": "PASS",
+    "typecheck": "PASS",
+    "build": "PASS",
+    "candidateCI": 38385605461,
+    "candidateBrowserCI": 38385605263,
+    "masterCI": 38386248951,
+    "publicPostDeployBrowserCI": 38386248950,
+    "publicBrowserPasses": 17,
+    "publicBrowserSkips": 3
+  },
+  "monitoring": {
+    "hourlyIntegrity": ".github/workflows/production-watch.yml",
+    "dailyBrowser": ".github/workflows/browser-smokes.yml",
+    "madridNoon": ".github/workflows/production-data.yml",
+    "artifactRetentionDays": 35,
+    "expiry": null
+  },
+  "backups": {
+    "v86": "d5d97b0d532d52c3cc23162e93b0c3a9b6d7ecf9",
+    "v89": "1bd09795565a90a0c66ede27348f1c9cf6f2a51a",
+    "v90": "2c3a71bf50186c6bc9688a91abcc0bfca4811903"
+  },
+  "historicalImage": "NO-GO; quality/dependency gates block publication"
+}

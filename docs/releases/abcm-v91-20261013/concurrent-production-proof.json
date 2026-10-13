@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-13T11:10:01.296Z",
+  "startedAt": "2026-10-13T11:09:24.279Z",
+  "release": 91,
+  "previousEdition": "2026-10-13T10:54:07.612Z",
+  "newEdition": "2026-10-13T11:09:44.271Z",
+  "responses": [
+    {
+      "snapshot": "2026-10-13T11:09:44.271Z",
+      "mode": "daily-persisted",
+      "refreshMode": "daily-edition",
+      "persistence": "ready",
+      "coverage": 12
+    },
+    {
+      "snapshot": "2026-10-13T11:09:44.271Z",
+      "mode": "live",
+      "refreshMode": "manual-refresh",
+      "persistence": "ready",
+      "coverage": 12
+    }
+  ],
+  "healthSnapshot": "2026-10-13T11:09:44.271Z",
+  "status": "DEGRADED",
+  "cooldown": "manual-cooldown",
+  "verified": "two concurrent POSTs, new D1 edition, independent GET and cooldown agree"
+}
