@@ -15,6 +15,10 @@ frontend, Worker/API backend, D1 persistence for shared macro snapshots, local-o
 - Runtime integrity: <https://austrian-business-cycle-monitor.jimblogic.chatgpt.site/api/health>
 - Local full-stack start: `cd sites-current && npm run install:ci && npm run dev`
 - Complete reconstruction and hosting guide: [`sites-current/README.md`](sites-current/README.md)
+- Automated desktop, iPhone/WebKit and Android/Chromium checks: [`qa/`](qa/README.md).
+- Production verification runs hourly; browser checks run daily, with 35-day
+  evidence retention and no planned schedule expiry. GitHub Actions records
+  failures without automatically deploying or rolling back.
 
 Do not derive the active release from a README title. The canonical source value
 is [`sites-current/app/version.ts`](sites-current/app/version.ts), and the
@@ -25,14 +29,16 @@ The live Sites application offers two six-module learning paths with 24 bilingua
 
 For independent hosting, follow the Docker/VPS guide in `sites-current/README.md` and set `ABCM_PUBLIC_ORIGIN` before building. GitHub Pages cannot serve its Worker API or D1 database.
 
-The Sites implementation coexists with the trusted Flask/React/FRED pipeline
-below. Choose one complete runtime; do not publish a frontend from one path
-against an undocumented backend from the other.
+The Sites implementation coexists with the historical Flask/React/FRED pipeline
+below. That separate image has unresolved quality/dependency findings and its
+publication is blocked by CI. See the [security disposition](docs/releases/abcm-v90-20261013/security-disposition.md).
+Choose one complete runtime; do not publish a frontend from one path against an
+undocumented backend from the other.
 
 ## Repository map
 
 - `apps/` — Flask API, trusted FRED ingestion, SQLite repositories, and deterministic snapshots.
-- `packages/frontend/` — current public React interface for the trusted Flask pipeline.
+- `packages/frontend/` — historical React interface for the separate Flask pipeline; not the public Sites bundle.
 - `sites-current/` — maintained source of the live full-stack Sites application.
 - `sites-v25/` — frozen historical snapshot; not the current code path.
 - `docs/` — maintained technical, operational, and educational documentation.

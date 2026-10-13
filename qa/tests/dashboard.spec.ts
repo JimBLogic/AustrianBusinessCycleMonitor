@@ -28,12 +28,18 @@ for (const lang of ['en','es']) test(`${lang}: real data, all charts, layout and
     await expect(card.locator('time')).toHaveAttribute('datetime',/^20\d{2}-\d{2}-\d{2}/);
   }
   for (const key of chartKeys) {
-    await page.locator(`#series-tab-${key}`).click();
+    if(isMobile) await page.locator(`#series-tab-${key}`).tap();
+    else await page.locator(`#series-tab-${key}`).click();
     await expect(page.locator(`#series-tab-${key}`)).toHaveAttribute('aria-selected','true');
     await expect(page.locator('#macro-chart-summary')).toHaveText(/\d+ (observations|observaciones)/);
     await expect(page.locator('#macro-chart-panel .chart-readout strong')).toHaveText(/\d/);
     await expect(page.locator('#macro-chart-panel time').first()).toHaveAttribute('datetime',/^20\d{2}-/);
-    await expect(page.locator('#macro-chart-panel svg path')).not.toHaveCount(0);
+    const lines=page.locator('#macro-chart-panel svg polyline');
+    await expect(lines).not.toHaveCount(0);
+    expect(await lines.evaluateAll(nodes=>nodes.every(node=>{
+      const points=node.getAttribute('points')?.trim();
+      return !!points && points.split(/\s+/).every(point=>point.split(',').length===2 && point.split(',').every(value=>value!==''&&Number.isFinite(Number(value))));
+    })),`${key}: finite plotted coordinates`).toBe(true);
   }
   await page.locator('#macro-chart-panel svg').focus();
   await page.keyboard.press('Home');
@@ -55,6 +61,7 @@ for (const lang of ['en','es']) test(`${lang}: real data, all charts, layout and
   await expect(page.locator('#market-tape-title')).toHaveText(lang==='en'?'Última observación verificada':'Latest verified observation');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),'horizontal overflow').toBe(true);
   await page.locator('.brand').click();
+  await page.screenshot({path:testInfo.outputPath(`${lang}-viewport.png`)});
   await page.screenshot({path:testInfo.outputPath(`${lang}-dashboard.png`),fullPage:true});
   expect(errors).toEqual([]);
   expect(failedResponses).toEqual([]);

@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-10-13T09:14:49.108Z",
+  "siteRelease": 90,
+  "appTree": "e9039a5cb47f857bcc3a3c72a579c1bee6d95eb7",
+  "checks": {
+    "build": "PASS",
+    "lint": "PASS",
+    "typecheck": "PASS",
+    "tests": {
+      "passed": 189,
+      "failed": 0
+    },
+    "fullSiteAudit": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "legacyAudit": {
+      "info": 0,
+      "low": 0,
+      "moderate": 8,
+      "high": 30,
+      "critical": 3,
+      "total": 41
+    }
+  },
+  "monitoring": {
+    "api": "hourly at :37 UTC",
+    "browser": "daily at 12:23 UTC",
+    "dailyEdition": "Madrid noon, delayed-run recovery",
+    "minimumDuration": "continuous; no planned expiry",
+    "artifactRetentionDays": 35
+  },
+  "mobileScope": "iPhone 13/WebKit and Pixel 7/Chromium device emulation; not physical devices",
+  "backups": {
+    "v86": "d5d97b0d532d52c3cc23162e93b0c3a9b6d7ecf9",
+    "v89": "1bd09795565a90a0c66ede27348f1c9cf6f2a51a",
+    "preIntegrationV87": "8a31c2de3a7195c1dbfe2152cd202c4d63de6eb8"
+  }
+}
