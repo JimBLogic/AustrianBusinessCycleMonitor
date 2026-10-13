@@ -82,6 +82,19 @@ test("serves every public learning route in both languages", async () => {
   }
 });
 
+test('public origins retain CSP upgrades; only HTTP loopback avoids nonexistent TLS', async()=>{
+  const {default:worker}=await import(new URL('../dist/server/index.js',import.meta.url));
+  const env={ASSETS:{fetch:async()=>new Response('Not found',{status:404})}};
+  const ctx={waitUntil(){},passThroughOnException(){}};
+  for(const origin of ['https://austrian-business-cycle-monitor.jimblogic.chatgpt.site','http://economy.example.com','https://localhost','http://127.0.0.1','http://localhost','http://[::1]']) {
+    const response=await worker.fetch(new Request(`${origin}/robots.txt`),env,ctx);
+    const csp=response.headers.get('content-security-policy');
+    assert.match(csp,/script-src 'self'/);assert.match(csp,/connect-src 'self'/);assert.match(csp,/frame-ancestors 'none'/);
+    const loopback=new URL(origin).protocol==='http:'&&['localhost','127.0.0.1','[::1]'].includes(new URL(origin).hostname);
+    assert.equal(csp.includes('upgrade-insecure-requests'),!loopback,origin);
+  }
+});
+
 
 test("font styles refer to portable public assets that exist in the production bundle", async () => {
   const {readFile, access} = await import("node:fs/promises");

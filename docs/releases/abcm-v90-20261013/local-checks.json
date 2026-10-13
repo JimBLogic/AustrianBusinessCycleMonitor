@@ -1,13 +1,13 @@
 {
   "checkedAt": "2026-10-13T09:14:49.108Z",
   "siteRelease": 90,
-  "appTree": "e9039a5cb47f857bcc3a3c72a579c1bee6d95eb7",
+  "appTree": "0c7f49fc71cc852055e2483fe215aea00d094f52",
   "checks": {
     "build": "PASS",
     "lint": "PASS",
     "typecheck": "PASS",
     "tests": {
-      "passed": 189,
+      "passed": 190,
       "failed": 0
     },
     "fullSiteAudit": {

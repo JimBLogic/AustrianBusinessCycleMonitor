@@ -6,6 +6,11 @@ tests the **public Site**. The same suite runs the exact candidate Worker with
 Candidate D1 is a temporary local database seeded from actual public observations;
 dates and values are copied unchanged, with provenance. No fixtures are written
 to production. Local volume and SQL are deleted when the test server exits.
+The isolated build sets `ABCM_PUBLIC_ORIGIN=http://127.0.0.1:8793` so canonical
+metadata and favicon respect the configured self-host origin. The published
+build uses the public HTTPS origin. Browser tests also reject console errors,
+404 assets, missing hydration and incorrect plot coordinates. Long WebKit pages
+use viewport/section screenshots because its image dimension is limited.
 
 Four profiles: desktop Chromium, desktop Firefox, iPhone 13 / WebKit, and Pixel 7 /
 Chromium. Mobile profiles emulate viewport, touch, user agent and device scale;

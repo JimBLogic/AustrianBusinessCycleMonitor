@@ -15,8 +15,9 @@ async function openDashboard(page:Page, lang='en') {
 for (const lang of ['en','es']) test(`${lang}: real data, all charts, layout and navigation`,async({page,isMobile},testInfo)=>{
   const errors:string[]=[];
   page.on('pageerror',error=>errors.push(error.message));
+  page.on('console',message=>{if(message.type()==='error') errors.push(message.text());});
   const failedResponses:string[]=[];
-  page.on('response',response=>{if(new URL(response.url()).origin===new URL(testInfo.project.use.baseURL!).origin && response.status()>=500) failedResponses.push(`${response.status()} ${new URL(response.url()).pathname}`);});
+  page.on('response',response=>{if(new URL(response.url()).origin===new URL(testInfo.project.use.baseURL!).origin && response.status()>=400) failedResponses.push(`${response.status()} ${new URL(response.url()).pathname}`);});
   await openDashboard(page,lang);
   for (const key of macroKeys) {
     await expect(page.locator(`#metric-tab-${key}`)).toHaveClass(/has-data/);

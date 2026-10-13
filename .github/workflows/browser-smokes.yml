@@ -42,6 +42,8 @@ jobs:
       - name: Build exact candidate Worker
         if: matrix.target == 'candidate'
         working-directory: sites-current
+        env:
+          ABCM_PUBLIC_ORIGIN: http://127.0.0.1:8793
         run: |
           npm ci
           npm run build
