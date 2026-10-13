@@ -5,8 +5,12 @@ const chartKeys=['m2','treasury2y','treasury10y','federalDebt','cpi','oil','gold
 const macroKeys=['m2','fedFunds','yieldCurve','creditSpread','cpi','unemployment','federalDebt','dollar','oil','manufacturingSurvey'];
 
 async function openDashboard(page:Page, lang='en') {
+  // SSR numbers alone do not prove hydration. The browser's initial API GET
+  // starts from a mounted React effect and must complete before interaction.
+  const hydrated=page.waitForResponse(response=>response.url().endsWith('/api/data')&&response.request().method()==='GET',{timeout:110_000});
   const response=await page.goto(`/?lang=${lang}`);
   expect(response?.status()).toBe(200);
+  expect((await hydrated).ok()).toBe(true);
   await expect(page.locator('.score-ring strong')).toHaveText(/^\d{1,3}$/);
   await expect(page.locator('#snapshot-status > div > strong')).toHaveText(/\d.*Madrid/);
   await expect(page.locator('.background-refresh')).toHaveCount(0, {timeout:110_000});
@@ -14,8 +18,17 @@ async function openDashboard(page:Page, lang='en') {
 
 for (const lang of ['en','es']) test(`${lang}: real data, all charts, layout and navigation`,async({page,isMobile},testInfo)=>{
   const errors:string[]=[];
+  let hostingCookieWarnings=0;
   page.on('pageerror',error=>errors.push(error.message));
-  page.on('console',message=>{if(message.type()==='error') errors.push(message.text());});
+  page.on('console',message=>{
+    if(message.type()!=='error') return;
+    const text=message.text();
+    // Firefox reports the hosting layer's rejected bot-management cookie as
+    // an error. Record this exact platform warning; application errors and
+    // CSP/asset failures still fail the gate. No cookie values are collected.
+    if(/Cookie [“"]__cf_bm[”"] has been rejected for invalid domain\./.test(text)) hostingCookieWarnings++;
+    else errors.push(text);
+  });
   const failedResponses:string[]=[];
   page.on('response',response=>{if(new URL(response.url()).origin===new URL(testInfo.project.use.baseURL!).origin && response.status()>=400) failedResponses.push(`${response.status()} ${new URL(response.url()).pathname}`);});
   await openDashboard(page,lang);
@@ -62,16 +75,17 @@ for (const lang of ['en','es']) test(`${lang}: real data, all charts, layout and
   await expect(page.locator('#market-tape-title')).toHaveText(lang==='en'?'Última observación verificada':'Latest verified observation');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),'horizontal overflow').toBe(true);
   await page.locator('.brand').click();
-  await page.screenshot({path:testInfo.outputPath(`${lang}-viewport.png`)});
+  await page.screenshot({path:testInfo.outputPath(`${lang}-viewport.png`),scale:'css'});
   const dimensions=await page.evaluate(()=>({width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight}));
   // WebKit refuses images over 32767 pixels. Capture actual sections rather
   // than shrinking, omitting assertions or changing the production layout.
-  if(Math.max(dimensions.width,dimensions.height)<32000) await page.screenshot({path:testInfo.outputPath(`${lang}-dashboard.png`),fullPage:true});
+  if(Math.max(dimensions.width,dimensions.height)<32000) await page.screenshot({path:testInfo.outputPath(`${lang}-dashboard.png`),fullPage:true,scale:'css'});
   else {
-    await page.locator('#dashboard').screenshot({path:testInfo.outputPath(`${lang}-charts.png`)});
-    await page.locator('.market-tape-wrap').screenshot({path:testInfo.outputPath(`${lang}-market.png`)});
+    await page.locator('#dashboard').screenshot({path:testInfo.outputPath(`${lang}-charts.png`),scale:'css'});
+    await page.locator('.market-tape-wrap').screenshot({path:testInfo.outputPath(`${lang}-market.png`),scale:'css'});
     await testInfo.attach(`${lang}-capture-scope.json`,{body:JSON.stringify({...dimensions,capture:'viewport, charts and market sections',reason:'WebKit maximum image dimension'}),contentType:'application/json'});
   }
+  if(hostingCookieWarnings) await testInfo.attach('hosting-cookie-warning.json',{body:JSON.stringify({provider:'Cloudflare',warning:'__cf_bm rejected for invalid domain',count:hostingCookieWarnings,applicationChecks:'independently asserted'}),contentType:'application/json'});
   expect(errors).toEqual([]);
   expect(failedResponses).toEqual([]);
 });

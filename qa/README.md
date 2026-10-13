@@ -11,6 +11,10 @@ metadata and favicon respect the configured self-host origin. The published
 build uses the public HTTPS origin. Browser tests also reject console errors,
 404 assets, missing hydration and incorrect plot coordinates. Long WebKit pages
 use viewport/section screenshots because its image dimension is limited.
+Screenshots use CSS-pixel scale while tests retain each device's native emulated
+pixel ratio. The exact Firefox warning about Cloudflare rejecting `__cf_bm` for
+an invalid domain is recorded separately without cookie values; app exceptions,
+CSP failures and failing asset/API responses continue to block the gate.
 
 Four profiles: desktop Chromium, desktop Firefox, iPhone 13 / WebKit, and Pixel 7 /
 Chromium. Mobile profiles emulate viewport, touch, user agent and device scale;
