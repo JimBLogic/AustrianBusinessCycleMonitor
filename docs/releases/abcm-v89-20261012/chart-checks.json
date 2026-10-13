@@ -1,0 +1,50 @@
+[
+  {
+    "series": "M2 money stock",
+    "readout": "61 observations from 1 Aug 2021 to 1 Aug 2026. Selected point: 1 Aug 2026, 23,342.8 USD bn.\n\nSELECTED POINT\n23,342.8 USD bn\n1 Aug 2026\nVISIBLE WINDOW\n61 OBSERVATIONS\nCURRENT\n23.6K\n22K\n20.5K\n1 Aug 2021\nSLIDE TO INSPECT\n1 Aug 2026\n\nProportional time axis · vertical scale fits the observed range and does not necessarily start at zero.\n\nLATEST →"
+  },
+  {
+    "series": "Treasury 2Y yield",
+    "readout": "1249 observations from 8 Oct 2021 to 8 Oct 2026. Selected point: 8 Oct 2026, 4.75 %.\n\nSELECTED POINT\n4.75 %\n8 Oct 2026\nVISIBLE WINDOW\n1249 OBSERVATIONS\nCURRENT\n5.6\n2.8\n-0.1\n8 Oct 2021\nSLIDE TO INSPECT\n8 Oct 2026\n\nProportional time axis · vertical scale fits the observed range and does not necessarily start at zero.\n\nLATEST →"
+  },
+  {
+    "series": "10-year Treasury yield",
+    "readout": "1249 observations from 8 Oct 2021 to 8 Oct 2026. Selected point: 8 Oct 2026, 5.22 percent.\n\nSELECTED POINT\n5.22 percent\n8 Oct 2026\nVISIBLE WINDOW\n1249 OBSERVATIONS\nCURRENT\n5.6\n3.3\n1\n8 Oct 2021\nSLIDE TO INSPECT\n8 Oct 2026\n\nProportional time axis · vertical scale fits the observed range and does not necessarily start at zero.\n\nLATEST →"
+  },
+  {
+    "series": "Federal debt",
+    "readout": "21 observations from 1 Apr 2021 to 1 Apr 2026. Selected point: 1 Apr 2026, 39,462,398 USD millions.\n\nSELECTED POINT\n39,462,398 USD millions\n1 Apr 2026\nVISIBLE WINDOW\n21 OBSERVATIONS\nSTALE\n40.3M\n33.9M\n27.5M\n1 Apr 2021\nSLIDE TO INSPECT\n1 Apr 2026\n\nProportional time axis · vertical scale fits the observed range and does not necessarily start at zero.\n\nLATEST →"
+  },
+  {
+    "series": "Consumer prices",
+    "readout": "60 observations from 1 Aug 2021 to 1 Aug 2026. Selected point: 1 Aug 2026, 334.13 index points.\n\nSELECTED POINT\n334.13 index points\n1 Aug 2026\nVISIBLE WINDOW\n60 OBSERVATIONS\nCURRENT\n339\n303.4\n267.8\n1 Aug 2021\nSLIDE TO INSPECT\n1 Aug 2026\n\nProportional time axis · vertical scale fits the observed range and does not necessarily start at zero. Long gaps are not connected.\n\nLATEST →"
+  },
+  {
+    "series": "WTI crude oil",
+    "readout": "1248 observations from 6 Oct 2021 to 6 Oct 2026. Selected point: 6 Oct 2026, 96.24 USD / barrel.\n\nSELECTED POINT\n96.24 USD / barrel\n6 Oct 2026\nVISIBLE WINDOW\n1248 OBSERVATIONS\nCURRENT\n129.1\n89.5\n50\n6 Oct 2021\nSLIDE TO INSPECT\n6 Oct 2026\n\nProportional time axis · vertical scale fits the observed range and does not necessarily start at zero.\n\nLATEST →"
+  },
+  {
+    "series": "Gold",
+    "readout": "61 observations from 1 Sept 2021 to 1 Sept 2026. Selected point: 1 Sept 2026, 4,319 USD / troy oz.\n\nSELECTED POINT\n4,319 USD / troy oz\n1 Sept 2026\nVISIBLE WINDOW\n61 OBSERVATIONS\nCURRENT\n5.3K\n3.3K\n1.4K\n1 Sept 2021\nSLIDE TO INSPECT\n1 Sept 2026\n\nProportional time axis · vertical scale fits the observed range and does not necessarily start at zero.\n\nLATEST →"
+  },
+  {
+    "series": "S&P 500",
+    "readout": "1255 observations from 11 Oct 2021 to 9 Oct 2026. Selected point: 9 Oct 2026, 7,811.54 index points.\n\nSELECTED POINT\n7,811.54 index points\n9 Oct 2026\nVISIBLE WINDOW\n1255 OBSERVATIONS\nCURRENT\n8.2K\n5.7K\n3.2K\n11 Oct 2021\nSLIDE TO INSPECT\n9 Oct 2026\n\nProportional time axis · vertical scale fits the observed range and does not necessarily start at zero.\n\nLATEST →"
+  },
+  {
+    "series": "VIX stress",
+    "readout": "1288 observations from 8 Oct 2021 to 8 Oct 2026. Selected point: 8 Oct 2026, 15.41 index points.\n\nSELECTED POINT\n15.41 index points\n8 Oct 2026\nVISIBLE WINDOW\n1288 OBSERVATIONS\nCURRENT\n55.6\n32.1\n8.6\n8 Oct 2021\nSLIDE TO INSPECT\n8 Oct 2026\n\nProportional time axis · vertical scale fits the observed range and does not necessarily start at zero.\n\nLATEST →"
+  },
+  {
+    "series": "Industrial production",
+    "readout": "61 observations from 31 Aug 2021 to 31 Aug 2026. Selected point: 31 Aug 2026, 103.07 index points.\n\nSELECTED POINT\n103.07 index points\n31 Aug 2026\nVISIBLE WINDOW\n61 OBSERVATIONS\nSTALE\n103.4\n101\n98.5\n31 Aug 2021\nSLIDE TO INSPECT\n31 Aug 2026\n\nProportional time axis · vertical scale fits the observed range and does not necessarily start at zero.\n\nLATEST →"
+  },
+  {
+    "series": "Manufacturing survey proxy",
+    "readout": "61 observations from 1 Sept 2021 to 1 Sept 2026. Selected point: 1 Sept 2026, 25 diffusion index.\n\nSELECTED POINT\n25 diffusion index\n1 Sept 2026\nVISIBLE WINDOW\n61 OBSERVATIONS\nCURRENT\n76.3\n6.6\n-63\n1 Sept 2021\nSLIDE TO INSPECT\n1 Sept 2026\n\nProportional time axis · vertical scale fits the observed range and does not necessarily start at zero.\n\nLATEST →"
+  },
+  {
+    "series": "Bitcoin",
+    "readout": "1827 observations from 12 Oct 2021 to 12 Oct 2026. Selected point: 12 Oct 2026, 83,677.37 USD.\n\nSELECTED POINT\n83,677.37 USD\n12 Oct 2026\nVISIBLE WINDOW\n1827 OBSERVATIONS\nHISTORY AVAILABLE\n133.5K\n70.3K\n7K\n12 Oct 2021\nSLIDE TO INSPECT\n12 Oct 2026\n\nProportional time axis · vertical scale fits the observed range and does not necessarily start at zero.\n\nLATEST →"
+  }
+]

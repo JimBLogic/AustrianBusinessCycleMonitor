@@ -11,10 +11,7 @@ const terminal = monitor.slice(
 );
 
 test("sanitizes, deduplicates and orders verified observations", () => {
-  assert.ok(chart.includes('const byDate = new Map<string, Point>()'));
-  assert.ok(chart.includes('/^\\d{4}-\\d{2}-\\d{2}$/.test(point.date)'));
-  assert.ok(chart.includes("Number.isFinite(point.value)"));
-  assert.ok(chart.includes("sort((a, b) => a.date.localeCompare(b.date))"));
+  assert.ok(chart.includes("validChartPoints(points)"));
   assert.ok(chart.includes("const min = values.length ? Math.min(...values) : 0"));
 });
 

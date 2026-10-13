@@ -1,0 +1,33 @@
+{
+  "release": 88,
+  "refresh_edition": "2026-10-11T21:40:28.667Z",
+  "read_persisted_edition": "2026-10-11T21:40:28.667Z",
+  "cooldown_edition": "2026-10-11T21:40:28.667Z",
+  "cooldown_mode": "manual-cooldown",
+  "available": 20,
+  "total": 20,
+  "fresh": 15,
+  "status": "DEGRADED",
+  "required_indicators_valid": [
+    "bitcoin",
+    "gold",
+    "oil",
+    "sp500",
+    "vix",
+    "creditSpread",
+    "dollar",
+    "m2",
+    "cpi",
+    "fedFunds",
+    "treasury10y",
+    "treasury2y",
+    "capacityUtilization",
+    "industrialProduction",
+    "unemployment",
+    "federalDebt"
+  ],
+  "composite": 52,
+  "model_coverage": "12/14",
+  "missing_fiscal_score": null,
+  "checks": "passed"
+}

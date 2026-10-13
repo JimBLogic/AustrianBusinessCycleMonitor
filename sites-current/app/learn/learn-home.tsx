@@ -117,9 +117,9 @@ export default function LearnHome({ initialLang }: { initialLang: Lang }) {
   return (
     <main className="academy-home" lang={lang}>
       <nav className="academy-top">
-        <Link href="/" className="academy-logo"><span>₿</span> {t.brand}</Link>
+        <Link href={`/?lang=${lang}`} className="academy-logo"><span>₿</span> {t.brand}</Link>
         <div className="learn-actions">
-          <Link href="/">← {t.back}</Link>
+          <Link href={`/?lang=${lang}`}>← {t.back}</Link>
           <button onClick={changeLanguage}>{lang === "es" ? "EN" : "ES"}</button>
         </div>
       </nav>

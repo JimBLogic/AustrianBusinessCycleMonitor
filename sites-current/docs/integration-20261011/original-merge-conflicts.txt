@@ -1,0 +1,105 @@
+f17c42e62866f32b5407ceca8dc4a3bcb9605d43
+100644 c55d077447ede0e0597abea2befa40a3b78ea74f 2	../.github/workflows/production-data.yml
+100644 a799cc1c41a4ad2f052346ba8923596df76f5dfb 3	../.github/workflows/production-data.yml
+100644 027a605e8cde49685840c26b1fdd6119eedd9f8c 1	../.github/workflows/sites-current.yml
+100644 acdfa725dea2c69bd248fa16000bafcfe5764922 2	../.github/workflows/sites-current.yml
+100644 7c947e54b8f5c6f1f925ce1470604dedb3e9a2d7 1	../.github/workflows/smoke-live.yml
+100644 eb3a34a587bb20ff1a902d07b0aabe86f3080934 2	../.github/workflows/smoke-live.yml
+100644 5d2c6918e62e21ab981a789b4c4d935fd05c50ba 1	../app/api/data/route.ts
+100644 12e9a9edf5a7b8a527cd1ea38ea6c1c22e129215 2	../app/api/data/route.ts
+100644 16b700de99cf43defb2fcaf20481b00a108d8dc9 3	../app/api/data/route.ts
+100644 c531c143084b4c51efe65b8218067ed404f2ba64 2	../app/api/source-health/route.ts
+100644 c531c143084b4c51efe65b8218067ed404f2ba64 3	../app/api/source-health/route.ts
+100644 501d0ee37273cbcf962a751173986c5555d30782 2	../app/aviso-legal/page.tsx
+100644 501d0ee37273cbcf962a751173986c5555d30782 3	../app/aviso-legal/page.tsx
+100644 5a9cf6c7c9b8c460c374c6b7f33d8c6a83943760 2	../app/data/snapshot-health.ts
+100644 5a9cf6c7c9b8c460c374c6b7f33d8c6a83943760 3	../app/data/snapshot-health.ts
+100644 fb1c34656a8a330878213044a6483f4c56fd6ede 2	../app/learn/monitor-guide.tsx
+100644 fb1c34656a8a330878213044a6483f4c56fd6ede 3	../app/learn/monitor-guide.tsx
+100644 2a07603fd0caab64ae1c70dea340627825145d9a 1	../app/monitor.tsx
+100644 82e1cad10a27e20b993cf79235f740e3a843a3e8 2	../app/monitor.tsx
+100644 25800d297e87296a0d16b94a28d3792e67e759b2 3	../app/monitor.tsx
+100644 de747be4ca336a5777a06c2ef1cb2365433d30b2 2	../app/progressive.css
+100644 de747be4ca336a5777a06c2ef1cb2365433d30b2 3	../app/progressive.css
+100644 07f9b820476e8f293e962dc9153aa8e6a66e5c90 2	../docs/compliance-review-2026-09-28.md
+100644 07f9b820476e8f293e962dc9153aa8e6a66e5c90 3	../docs/compliance-review-2026-09-28.md
+100644 c084a6d18e12f97710c065ea055331dde502bdc8 2	../docs/production-recovery-20261008.md
+100644 c084a6d18e12f97710c065ea055331dde502bdc8 3	../docs/production-recovery-20261008.md
+100644 74aa4a1b436af1cfac9174b3c3b6687f00d2ca76 2	../docs/progressive-redesign-2026-09-29.md
+100644 74aa4a1b436af1cfac9174b3c3b6687f00d2ca76 3	../docs/progressive-redesign-2026-09-29.md
+100644 cd037b0da1ba4b59960db923f315be236119ee02 2	../docs/source-audit-2026-09-28.md
+100644 cd037b0da1ba4b59960db923f315be236119ee02 3	../docs/source-audit-2026-09-28.md
+100644 c3af76e590e543a0943f09b7471157831d85a8c6 2	../lib/dashboard-recovery.mjs
+100644 c3af76e590e543a0943f09b7471157831d85a8c6 3	../lib/dashboard-recovery.mjs
+100644 c1a5156776a1d241b6913d7557f3a835b4c4df2f 2	../lib/series-quality.mjs
+100644 c1a5156776a1d241b6913d7557f3a835b4c4df2f 3	../lib/series-quality.mjs
+100644 d980576fccbfc8d72b45f8120fde2c3520ddb026 2	../lib/snapshot-policy.mjs
+100644 d980576fccbfc8d72b45f8120fde2c3520ddb026 3	../lib/snapshot-policy.mjs
+100644 60db88bea481daa2a285906e5546eaab04398b9c 2	../lib/snapshot-recovery.mjs
+100644 60db88bea481daa2a285906e5546eaab04398b9c 3	../lib/snapshot-recovery.mjs
+100644 3d0d605f607af6a12677ec0bccd98b2b5c6eb393 2	../lib/source-validation.mjs
+100644 3d0d605f607af6a12677ec0bccd98b2b5c6eb393 3	../lib/source-validation.mjs
+100644 a36fdf12ae5e0f809fefde8e9fcfed1329dfe132 2	../lib/upstream-policy.mjs
+100644 a36fdf12ae5e0f809fefde8e9fcfed1329dfe132 3	../lib/upstream-policy.mjs
+100644 04e95fc550855eb44416b9db1f6722f5cb7342db 2	../public/fonts/OFL.txt
+100644 04e95fc550855eb44416b9db1f6722f5cb7342db 3	../public/fonts/OFL.txt
+100644 4f2a51731562ff9ec9857e8b0877c908b13a0c57 2	../scripts/verify-production.mjs
+100644 4f2a51731562ff9ec9857e8b0877c908b13a0c57 3	../scripts/verify-production.mjs
+100644 d13a7019d3dd87b7f527f0249494e3921f7dc9d8 1	app/api/bitcoin/route.ts
+100644 512eb7537506083da2c4641321827c5928d9f806 2	app/api/bitcoin/route.ts
+100644 00397b8771d3244ddde108794be1818d183131b8 1	app/engine.css
+100644 bf503af00c940f7113e3c6985012b38eb4f33a84 2	app/engine.css
+100644 6bef9a66b2f0b7595eb99c010bd0dd6e70f86ac0 1	app/page.tsx
+100644 8e96f3826aee704d8bdff081f6a6fe450fb79037 2	app/page.tsx
+100644 91d2633d5c3ae3e98f5e4e2f48a6814aedd3853c 1	app/version.ts
+100644 5aa630c32723f64d9ce5f6476297b6f8c2dd75e4 2	app/version.ts
+100644 26eba9f4aa373d78cb538453a9ab3d30bb41d861 2	../tests/educational-series.test.mjs
+100644 26eba9f4aa373d78cb538453a9ab3d30bb41d861 3	../tests/educational-series.test.mjs
+100644 860c4b8734fd3986765e461e2952901eec48622f 2	../tests/snapshot-recovery.test.mjs
+100644 860c4b8734fd3986765e461e2952901eec48622f 3	../tests/snapshot-recovery.test.mjs
+100644 e9adeef42bba6146a2bfaa7d5b6f50dc865aea25 2	../tests/source-pipeline.test.mjs
+100644 e9adeef42bba6146a2bfaa7d5b6f50dc865aea25 3	../tests/source-pipeline.test.mjs
+100644 2a33c84edf050db29821f11f30a8381095abfe54 2	../tests/source-quality.test.mjs
+100644 2a33c84edf050db29821f11f30a8381095abfe54 3	../tests/source-quality.test.mjs
+100644 a0f31e699e81bfff54cf7b02ecc2a53ec1417b52 2	../tests/stale-edition-resilience.test.mjs
+100644 a0f31e699e81bfff54cf7b02ecc2a53ec1417b52 3	../tests/stale-edition-resilience.test.mjs
+100644 75fd79e006704304bc2808923c3b9d7454408308 2	../tests/worker-transport.test.mjs
+100644 75fd79e006704304bc2808923c3b9d7454408308 3	../tests/worker-transport.test.mjs
+
+Auto-merging .github/workflows/production-data.yml
+CONFLICT (add/add): Merge conflict in .github/workflows/production-data.yml
+CONFLICT (modify/delete): .github/workflows/sites-current.yml deleted in origin/audit/v87-integrity-candidate-20261010 and modified in origin/master.  Version origin/master of .github/workflows/sites-current.yml left in tree.
+CONFLICT (modify/delete): .github/workflows/smoke-live.yml deleted in origin/audit/v87-integrity-candidate-20261010 and modified in origin/master.  Version origin/master of .github/workflows/smoke-live.yml left in tree.
+Auto-merging app/api/data/route.ts
+CONFLICT (content): Merge conflict in app/api/data/route.ts
+CONFLICT (file location): sites-current/app/api/source-health/route.ts added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to app/api/source-health/route.ts.
+CONFLICT (file location): sites-current/app/aviso-legal/page.tsx added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to app/aviso-legal/page.tsx.
+CONFLICT (file location): sites-current/app/data/snapshot-health.ts added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to app/data/snapshot-health.ts.
+Auto-merging app/learn/learn-home.tsx
+CONFLICT (file location): sites-current/app/learn/monitor-guide.tsx added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to app/learn/monitor-guide.tsx.
+Auto-merging app/monitor.tsx
+CONFLICT (content): Merge conflict in app/monitor.tsx
+CONFLICT (file location): sites-current/app/progressive.css added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to app/progressive.css.
+CONFLICT (file location): sites-current/docs/compliance-review-2026-09-28.md added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to docs/compliance-review-2026-09-28.md.
+CONFLICT (file location): sites-current/docs/production-recovery-20261008.md added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to docs/production-recovery-20261008.md.
+CONFLICT (file location): sites-current/docs/progressive-redesign-2026-09-29.md added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to docs/progressive-redesign-2026-09-29.md.
+CONFLICT (file location): sites-current/docs/source-audit-2026-09-28.md added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to docs/source-audit-2026-09-28.md.
+CONFLICT (file location): sites-current/lib/dashboard-recovery.mjs added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to lib/dashboard-recovery.mjs.
+CONFLICT (file location): sites-current/lib/series-quality.mjs added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to lib/series-quality.mjs.
+CONFLICT (file location): sites-current/lib/snapshot-policy.mjs added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to lib/snapshot-policy.mjs.
+CONFLICT (file location): sites-current/lib/snapshot-recovery.mjs added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to lib/snapshot-recovery.mjs.
+CONFLICT (file location): sites-current/lib/source-validation.mjs added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to lib/source-validation.mjs.
+CONFLICT (file location): sites-current/lib/upstream-policy.mjs added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to lib/upstream-policy.mjs.
+CONFLICT (file location): sites-current/public/fonts/OFL.txt added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to public/fonts/OFL.txt.
+CONFLICT (file location): sites-current/scripts/verify-production.mjs added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to scripts/verify-production.mjs.
+CONFLICT (modify/delete): sites-current/app/api/bitcoin/route.ts deleted in origin/audit/v87-integrity-candidate-20261010 and modified in origin/master.  Version origin/master of sites-current/app/api/bitcoin/route.ts left in tree.
+CONFLICT (modify/delete): sites-current/app/engine.css deleted in origin/audit/v87-integrity-candidate-20261010 and modified in origin/master.  Version origin/master of sites-current/app/engine.css left in tree.
+CONFLICT (modify/delete): sites-current/app/page.tsx deleted in origin/audit/v87-integrity-candidate-20261010 and modified in origin/master.  Version origin/master of sites-current/app/page.tsx left in tree.
+CONFLICT (modify/delete): sites-current/app/version.ts deleted in origin/audit/v87-integrity-candidate-20261010 and modified in origin/master.  Version origin/master of sites-current/app/version.ts left in tree.
+CONFLICT (file location): sites-current/tests/educational-series.test.mjs added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to tests/educational-series.test.mjs.
+Auto-merging tests/ratio-strip.test.mjs
+CONFLICT (file location): sites-current/tests/snapshot-recovery.test.mjs added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to tests/snapshot-recovery.test.mjs.
+CONFLICT (file location): sites-current/tests/source-pipeline.test.mjs added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to tests/source-pipeline.test.mjs.
+CONFLICT (file location): sites-current/tests/source-quality.test.mjs added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to tests/source-quality.test.mjs.
+CONFLICT (file location): sites-current/tests/stale-edition-resilience.test.mjs added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to tests/stale-edition-resilience.test.mjs.
+CONFLICT (file location): sites-current/tests/worker-transport.test.mjs added in origin/master inside a directory that was renamed in origin/audit/v87-integrity-candidate-20261010, suggesting it should perhaps be moved to tests/worker-transport.test.mjs.

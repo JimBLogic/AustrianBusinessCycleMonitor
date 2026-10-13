@@ -5,6 +5,10 @@ on:
     paths:
       - '.github/workflows/production-data.yml'
       - 'sites-current/scripts/verify-production.mjs'
+      - 'sites-current/scripts/production-daily.mjs'
+      - 'sites-current/lib/production-verification.mjs'
+      - 'sites-current/lib/timestamp.mjs'
+      - 'automation/production-daily.mjs'
   schedule:
     - cron: '0 10,11 * * *'
   workflow_dispatch:
@@ -22,12 +26,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Refresh at noon Europe/Madrid and verify actual data
+      - name: Validate daily recovery policy
+        run: node --test automation/production-daily.test.mjs
+      - name: Refresh Madrid daily edition, including delayed scheduled runs
         shell: bash
-        run: |
-          if [ "${{ github.event_name }}" = schedule ] && [ "$(TZ=Europe/Madrid date +%H)" != 12 ]; then exit 0; fi
-          if [ -f sites-current/scripts/verify-production.mjs ]; then
-            node sites-current/scripts/verify-production.mjs --refresh
-          else
-            node scripts/verify-production.mjs --refresh
-          fi
+        run: node automation/production-daily.mjs

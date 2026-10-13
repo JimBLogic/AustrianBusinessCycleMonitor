@@ -7,11 +7,15 @@ on:
     paths:
       - "sites-current/**"
       - ".github/workflows/sites-current.yml"
+      - "automation/production-daily*"
+      - ".github/workflows/production-data.yml"
   pull_request:
     branches: [master]
     paths:
       - "sites-current/**"
       - ".github/workflows/sites-current.yml"
+      - "automation/production-daily*"
+      - ".github/workflows/production-data.yml"
   workflow_dispatch:
 
 permissions:
@@ -44,8 +48,11 @@ jobs:
 
       - name: Validate maintained source
         run: |
+          node --test ../automation/production-daily.test.mjs
           npm run lint
+          npm run typecheck
           npm test
+          bash scripts/selfhost-smoke.sh
           npm audit --omit=dev --audit-level=high
 
       - name: Validate exact self-host Compose
@@ -82,3 +89,26 @@ jobs:
           curl -fsS http://127.0.0.1:8787/api/data-manifest |
             jq -e --argjson release "$expected_release" '.build.siteRelease == $release'
           grep -q "Austrian Business Cycle Monitor" selfhost-index.html
+
+  full-dependency-audit:
+    name: Full dependency audit (including build tools)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: sites-current
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.14"
+          cache: npm
+          cache-dependency-path: sites-current/package-lock.json
+      - name: Audit locked production and development dependencies
+        run: npm audit --package-lock-only --audit-level=high --json > dependency-audit-current.json
+      - name: Preserve audit even when the security gate fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-dependency-audit
+          path: sites-current/dependency-audit-current.json

@@ -1,5 +1,6 @@
 import { readLatestMacroSnapshot } from "../../../db/runtime";
 import { loadBitcoinSpot } from "../../data/bitcoin-spot";
+import { bitcoinDataStatus } from "../../../lib/observation-integrity.mjs";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +13,8 @@ export async function GET() {
     price,
     priceObservedAt: spot.observedAt ?? retained?.priceObservedAt ?? null,
     provider: spot.price == null && price != null ? previous?.provenance?.bitcoinPrice : spot.provider,
-    status: price == null ? "UNAVAILABLE" : spot.price == null ? "STALE" : "HEALTHY",
-    failure_reason: spot.price == null ? "Live spot providers unavailable; last-known-good if present" : null,
+    status: bitcoinDataStatus(price, spot.price == null ? "stale" : spot.consensus),
+    failure_reason: spot.price == null ? "Live spot providers unavailable; last-known-good if present" : spot.consensus === "confirmed" ? null : `Spot quote quality: ${spot.consensus}`,
     priceConsensus: spot.price == null && price != null ? "stale" : spot.consensus,
     priceSpreadPercent: spot.spreadPercent,
     priceSources: spot.sources,

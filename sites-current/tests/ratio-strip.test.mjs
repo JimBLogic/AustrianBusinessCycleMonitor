@@ -33,7 +33,8 @@ test("uses monthly averages from the latest shared calendar month", () => {
 
 test("withholds stale debt instead of dividing observations from different years", () => {
   for (const expected of [
-    "debtToM2: pairedMonthlyRatio(debtSeries, series.m2 ?? [], 160)",
+    "quarterlyDebtInBillions(series.federalDebt ?? [])",
+    "!debtSourceFresh",
     'status === "available" && denominator.value !== 0',
     'monthAgeDays(observationMonth) <= maximumAgeDays ? "available" : "stale"',
   ]) assert.ok(route.includes(expected), `missing debt freshness guard: ${expected}`);
@@ -56,7 +57,7 @@ test("returns auditable evidence and recomputes it for durable snapshots", () =>
     "ratioEvidence",
     "observationMonth: reading.observationMonth",
     "numeratorObservations: reading.numeratorObservations",
-    "storedRatioModel = buildRatioModel(storedSeries, storedDebtSeries)",
+    "storedRatioModel = buildRatioModel(storedSeries)",
     "ratios: storedRatioModel.ratios",
   ]) assert.ok(route.includes(expected), `missing ratio evidence: ${expected}`);
 });

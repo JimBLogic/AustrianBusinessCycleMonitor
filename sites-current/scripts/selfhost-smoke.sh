@@ -22,7 +22,8 @@ ABCM_DATA_DIR="${runtime_dir}/data" ABCM_INTERNAL_PORT="${port}" ABCM_BIND_IP="1
 server_pid=$!
 
 for _ in $(seq 1 45); do
-  if curl -fsS "http://127.0.0.1:${port}/api/health" >"${runtime_dir}/health.json"; then
+  if node scripts/check-runtime-health.mjs "http://127.0.0.1:${port}/api/health" >"${runtime_dir}/readiness.json" 2>/dev/null; then
+    curl -sS --max-time 5 "http://127.0.0.1:${port}/api/health" >"${runtime_dir}/health.json"
     break
   fi
   if ! kill -0 "${server_pid}" 2>/dev/null; then
@@ -57,4 +58,20 @@ node -e '
   if (!home.includes("Austrian Business Cycle Monitor")) process.exit(1);
 ' "${runtime_dir}/health.json" "${runtime_dir}/manifest.json" "${runtime_dir}/home.html"
 
-echo "Self-host smoke passed on production Worker artifact."
+node --input-type=module - "${runtime_dir}/home.html" "http://127.0.0.1:${port}" <<'NODE'
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const html=await readFile(process.argv[2],'utf8'),origin=process.argv[3];
+const assets=[...new Set([...html.matchAll(/(?:src|href)="(\/assets\/[^"?#]+\.(?:js|css))"/g)].map(match=>match[1]))];
+assert.ok(assets.some(path=>path.endsWith('.js')),'SSR page has no hydration scripts');
+assert.ok(assets.some(path=>path.endsWith('.css')),'SSR page has no stylesheet');
+for(const path of assets) {
+  const response=await fetch(new URL(path,origin),{signal:AbortSignal.timeout(10000)});
+  assert.equal(response.status,200,`${path} is not served`);
+  assert.match(response.headers.get('content-type')??'',path.endsWith('.css')?/text\/css/:/(?:javascript|ecmascript)/,`${path} has incorrect MIME type`);
+  assert.ok((await response.text()).length>0,`${path} is empty`);
+}
+console.log(`Verified ${assets.length} real JavaScript/CSS assets and MIME types.`);
+NODE
+
+echo "Self-host smoke passed on production Worker artifact, including browser assets."

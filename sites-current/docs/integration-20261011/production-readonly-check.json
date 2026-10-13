@@ -1,0 +1,10 @@
+{
+  "siteRelease": 86,
+  "status": "DEGRADED",
+  "checkedAt": "2026-10-11T09:16:12.520Z",
+  "persistence": {
+    "binding": "DB",
+    "status": "ready",
+    "snapshotReadable": true
+  }
+}

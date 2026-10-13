@@ -46,9 +46,16 @@ const SECURITY_HEADERS = {
   "X-Frame-Options": "DENY",
 } as const;
 
-function withSecurityHeaders(response: Response) {
+function withSecurityHeaders(response: Response, request: Request) {
   const headers = new Headers(response.headers);
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) headers.set(name, value);
+  const url = new URL(request.url);
+  // A plain-HTTP loopback self-host server has no TLS endpoint. WebKit upgrades
+  // its scripts and API requests otherwise, preventing hydration entirely.
+  // Public origins retain the production policy, including forced upgrades.
+  if (url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) {
+    headers.set("Content-Security-Policy", SECURITY_HEADERS["Content-Security-Policy"].replace("; upgrade-insecure-requests", ""));
+  }
   headers.delete("Server");
   headers.delete("X-Powered-By");
   return new Response(response.body, {
@@ -78,10 +85,10 @@ const worker = {
           return result.response();
         },
       }, allowedWidths);
-      return withSecurityHeaders(response);
+      return withSecurityHeaders(response, request);
     }
 
-    return withSecurityHeaders(await handler.fetch(request, env, ctx));
+    return withSecurityHeaders(await handler.fetch(request, env, ctx), request);
   },
 };
 

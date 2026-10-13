@@ -121,12 +121,12 @@ export const SOURCE_REGISTRY: readonly SourceDefinition[] = [
   {
     id: "world-bank-pink-sheet",
     provider: "World Bank Pink Sheet",
-    role: "fallback",
+    role: "enrichment",
     authentication: "none",
     transport: "text",
     timeoutMs: 15_000,
     maxAttempts: 2,
-    notes: "Official monthly commodity-price workbook used for gold history when the former FRED series is unavailable.",
+    notes: "Separate monthly gold context metric (USD per troy ounce, monthly mean). Not live spot and not an equivalent backup for the retired daily LBMA AM fixing. First-day dates label observation months.",
   },
   {
     id: "coinbase",

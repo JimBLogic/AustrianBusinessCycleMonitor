@@ -1,0 +1,477 @@
+{
+  "siteRelease": 89,
+  "requestedAt": "2026-10-12T05:23:09.378Z",
+  "refreshMode": "daily-edition",
+  "provenance": {
+    "sourcePolicyVersion": "2026-10-02-retain-history-v2",
+    "persistence": "ready",
+    "backupValidation": [
+      {
+        "key": "vix",
+        "candidate": "Cboe official daily close",
+        "independence": "different delivery origin; same index producer",
+        "status": "matched",
+        "pointsCompared": 60,
+        "primaryDate": "2026-10-08",
+        "backupDate": "2026-10-09",
+        "commonDate": "2026-10-08",
+        "maxDifference": 0,
+        "tolerance": 0.011,
+        "fresh": true,
+        "automaticPromotion": false
+      },
+      {
+        "key": "creditSpread",
+        "candidate": "DBAA − DGS10 on identical dates",
+        "independence": "same FRED dependency; alternative component calculation",
+        "status": "matched",
+        "pointsCompared": 60,
+        "primaryDate": "2026-10-08",
+        "backupDate": "2026-10-08",
+        "commonDate": "2026-10-08",
+        "maxDifference": 0,
+        "tolerance": 0.011,
+        "fresh": true,
+        "automaticPromotion": false
+      },
+      {
+        "key": "sp500",
+        "candidate": "Cboe SPX daily history",
+        "independence": "different delivery origin; same underlying index",
+        "status": "matched",
+        "pointsCompared": 60,
+        "primaryDate": "2026-10-09",
+        "backupDate": "2026-10-09",
+        "commonDate": "2026-10-09",
+        "maxDifference": 0,
+        "tolerance": 0.011,
+        "fresh": true,
+        "automaticPromotion": false
+      }
+    ],
+    "blsCheckedAt": "2026-10-08T11:58:39.327Z",
+    "transportHealth": [
+      {
+        "id": "coinbase",
+        "status": "ready",
+        "failures": 0,
+        "attempts": 2,
+        "successes": 2,
+        "lastLatencyMs": 49,
+        "meanSuccessLatencyMs": 29,
+        "scope": "current-worker-isolate-transport",
+        "coolingUntil": null,
+        "lastFailureAt": null,
+        "lastSuccessAt": "2026-10-12T05:22:57.119Z",
+        "reason": null
+      },
+      {
+        "id": "kraken",
+        "status": "ready",
+        "failures": 0,
+        "attempts": 2,
+        "successes": 2,
+        "lastLatencyMs": 53,
+        "meanSuccessLatencyMs": 31,
+        "scope": "current-worker-isolate-transport",
+        "coolingUntil": null,
+        "lastFailureAt": null,
+        "lastSuccessAt": "2026-10-12T05:22:57.123Z",
+        "reason": null
+      },
+      {
+        "id": "fred-csv",
+        "status": "ready",
+        "failures": 0,
+        "attempts": 21,
+        "successes": 21,
+        "lastLatencyMs": 1369,
+        "meanSuccessLatencyMs": 546,
+        "scope": "current-worker-isolate-transport",
+        "coolingUntil": null,
+        "lastFailureAt": null,
+        "lastSuccessAt": "2026-10-12T05:22:56.580Z",
+        "reason": null
+      },
+      {
+        "id": "world-bank-pink-sheet",
+        "status": "ready",
+        "failures": 0,
+        "attempts": 1,
+        "successes": 1,
+        "lastLatencyMs": 57,
+        "meanSuccessLatencyMs": 57,
+        "scope": "current-worker-isolate-transport",
+        "coolingUntil": null,
+        "lastFailureAt": null,
+        "lastSuccessAt": "2026-10-12T05:22:55.211Z",
+        "reason": null
+      },
+      {
+        "id": "cdn-api.cboe.com",
+        "status": "ready",
+        "failures": 0,
+        "attempts": 2,
+        "successes": 2,
+        "lastLatencyMs": 1394,
+        "meanSuccessLatencyMs": 710,
+        "scope": "current-worker-isolate-transport",
+        "coolingUntil": null,
+        "lastFailureAt": null,
+        "lastSuccessAt": "2026-10-12T05:22:56.605Z",
+        "reason": null
+      },
+      {
+        "id": "api.fiscaldata.treasury.gov",
+        "status": "recovering",
+        "failures": 1,
+        "attempts": 2,
+        "successes": 0,
+        "lastLatencyMs": null,
+        "meanSuccessLatencyMs": null,
+        "scope": "current-worker-isolate-transport",
+        "coolingUntil": null,
+        "lastFailureAt": "2026-10-12T05:23:09.378Z",
+        "lastSuccessAt": null,
+        "reason": "HTTP 525"
+      },
+      {
+        "id": "blockchain.info",
+        "status": "ready",
+        "failures": 0,
+        "attempts": 1,
+        "successes": 1,
+        "lastLatencyMs": 563,
+        "meanSuccessLatencyMs": 563,
+        "scope": "current-worker-isolate-transport",
+        "coolingUntil": null,
+        "lastFailureAt": null,
+        "lastSuccessAt": "2026-10-12T05:22:57.633Z",
+        "reason": null
+      },
+      {
+        "id": "mempool.space",
+        "status": "ready",
+        "failures": 0,
+        "attempts": 2,
+        "successes": 2,
+        "lastLatencyMs": 193,
+        "meanSuccessLatencyMs": 192,
+        "scope": "current-worker-isolate-transport",
+        "coolingUntil": null,
+        "lastFailureAt": null,
+        "lastSuccessAt": "2026-10-12T05:22:57.263Z",
+        "reason": null
+      },
+      {
+        "id": "api.blockchain.info",
+        "status": "ready",
+        "failures": 0,
+        "attempts": 1,
+        "successes": 1,
+        "lastLatencyMs": 820,
+        "meanSuccessLatencyMs": 820,
+        "scope": "current-worker-isolate-transport",
+        "coolingUntil": null,
+        "lastFailureAt": null,
+        "lastSuccessAt": "2026-10-12T05:22:57.890Z",
+        "reason": null
+      }
+    ],
+    "fred": "Official-source fallback mesh (FRED REST ready)",
+    "bitcoinPrice": "Coinbase + Kraken",
+    "bitcoinNetwork": "Mempool.space + Blockchain.com",
+    "bitcoinHistory": "Blockchain.com Charts",
+    "federalDebt": "FRED",
+    "fredAvailable": 14,
+    "fredTotal": 19,
+    "modelReady": false,
+    "modelStatus": "provisional",
+    "modelInputsAvailable": 12,
+    "modelInputsTotal": 14,
+    "engineReady": {
+      "liquidity": true,
+      "credit": true,
+      "realEconomy": true,
+      "inflation": true,
+      "fiscal": false
+    },
+    "signalReady": {
+      "money": true,
+      "monetaryStance": true,
+      "creditRisk": true,
+      "termStructure": true,
+      "production": true,
+      "labour": true,
+      "consumerPrices": true,
+      "resourcesFx": true,
+      "debtBurden": false,
+      "fiscalImpulse": false
+    },
+    "availableWeight": 0.8499999999999999,
+    "mode": "daily-persisted"
+  },
+  "derived": {
+    "scores": {
+      "liquidity": 67,
+      "credit": 46,
+      "realEconomy": 34,
+      "inflation": 61,
+      "fiscal": null,
+      "money": 84,
+      "monetaryStance": 48,
+      "creditRisk": 54,
+      "termStructure": 35,
+      "production": 36,
+      "labour": 30,
+      "consumerPrices": 65,
+      "resourcesFx": 56,
+      "debtBurden": null,
+      "fiscalImpulse": null,
+      "composite": 52
+    },
+    "regime": "liquidity-led-expansion"
+  },
+  "bitcoin": {
+    "price": 84037.83,
+    "change24h": null,
+    "marketCap": null,
+    "priceObservedAt": "2026-10-12T05:22:56.933339019Z",
+    "priceConsensus": "confirmed",
+    "priceSpreadPercent": 0.012684763516625182,
+    "priceSources": [
+      "coinbase",
+      "kraken"
+    ],
+    "supply": 20097025,
+    "stockToFlow": 122.35631659056317,
+    "blockHeight": 971049,
+    "hashRate": 1147938597417.7231,
+    "difficulty": 132716002350731,
+    "feeFast": 1,
+    "feeHour": 1
+  },
+  "series": {
+    "m2": {
+      "observations": 140,
+      "first": {
+        "date": "2015-01-01",
+        "value": 11806.2
+      },
+      "last": {
+        "date": "2026-08-01",
+        "value": 23342.8
+      }
+    },
+    "fedFunds": {
+      "observations": 141,
+      "first": {
+        "date": "2015-01-01",
+        "value": 0.11
+      },
+      "last": {
+        "date": "2026-09-01",
+        "value": 3.75
+      }
+    },
+    "treasury10y": {
+      "observations": 2944,
+      "first": {
+        "date": "2015-01-02",
+        "value": 2.12
+      },
+      "last": {
+        "date": "2026-10-08",
+        "value": 5.22
+      }
+    },
+    "treasury2y": {
+      "observations": 2944,
+      "first": {
+        "date": "2015-01-02",
+        "value": 0.66
+      },
+      "last": {
+        "date": "2026-10-08",
+        "value": 4.75
+      }
+    },
+    "yieldCurve": {
+      "observations": 2945,
+      "first": {
+        "date": "2015-01-02",
+        "value": 1.46
+      },
+      "last": {
+        "date": "2026-10-09",
+        "value": 0.44
+      }
+    },
+    "creditSpread": {
+      "observations": 2939,
+      "first": {
+        "date": "2015-01-02",
+        "value": 2.51
+      },
+      "last": {
+        "date": "2026-10-08",
+        "value": 1.48
+      }
+    },
+    "cpi": {
+      "observations": 139,
+      "first": {
+        "date": "2015-01-01",
+        "value": 234.747
+      },
+      "last": {
+        "date": "2026-08-01",
+        "value": 334.131
+      }
+    },
+    "unemployment": {
+      "observations": 140,
+      "first": {
+        "date": "2015-01-01",
+        "value": 5.7
+      },
+      "last": {
+        "date": "2026-09-01",
+        "value": 4.2
+      }
+    },
+    "federalDebt": {
+      "observations": 46,
+      "first": {
+        "date": "2015-01-01",
+        "value": 18152056
+      },
+      "last": {
+        "date": "2026-04-01",
+        "value": 39462398
+      }
+    },
+    "debtToGdp": {
+      "observations": 45,
+      "first": {
+        "date": "2015-01-01",
+        "value": 100.49009
+      },
+      "last": {
+        "date": "2026-01-01",
+        "value": 122.59387
+      }
+    },
+    "oil": {
+      "observations": 2936,
+      "first": {
+        "date": "2015-01-02",
+        "value": 52.72
+      },
+      "last": {
+        "date": "2026-10-06",
+        "value": 96.24
+      }
+    },
+    "gold": {
+      "observations": 141,
+      "first": {
+        "date": "2015-01-01",
+        "value": 1251
+      },
+      "last": {
+        "date": "2026-09-01",
+        "value": 4319
+      }
+    },
+    "dollar": {
+      "observations": 2931,
+      "first": {
+        "date": "2015-01-02",
+        "value": 102.9027
+      },
+      "last": {
+        "date": "2026-10-02",
+        "value": 121.3848
+      }
+    },
+    "sp500": {
+      "observations": 2514,
+      "first": {
+        "date": "2016-10-10",
+        "value": 2163.66
+      },
+      "last": {
+        "date": "2026-10-09",
+        "value": 7811.54
+      }
+    },
+    "vix": {
+      "observations": 2992,
+      "first": {
+        "date": "2015-01-02",
+        "value": 17.79
+      },
+      "last": {
+        "date": "2026-10-08",
+        "value": 15.41
+      }
+    },
+    "industrialProduction": {
+      "observations": 140,
+      "first": {
+        "date": "2015-01-31",
+        "value": 102.8905
+      },
+      "last": {
+        "date": "2026-08-31",
+        "value": 103.0682
+      }
+    },
+    "capacityUtilization": {
+      "observations": 140,
+      "first": {
+        "date": "2015-01-31",
+        "value": 78.5803
+      },
+      "last": {
+        "date": "2026-08-31",
+        "value": 76.2717
+      }
+    },
+    "realGdpGrowth": {
+      "observations": 46,
+      "first": {
+        "date": "2015-01-01",
+        "value": 3.6
+      },
+      "last": {
+        "date": "2026-04-01",
+        "value": 2.2
+      }
+    },
+    "manufacturingSurvey": {
+      "observations": 141,
+      "first": {
+        "date": "2015-01-01",
+        "value": 33.19090270996094
+      },
+      "last": {
+        "date": "2026-09-01",
+        "value": 25
+      }
+    },
+    "bitcoin": {
+      "observations": 1827,
+      "first": {
+        "date": "2021-10-12",
+        "value": 57452.01
+      },
+      "last": {
+        "date": "2026-10-12",
+        "value": 83677.37
+      }
+    }
+  },
+  "originalPayloadSHA256": "7995f6b6ad30c9c81f0498fb0d5c0eed2e8fd8da10350ad1247bffb057acfe23"
+}

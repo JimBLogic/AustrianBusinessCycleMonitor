@@ -1,17 +1,19 @@
 /** Missing values must never become observations with value zero. */
 export function finiteObservation(value) {
-  if (value == null || typeof value === 'boolean' || (typeof value === 'string' && !value.trim())) return null;
+  if (!['number', 'string'].includes(typeof value) || (typeof value === 'string' && !value.trim())) return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
 export function validDate(date, now = Date.now()) {
+  if (typeof date !== 'string') return false;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
   const stamp = Date.parse(date);
   return Number.isFinite(stamp) && new Date(stamp).toISOString().slice(0,10) === date && stamp <= now + 86400000;
 }
 export function normalizeSeries(points, now = Date.now()) {
   const dates = new Map();
-  for (const point of points) {
+  for (const point of Array.isArray(points) ? points : []) {
+    if (!point || typeof point !== 'object' || Array.isArray(point)) continue;
     const value = finiteObservation(point.value);
     if (validDate(point.date, now) && value != null) dates.set(point.date,value);
   }

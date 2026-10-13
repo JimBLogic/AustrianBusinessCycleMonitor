@@ -201,7 +201,9 @@ jobs:
     name: Publish container image
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [backend, frontend, docker-smoke]
+    # The historical Flask/Vite image is separate from Sites. Never publish it
+    # while its real quality/security gates fail, even if report jobs are soft.
+    needs: [backend, frontend, docker-smoke, backend-quality, frontend-quality, legacy-dependency-audit]
     if: ${{ github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master') }}
     permissions:
       contents: read
@@ -229,3 +231,22 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  legacy-dependency-audit:
+    name: Historical frontend security publication gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.14'
+      - name: Block historical image publication on unresolved advisories
+        working-directory: packages/frontend
+        run: npm audit --package-lock-only --audit-level=high --json > legacy-dependency-audit.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: legacy-dependency-audit
+          path: packages/frontend/legacy-dependency-audit.json
+          retention-days: 35

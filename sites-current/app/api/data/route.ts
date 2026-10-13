@@ -1,4 +1,5 @@
 import { snapshotHealth } from "../../data/snapshot-health";
+import { bitcoinHistoryPoints, treasuryDebtPoints, retainHistory, eligibleScores, quarterlyDebtInBillions } from "@/lib/observation-integrity.mjs";
 import { finiteObservation, normalizeSeries, parseFredCsv, parseCboeCsv, alignedDifference, compareSeries, seriesFresh } from "@/lib/series-quality.mjs";
 import { SOURCE_POLICY_VERSION } from "@/lib/snapshot-policy.mjs";
 import { getRuntimeBindings, readLatestMacroSnapshot, recordMacroSnapshot } from "../../../db/runtime";
@@ -608,13 +609,15 @@ function alignedRealRate(fedFunds: Point[], cpi: Point[]): RatioReading {
   };
 }
 
-function buildRatioModel(series: Record<string, Point[]>, debtSeries: Point[]) {
+function buildRatioModel(series: Record<string, Point[]>) {
   const readings = {
     bitcoinGoldOunces: pairedMonthlyRatio(series.bitcoin ?? [], series.gold ?? [], 75),
     sp500Gold: pairedMonthlyRatio(series.sp500 ?? [], series.gold ?? [], 75),
-    debtToM2: pairedMonthlyRatio(debtSeries, series.m2 ?? [], 160),
+    debtToM2: pairedMonthlyRatio(seriesFresh(series.treasuryDebt ?? [], 14) ? series.treasuryDebt : quarterlyDebtInBillions(series.federalDebt ?? []), series.m2 ?? [], 160),
     realRate: alignedRealRate(series.fedFunds ?? [], series.cpi ?? []),
   };
+  const debtSourceFresh = seriesFresh(seriesFresh(series.treasuryDebt ?? [], 14) ? series.treasuryDebt : series.federalDebt ?? [], seriesFresh(series.treasuryDebt ?? [], 14) ? 14 : 160);
+  if (!debtSourceFresh && readings.debtToM2.status === "available") readings.debtToM2 = {...readings.debtToM2, value:null, status:"stale"};
   return {
     ratios: Object.fromEntries(Object.entries(readings).map(([key, reading]) => [key, reading.value])),
     ratioEvidence: Object.fromEntries(Object.entries(readings).map(([key, reading]) => [key, {
@@ -682,7 +685,7 @@ function buildSixForceContext(series: Record<string, Point[]>, debtSeries: Point
       debtGrowth,
       null,
       latest(debtSeries)?.date ?? null,
-      series.treasuryDebt?.length ? "treasuryDebt" : "federalDebt",
+      seriesFresh(series.treasuryDebt ?? [], 14) ? "treasuryDebt" : "federalDebt",
       [latest(debtSeries)?.value, debtGrowth],
     ),
     oil: force(
@@ -723,17 +726,23 @@ function buildSixForceContext(series: Record<string, Point[]>, debtSeries: Point
     ),
   };
 
+  // Context retains old observations, but they cannot confirm a current pattern.
+  for (const reading of Object.values(forces)) {
+    const maxAge = MAX_OBSERVATION_AGE_DAYS[reading.sourceKey as FredSeriesKey] ?? 14;
+    const age = reading.observedAt ? (Date.now()-Date.parse(reading.observedAt))/86_400_000 : Infinity;
+    if (reading.available && age > maxAge) { reading.available = false; reading.state = "stale"; }
+  }
   const activePatterns: string[] = [];
-  if (n(oilMomentum) > 5 && manufacturing && manufacturing.value < -10) activePatterns.push("energy-pressure-below-trend-manufacturing");
-  if (n(treasuryChange) > 0.25 && n(debtGrowth) > 5) activePatterns.push("rising-yields-with-fiscal-refinancing-pressure");
-  if (n(dollarMomentum) > 2 && n(bitcoinMomentum) < -5) activePatterns.push("dollar-liquidity-tightening");
-  if (n(dollarMomentum) < -2 && n(bitcoinMomentum) > 5) activePatterns.push("monetary-repricing");
+  if (forces.oil.available && forces.manufacturing.available && n(oilMomentum) > 5 && manufacturing && manufacturing.value < -10) activePatterns.push("energy-pressure-below-trend-manufacturing");
+  if (forces.treasury.available && forces.debt.available && n(treasuryChange) > 0.25 && n(debtGrowth) > 5) activePatterns.push("rising-yields-with-fiscal-refinancing-pressure");
+  if (forces.dollar.available && forces.bitcoin.available && n(dollarMomentum) > 2 && n(bitcoinMomentum) < -5) activePatterns.push("dollar-liquidity-tightening");
+  if (forces.dollar.available && forces.bitcoin.available && n(dollarMomentum) < -2 && n(bitcoinMomentum) > 5) activePatterns.push("monetary-repricing");
 
   const divergences: string[] = [];
-  if (n(dollarMomentum) > 2 && n(bitcoinMomentum) > 5) divergences.push("stronger-dollar-and-rising-bitcoin");
-  if (n(dollarMomentum) < -2 && n(bitcoinMomentum) < -5) divergences.push("weaker-dollar-and-falling-bitcoin");
-  if (n(treasuryChange) > 0.25 && n(bitcoinMomentum) > 5) divergences.push("rising-yields-and-rising-bitcoin");
-  if (manufacturing && manufacturing.value < -10 && n(oilMomentum) < -5) divergences.push("below-trend-manufacturing-and-falling-energy");
+  if (forces.dollar.available && forces.bitcoin.available && n(dollarMomentum) > 2 && n(bitcoinMomentum) > 5) divergences.push("stronger-dollar-and-rising-bitcoin");
+  if (forces.dollar.available && forces.bitcoin.available && n(dollarMomentum) < -2 && n(bitcoinMomentum) < -5) divergences.push("weaker-dollar-and-falling-bitcoin");
+  if (forces.treasury.available && forces.bitcoin.available && n(treasuryChange) > 0.25 && n(bitcoinMomentum) > 5) divergences.push("rising-yields-and-rising-bitcoin");
+  if (forces.manufacturing.available && forces.oil.available && manufacturing && manufacturing.value < -10 && n(oilMomentum) < -5) divergences.push("below-trend-manufacturing-and-falling-energy");
 
   const available = Object.values(forces).filter((reading) => reading.available).length;
   const status = available === 6 ? "complete" : available >= 4 ? "partial" : "withheld";
@@ -813,8 +822,8 @@ export async function readPersistedEdition(request: Request) {
       };
       const storedSeries = metrics.series ?? {};
       const storedCorrelationModel = buildCorrelations(storedSeries);
-      const storedDebtSeries = storedSeries.treasuryDebt?.length ? storedSeries.treasuryDebt : (storedSeries.federalDebt ?? []).map(point => ({...point,value:point.value/1000}));
-      const storedRatioModel = buildRatioModel(storedSeries, storedDebtSeries);
+      const storedDebtSeries = seriesFresh(storedSeries.treasuryDebt ?? [], 14) ? storedSeries.treasuryDebt : (storedSeries.federalDebt ?? []).map(point => ({...point,value:point.value/1000}));
+      const storedRatioModel = buildRatioModel(storedSeries);
       const storedLatest = metrics.latest ?? {};
       const storedBitcoin = metrics.bitcoin ?? {};
       const storedSixForce = buildSixForceContext(
@@ -833,23 +842,9 @@ export async function readPersistedEdition(request: Request) {
       });
       const storedScores = persisted.scores as Record<string, number>;
       const storedModelExpired = Date.now() - persistedAt > 36 * 60 * 60_000;
-      // Versions written before v33 contained the five parent engines only.
-      // Preserve instant availability during the transition, explicitly mark
-      // the reading provisional, and let the background daily refresh replace
-      // these temporary aliases with the ten independently calculated signals.
-      const normalizedScores = {
-        ...storedScores,
-        money: Number.isFinite(storedScores.money) ? storedScores.money : storedScores.liquidity,
-        monetaryStance: Number.isFinite(storedScores.monetaryStance) ? storedScores.monetaryStance : storedScores.liquidity,
-        creditRisk: Number.isFinite(storedScores.creditRisk) ? storedScores.creditRisk : storedScores.credit,
-        termStructure: Number.isFinite(storedScores.termStructure) ? storedScores.termStructure : storedScores.credit,
-        production: Number.isFinite(storedScores.production) ? storedScores.production : storedScores.realEconomy,
-        labour: Number.isFinite(storedScores.labour) ? storedScores.labour : storedScores.realEconomy,
-        consumerPrices: Number.isFinite(storedScores.consumerPrices) ? storedScores.consumerPrices : storedScores.inflation,
-        resourcesFx: Number.isFinite(storedScores.resourcesFx) ? storedScores.resourcesFx : storedScores.inflation,
-        debtBurden: Number.isFinite(storedScores.debtBurden) ? storedScores.debtBurden : storedScores.fiscal,
-        fiscalImpulse: Number.isFinite(storedScores.fiscalImpulse) ? storedScores.fiscalImpulse : storedScores.fiscal,
-      };
+      // Missing legacy ten-signal components are not reconstructed from parent
+      // scores: those are different formulas and cannot serve as substitutes.
+      const normalizedScores = { ...storedScores };
       const hasNativeTenSignals = Number.isFinite(storedScores.money);
       const generatedAt = persisted.requestedAt;
       const nextManualAt = new Date(persistedAt + 15 * 60_000).toISOString();
@@ -876,7 +871,7 @@ export async function readPersistedEdition(request: Request) {
         bitcoin: storedBitcoin,
         derived: {
           changes: metrics.changes ?? {},
-          scores: normalizedScores,
+          scores: eligibleScores(normalizedScores, persisted.provenance, storedModelExpired || !hasNativeTenSignals),
           regime: persisted.regime,
           correlations: storedCorrelationModel.correlations,
           correlationEvidence: storedCorrelationModel.correlationEvidence,
@@ -891,8 +886,8 @@ export async function readPersistedEdition(request: Request) {
           ...persisted.provenance,
           bitcoinNetwork: storedBitcoinNetwork,
           mode: currentMainEdition ? "daily-persisted" : "stale-persisted",
-          modelStatus: storedModelExpired ? "withheld" : hasNativeTenSignals ? persisted.provenance.modelStatus : "provisional",
-          ...(storedModelExpired ? { modelReady: false, signalReady: Object.fromEntries(Object.keys(persisted.provenance.signalReady ?? {}).map(key => [key,false])), engineReady: Object.fromEntries(Object.keys(persisted.provenance.engineReady ?? {}).map(key => [key,false])) } : {}),
+          modelStatus: storedModelExpired || !hasNativeTenSignals ? "withheld" : persisted.provenance.modelStatus,
+          ...((storedModelExpired || !hasNativeTenSignals) ? { modelReady: false, signalReady: Object.fromEntries(Object.keys(persisted.provenance.signalReady ?? {}).map(key => [key,false])), engineReady: Object.fromEntries(Object.keys(persisted.provenance.engineReady ?? {}).map(key => [key,false])) } : {}),
         },
       }, {
         headers: {
@@ -972,19 +967,10 @@ async function generateEdition(request: Request) {
   ]);
   const treasury = await treasuryPromise;
 
-  const bitcoinHistory: Point[] = Array.isArray(bitcoinChart?.values)
-    ? normalizePoints(bitcoinChart.values.map((item: { x: number; y: number }) => ({
-        date: new Date(item.x * 1000).toISOString().slice(0, 10),
-        value: finiteObservation(item.y),
-      })).filter((point: {date:string;value:number|null}): point is Point => point.value != null && point.value > 0))
-    : normalizePoints(persistedSnapshot?.metrics?.series?.bitcoin ?? []);
-
-  const treasuryDebt: Point[] = Array.isArray(treasury?.data)
-    ? normalizePoints(treasury.data.map((item: { record_date?: string; tot_pub_debt_out_amt?: string }) => ({
-        date: String(item.record_date ?? ""),
-        value: finiteObservation(item.tot_pub_debt_out_amt) == null ? null : Number(item.tot_pub_debt_out_amt) / 1_000_000_000,
-      })).filter((point: {date:string;value:number|null}): point is Point => point.value != null && point.value > 0))
-    : normalizePoints(persistedSnapshot?.metrics?.series?.treasuryDebt ?? []);
+  const bitcoinCandidate = bitcoinHistoryPoints(bitcoinChart);
+  const bitcoinHistory: Point[] = retainHistory(bitcoinCandidate, persistedSnapshot?.metrics?.series?.bitcoin ?? []);
+  const treasuryCandidate = treasuryDebtPoints(treasury);
+  const treasuryDebt: Point[] = retainHistory(treasuryCandidate, persistedSnapshot?.metrics?.series?.treasuryDebt ?? []);
   if (treasuryDebt.length) series.treasuryDebt = treasuryDebt;
 
   const bitcoinPrice = bitcoinSpot.price ?? persistedSnapshot?.metrics?.bitcoin?.price ?? null;
@@ -1004,7 +990,7 @@ async function generateEdition(request: Request) {
   const industrialGrowth = change(modelSeries.industrialProduction, 365);
   const unemploymentChange = delta(modelSeries.unemployment, 365);
   const capacityChange = delta(modelSeries.capacityUtilization, 365);
-  const debtSeries = treasuryDebt.length ? treasuryDebt : modelSeries.federalDebt.map(point => ({...point,value:point.value/1000}));
+  const debtSeries = seriesFresh(treasuryDebt, 14) ? treasuryDebt : modelSeries.federalDebt.map(point => ({...point,value:point.value/1000}));
   const debtGrowth = change(debtSeries, 365);
   const debtToGdp = latest(modelSeries.debtToGdp)?.value ?? null;
   const realRate = alignedRealRate(modelSeries.fedFunds, modelSeries.cpi).value;
@@ -1081,7 +1067,7 @@ async function generateEdition(request: Request) {
 
   const correlationModel = buildCorrelations({ ...series, bitcoin: bitcoinHistory });
 
-  const ratioModel = buildRatioModel({ ...series, bitcoin: bitcoinHistory }, debtSeries);
+  const ratioModel = buildRatioModel({ ...series, bitcoin: bitcoinHistory });
   const sixForceContext = buildSixForceContext({ ...series, bitcoin: bitcoinHistory }, debtSeries, bitcoinPrice);
 
   const freshness = Object.entries(FRED).map(([key, id]) => ({
@@ -1142,7 +1128,7 @@ async function generateEdition(request: Request) {
     },
     derived: {
       changes: { m2Growth, rateChange, cpiGrowth, oilMomentum, dollarMomentum, industrialGrowth, unemploymentChange, capacityChange, debtGrowth },
-      scores: { liquidity: liquidityScore, credit: creditScore, realEconomy: realEconomyScore, inflation: inflationScore, fiscal: fiscalScore, ...signalScores, composite },
+      scores: eligibleScores({ liquidity: liquidityScore, credit: creditScore, realEconomy: realEconomyScore, inflation: inflationScore, fiscal: fiscalScore, ...signalScores, composite }, {signalReady, engineReady, modelStatus}),
       regime,
       correlations: correlationModel.correlations,
       correlationEvidence: correlationModel.correlationEvidence,
@@ -1161,7 +1147,7 @@ async function generateEdition(request: Request) {
       fred: fredProvenance,
       bitcoinPrice: bitcoinSpot.price ? bitcoinSpot.provider : bitcoinPrice != null ? persistedSnapshot?.provenance?.bitcoinPrice ?? "last-known-good" : "unavailable",
       bitcoinNetwork: bitcoinNetworkProvenance(Boolean(heightText || fees), Boolean(chain)),
-      bitcoinHistory: bitcoinHistory.length ? "Blockchain.com Charts" : "unavailable",
+      bitcoinHistory: bitcoinCandidate.length ? "Blockchain.com Charts" : bitcoinHistory.length ? "Blockchain.com Charts · last-known-good" : "unavailable",
       federalDebt: treasuryDebt.length
         ? "U.S. Treasury Fiscal Data"
         : results.federalDebt.source === "worldbank"

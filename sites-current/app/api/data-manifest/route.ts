@@ -1,3 +1,4 @@
+import { WORLD_BANK_GOLD } from '../../../lib/gold-metadata.mjs';
 import { FRED_SERIES, SOURCE_REGISTRY } from "../../data/source-registry";
 import { CONTEXT_MODEL_VERSION, DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "../../version";
 
@@ -11,6 +12,7 @@ export async function GET() {
       sourceMirror: SOURCE_MIRROR,
     },
     sourceReliability: {
+      gold: WORLD_BANK_GOLD,
       report: "/api/source-health",
       primaryPromotion: "Manual review only, after at least 30 distinct observed days, >=99% matched daily checks and zero divergence.",
       observationScope: "Checks on refresh, not a continuous availability monitor. Persisted macro editions retain validation evidence.",

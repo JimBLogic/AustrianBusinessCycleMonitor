@@ -1,0 +1,13 @@
+✔ every installed glob consumer uses the pinned security backport (6.072972ms)
+✔ string and direct AST guards protect all recursive public entry points (14.983257ms)
+✔ published stack-exhaustion payload is rejected in a bounded child process (76.320276ms)
+✔ cyclic expansion parent chains stop before an unbounded loop (2.596616ms)
+✔ normal globs, ranges and escaping retain published semantics (28.322424ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 234.4901

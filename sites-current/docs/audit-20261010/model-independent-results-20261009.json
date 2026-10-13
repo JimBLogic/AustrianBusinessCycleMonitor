@@ -1,0 +1,68 @@
+{
+  "edition": "2026-10-09T11:39:09.081Z",
+  "changes": {
+    "m2Growth": 5.6589084127717015,
+    "rateChange": -0.46999999999999975,
+    "cpiGrowth": 3.353016322755642,
+    "oilMomentum": 29.077253218884103,
+    "dollarMomentum": 0.5755231162099195,
+    "industrialGrowth": 1.4204223973108832,
+    "unemploymentChange": -0.20000000000000018,
+    "capacityChange": 0.16619999999998925
+  },
+  "alignedRealRate": {
+    "month": "2026-08",
+    "value": 0.2769836772443579
+  },
+  "scores": {
+    "money": 84,
+    "monetaryStance": 48,
+    "creditRisk": 53,
+    "termStructure": 35,
+    "production": 36,
+    "labour": 30,
+    "consumerPrices": 65,
+    "resourcesFx": 56
+  },
+  "weight": 0.85,
+  "weightedNumerator": 44.32,
+  "unroundedComposite": 52.141176470588235,
+  "composite": 52,
+  "ratios": {
+    "bitcoinGoldOunces": {
+      "month": "2026-09",
+      "value": 18.594157443852744
+    },
+    "sp500Gold": {
+      "month": "2026-09",
+      "value": 1.7757384315152318
+    }
+  },
+  "correlations": {
+    "m2_sp500": {
+      "pairs": 60,
+      "value": 0.16597530835199167
+    },
+    "dollar_gold": {
+      "pairs": 60,
+      "value": -0.3533557832564136
+    },
+    "oil_cpi": {
+      "pairs": 60,
+      "value": 0.32985915481028033
+    },
+    "bitcoin_m2": {
+      "pairs": 58,
+      "value": -0.0446856866534398
+    },
+    "bitcoin_gold": {
+      "pairs": 59,
+      "value": 0.0787353795787694
+    },
+    "sp500_gold": {
+      "pairs": 60,
+      "value": 0.021414849299289072
+    }
+  },
+  "result": "PASS for arithmetic on eligible live inputs; excluded fiscal scores are not valid observations"
+}

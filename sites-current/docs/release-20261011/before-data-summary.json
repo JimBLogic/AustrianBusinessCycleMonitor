@@ -1,0 +1,742 @@
+{
+  "requestedAt": "2026-10-11T21:03:58.701Z",
+  "refreshMode": "daily-edition",
+  "cache": {
+    "generatedAt": "2026-10-11T21:03:58.701Z",
+    "validUntil": "2026-10-11T21:18:58.701Z",
+    "nextManualAt": "2026-10-11T21:18:58.701Z",
+    "nextDailyAt": "2026-10-12T10:00:00.000Z",
+    "ttlSeconds": 900,
+    "editionTtlSeconds": 86400,
+    "mode": "durable-daily-edition"
+  },
+  "regime": null,
+  "scores": null,
+  "latest": {
+    "m2": {
+      "date": "2026-08-01",
+      "value": 23342.8
+    },
+    "fedFunds": {
+      "date": "2026-09-01",
+      "value": 3.75
+    },
+    "treasury10y": {
+      "date": "2026-10-08",
+      "value": 5.22
+    },
+    "treasury2y": {
+      "date": "2026-10-08",
+      "value": 4.75
+    },
+    "yieldCurve": {
+      "date": "2026-10-09",
+      "value": 0.44
+    },
+    "creditSpread": {
+      "date": "2026-10-08",
+      "value": 1.48
+    },
+    "cpi": {
+      "date": "2026-08-01",
+      "value": 334.131
+    },
+    "unemployment": {
+      "date": "2026-09-01",
+      "value": 4.2
+    },
+    "federalDebt": {
+      "date": "2026-04-01",
+      "value": 39462398
+    },
+    "debtToGdp": {
+      "date": "2026-01-01",
+      "value": 122.59387
+    },
+    "oil": {
+      "date": "2026-10-06",
+      "value": 96.24
+    },
+    "gold": {
+      "date": "2026-09-01",
+      "value": 4319
+    },
+    "dollar": {
+      "date": "2026-10-02",
+      "value": 121.3848
+    },
+    "sp500": {
+      "date": "2026-10-09",
+      "value": 7811.54
+    },
+    "vix": {
+      "date": "2026-10-08",
+      "value": 15.41
+    },
+    "industrialProduction": {
+      "date": "2026-08-31",
+      "value": 103.0682
+    },
+    "capacityUtilization": {
+      "date": "2026-08-31",
+      "value": 76.2717
+    },
+    "realGdpGrowth": {
+      "date": "2026-04-01",
+      "value": 2.2
+    },
+    "manufacturingSurvey": {
+      "date": "2026-09-01",
+      "value": 25
+    },
+    "bitcoin": {
+      "date": "2026-10-11",
+      "value": 82916.77
+    }
+  },
+  "freshness": [
+    {
+      "key": "m2",
+      "id": "M2SL",
+      "observedAt": "2026-08-01",
+      "status": "live",
+      "error": null,
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-11T21:03:58.701Z",
+      "source": "csv"
+    },
+    {
+      "key": "fedFunds",
+      "id": "FEDFUNDS",
+      "observedAt": "2026-09-01",
+      "status": "live",
+      "error": null,
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-11T21:03:58.701Z",
+      "source": "csv"
+    },
+    {
+      "key": "treasury10y",
+      "id": "DGS10",
+      "observedAt": "2026-10-08",
+      "status": "live",
+      "error": null,
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-11T21:03:58.701Z",
+      "source": "csv"
+    },
+    {
+      "key": "treasury2y",
+      "id": "DGS2",
+      "observedAt": "2026-10-08",
+      "status": "live",
+      "error": null,
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-11T21:03:58.701Z",
+      "source": "csv"
+    },
+    {
+      "key": "yieldCurve",
+      "id": "T10Y2Y",
+      "observedAt": "2026-10-09",
+      "status": "live",
+      "error": null,
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-11T21:03:58.701Z",
+      "source": "csv"
+    },
+    {
+      "key": "creditSpread",
+      "id": "BAA10Y",
+      "observedAt": "2026-10-08",
+      "status": "live",
+      "error": null,
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-11T21:03:58.701Z",
+      "source": "csv"
+    },
+    {
+      "key": "cpi",
+      "id": "CPIAUCSL",
+      "observedAt": "2026-08-01",
+      "status": "live",
+      "error": null,
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-11T21:03:58.701Z",
+      "source": "csv"
+    },
+    {
+      "key": "unemployment",
+      "id": "UNRATE",
+      "observedAt": "2026-09-01",
+      "status": "live",
+      "error": null,
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-11T21:03:58.701Z",
+      "source": "csv"
+    },
+    {
+      "key": "federalDebt",
+      "id": "GFDEBTN",
+      "observedAt": "2026-04-01",
+      "status": "stale",
+      "error": null,
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-11T21:03:58.701Z",
+      "source": "csv"
+    },
+    {
+      "key": "debtToGdp",
+      "id": "GFDEGDQ188S",
+      "observedAt": "2026-01-01",
+      "status": "stale",
+      "error": null,
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-11T21:03:58.701Z",
+      "source": "csv"
+    },
+    {
+      "key": "oil",
+      "id": "DCOILWTICO",
+      "observedAt": "2026-10-06",
+      "status": "live",
+      "error": null,
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-11T21:03:58.701Z",
+      "source": "csv"
+    },
+    {
+      "key": "gold",
+      "id": "GOLDAMGBD228NLBM",
+      "observedAt": "2026-09-01",
+      "status": "live",
+      "error": null,
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-11T21:03:58.701Z",
+      "source": "worldbank"
+    },
+    {
+      "key": "dollar",
+      "id": "DTWEXBGS",
+      "observedAt": "2026-10-02",
+      "status": "live",
+      "error": null,
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-11T21:03:58.701Z",
+      "source": "csv"
+    },
+    {
+      "key": "sp500",
+      "id": "SP500",
+      "observedAt": "2026-10-09",
+      "status": "live",
+      "error": null,
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-11T21:03:58.701Z",
+      "source": "csv"
+    },
+    {
+      "key": "vix",
+      "id": "VIXCLS",
+      "observedAt": "2026-10-08",
+      "status": "live",
+      "error": null,
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-11T21:03:58.701Z",
+      "source": "csv"
+    },
+    {
+      "key": "industrialProduction",
+      "id": "INDPRO",
+      "observedAt": "2026-08-31",
+      "status": "stale",
+      "error": "live providers unavailable; last verified snapshot",
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-08T11:59:17.904Z",
+      "source": "dbnomics"
+    },
+    {
+      "key": "capacityUtilization",
+      "id": "TCU",
+      "observedAt": "2026-08-31",
+      "status": "stale",
+      "error": "live providers unavailable; last verified snapshot",
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-08T11:59:17.904Z",
+      "source": "dbnomics"
+    },
+    {
+      "key": "realGdpGrowth",
+      "id": "A191RL1Q225SBEA",
+      "observedAt": "2026-04-01",
+      "status": "stale",
+      "error": null,
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-11T21:03:58.701Z",
+      "source": "csv"
+    },
+    {
+      "key": "manufacturingSurvey",
+      "id": "CFSBCACTIVITYMFG",
+      "observedAt": "2026-09-01",
+      "status": "live",
+      "error": null,
+      "last_attempt": "2026-10-11T21:03:49.867Z",
+      "last_success": "2026-10-11T21:03:58.701Z",
+      "source": "csv"
+    }
+  ],
+  "health": {
+    "status": "DEGRADED",
+    "available": 20,
+    "total": 20,
+    "fresh": 15,
+    "snapshot_at": "2026-10-11T21:03:58.701Z",
+    "indicators": [
+      {
+        "indicator": "m2",
+        "metric": "M2SL",
+        "source": "csv",
+        "status": "HEALTHY",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-11T21:03:58.701Z",
+        "last_valid_value": 23342.8,
+        "observation_date": "2026-08-01",
+        "freshness": {
+          "state": "FRESH",
+          "age_days": 71.9,
+          "max_age_days": 75
+        },
+        "failure_reason": null,
+        "fallback": {
+          "configured": "DBnomics / FED H6 M2.M",
+          "active": null
+        },
+        "unit": null
+      },
+      {
+        "indicator": "fedFunds",
+        "metric": "FEDFUNDS",
+        "source": "csv",
+        "status": "HEALTHY",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-11T21:03:58.701Z",
+        "last_valid_value": 3.75,
+        "observation_date": "2026-09-01",
+        "freshness": {
+          "state": "FRESH",
+          "age_days": 40.9,
+          "max_age_days": 75
+        },
+        "failure_reason": null,
+        "fallback": {
+          "configured": "DBnomics / FED H15 RIFSPFF_N.M",
+          "active": null
+        },
+        "unit": null
+      },
+      {
+        "indicator": "treasury10y",
+        "metric": "DGS10",
+        "source": "csv",
+        "status": "HEALTHY",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-11T21:03:58.701Z",
+        "last_valid_value": 5.22,
+        "observation_date": "2026-10-08",
+        "freshness": {
+          "state": "FRESH",
+          "age_days": 3.9,
+          "max_age_days": 14
+        },
+        "failure_reason": null,
+        "fallback": {
+          "configured": "DBnomics / FED H15 RIFLGFCY10_N.B",
+          "active": null
+        },
+        "unit": null
+      },
+      {
+        "indicator": "treasury2y",
+        "metric": "DGS2",
+        "source": "csv",
+        "status": "HEALTHY",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-11T21:03:58.701Z",
+        "last_valid_value": 4.75,
+        "observation_date": "2026-10-08",
+        "freshness": {
+          "state": "FRESH",
+          "age_days": 3.9,
+          "max_age_days": 14
+        },
+        "failure_reason": null,
+        "fallback": {
+          "configured": "DBnomics / FED H15 RIFLGFCY02_N.B",
+          "active": null
+        },
+        "unit": null
+      },
+      {
+        "indicator": "yieldCurve",
+        "metric": "T10Y2Y",
+        "source": "csv",
+        "status": "HEALTHY",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-11T21:03:58.701Z",
+        "last_valid_value": 0.44,
+        "observation_date": "2026-10-09",
+        "freshness": {
+          "state": "FRESH",
+          "age_days": 2.9,
+          "max_age_days": 14
+        },
+        "failure_reason": null,
+        "fallback": {
+          "configured": "DBnomics / FED H15 10Y minus 2Y, identical dates",
+          "active": null
+        },
+        "unit": null
+      },
+      {
+        "indicator": "creditSpread",
+        "metric": "BAA10Y",
+        "source": "csv",
+        "status": "HEALTHY",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-11T21:03:58.701Z",
+        "last_valid_value": 1.48,
+        "observation_date": "2026-10-08",
+        "freshness": {
+          "state": "FRESH",
+          "age_days": 3.9,
+          "max_age_days": 14
+        },
+        "failure_reason": null,
+        "fallback": {
+          "configured": "FRED DBAA minus DGS10; same provider outage risk",
+          "active": null
+        },
+        "unit": null
+      },
+      {
+        "indicator": "cpi",
+        "metric": "CPIAUCSL",
+        "source": "csv",
+        "status": "HEALTHY",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-11T21:03:58.701Z",
+        "last_valid_value": 334.131,
+        "observation_date": "2026-08-01",
+        "freshness": {
+          "state": "FRESH",
+          "age_days": 71.9,
+          "max_age_days": 75
+        },
+        "failure_reason": null,
+        "fallback": {
+          "configured": "BLS CUSR0000SA0",
+          "active": null
+        },
+        "unit": null
+      },
+      {
+        "indicator": "unemployment",
+        "metric": "UNRATE",
+        "source": "csv",
+        "status": "HEALTHY",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-11T21:03:58.701Z",
+        "last_valid_value": 4.2,
+        "observation_date": "2026-09-01",
+        "freshness": {
+          "state": "FRESH",
+          "age_days": 40.9,
+          "max_age_days": 75
+        },
+        "failure_reason": null,
+        "fallback": {
+          "configured": "BLS LNS14000000",
+          "active": null
+        },
+        "unit": null
+      },
+      {
+        "indicator": "federalDebt",
+        "metric": "GFDEBTN",
+        "source": "csv",
+        "status": "STALE",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-11T21:03:58.701Z",
+        "last_valid_value": 39462398,
+        "observation_date": "2026-04-01",
+        "freshness": {
+          "state": "STALE",
+          "age_days": 193.9,
+          "max_age_days": 160
+        },
+        "failure_reason": "Observation or edition exceeds freshness policy",
+        "fallback": {
+          "configured": "No verified equivalent provider; durable last-known-good only",
+          "active": null
+        },
+        "unit": "USD millions"
+      },
+      {
+        "indicator": "debtToGdp",
+        "metric": "GFDEGDQ188S",
+        "source": "csv",
+        "status": "STALE",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-11T21:03:58.701Z",
+        "last_valid_value": 122.59387,
+        "observation_date": "2026-01-01",
+        "freshness": {
+          "state": "STALE",
+          "age_days": 283.9,
+          "max_age_days": 160
+        },
+        "failure_reason": "Observation or edition exceeds freshness policy",
+        "fallback": {
+          "configured": "No verified equivalent provider; durable last-known-good only",
+          "active": null
+        },
+        "unit": null
+      },
+      {
+        "indicator": "oil",
+        "metric": "DCOILWTICO",
+        "source": "csv",
+        "status": "HEALTHY",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-11T21:03:58.701Z",
+        "last_valid_value": 96.24,
+        "observation_date": "2026-10-06",
+        "freshness": {
+          "state": "FRESH",
+          "age_days": 5.9,
+          "max_age_days": 14
+        },
+        "failure_reason": null,
+        "fallback": {
+          "configured": "DBnomics / EIA RWTC.D",
+          "active": null
+        },
+        "unit": null
+      },
+      {
+        "indicator": "gold",
+        "metric": "GOLDAMGBD228NLBM",
+        "source": "World Bank Pink Sheet / monthly gold",
+        "status": "DEGRADED",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-11T21:03:58.701Z",
+        "last_valid_value": 4319,
+        "observation_date": "2026-09-01",
+        "freshness": {
+          "state": "FRESH",
+          "age_days": 40.9,
+          "max_age_days": 75
+        },
+        "failure_reason": "Primary unavailable; exact metric backup selected",
+        "fallback": {
+          "configured": "No verified equivalent provider; durable last-known-good only",
+          "active": "World Bank Pink Sheet / monthly gold"
+        },
+        "unit": "USD per troy ounce, monthly mean"
+      },
+      {
+        "indicator": "dollar",
+        "metric": "DTWEXBGS",
+        "source": "csv",
+        "status": "HEALTHY",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-11T21:03:58.701Z",
+        "last_valid_value": 121.3848,
+        "observation_date": "2026-10-02",
+        "freshness": {
+          "state": "FRESH",
+          "age_days": 9.9,
+          "max_age_days": 14
+        },
+        "failure_reason": null,
+        "fallback": {
+          "configured": "DBnomics / FED H10 JRXWTFB_N.B",
+          "active": null
+        },
+        "unit": null
+      },
+      {
+        "indicator": "sp500",
+        "metric": "SP500",
+        "source": "csv",
+        "status": "HEALTHY",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-11T21:03:58.701Z",
+        "last_valid_value": 7811.54,
+        "observation_date": "2026-10-09",
+        "freshness": {
+          "state": "FRESH",
+          "age_days": 2.9,
+          "max_age_days": 14
+        },
+        "failure_reason": null,
+        "fallback": {
+          "configured": "Cboe SPX daily close, validated overlap",
+          "active": null
+        },
+        "unit": null
+      },
+      {
+        "indicator": "vix",
+        "metric": "VIXCLS",
+        "source": "csv",
+        "status": "HEALTHY",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-11T21:03:58.701Z",
+        "last_valid_value": 15.41,
+        "observation_date": "2026-10-08",
+        "freshness": {
+          "state": "FRESH",
+          "age_days": 3.9,
+          "max_age_days": 14
+        },
+        "failure_reason": null,
+        "fallback": {
+          "configured": "Cboe VIX daily close, validated overlap",
+          "active": null
+        },
+        "unit": null
+      },
+      {
+        "indicator": "industrialProduction",
+        "metric": "INDPRO",
+        "source": "dbnomics",
+        "status": "STALE",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-08T11:59:17.904Z",
+        "last_valid_value": 103.0682,
+        "observation_date": "2026-08-31",
+        "freshness": {
+          "state": "STALE",
+          "age_days": 41.9,
+          "max_age_days": 75
+        },
+        "failure_reason": "live providers unavailable; last verified snapshot",
+        "fallback": {
+          "configured": "DBnomics / FED G17 IP.B50001.S",
+          "active": "last-known-good"
+        },
+        "unit": null
+      },
+      {
+        "indicator": "capacityUtilization",
+        "metric": "TCU",
+        "source": "dbnomics",
+        "status": "STALE",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-08T11:59:17.904Z",
+        "last_valid_value": 76.2717,
+        "observation_date": "2026-08-31",
+        "freshness": {
+          "state": "STALE",
+          "age_days": 41.9,
+          "max_age_days": 75
+        },
+        "failure_reason": "live providers unavailable; last verified snapshot",
+        "fallback": {
+          "configured": "DBnomics / FED G17 CAPUTL.B50001.S",
+          "active": "last-known-good"
+        },
+        "unit": null
+      },
+      {
+        "indicator": "realGdpGrowth",
+        "metric": "A191RL1Q225SBEA",
+        "source": "csv",
+        "status": "STALE",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-11T21:03:58.701Z",
+        "last_valid_value": 2.2,
+        "observation_date": "2026-04-01",
+        "freshness": {
+          "state": "STALE",
+          "age_days": 193.9,
+          "max_age_days": 160
+        },
+        "failure_reason": "Observation or edition exceeds freshness policy",
+        "fallback": {
+          "configured": "No verified equivalent provider; durable last-known-good only",
+          "active": null
+        },
+        "unit": null
+      },
+      {
+        "indicator": "manufacturingSurvey",
+        "metric": "CFSBCACTIVITYMFG",
+        "source": "csv",
+        "status": "HEALTHY",
+        "last_attempt": "2026-10-11T21:03:49.867Z",
+        "last_success": "2026-10-11T21:03:58.701Z",
+        "last_valid_value": 25,
+        "observation_date": "2026-09-01",
+        "freshness": {
+          "state": "FRESH",
+          "age_days": 40.9,
+          "max_age_days": 75
+        },
+        "failure_reason": null,
+        "fallback": {
+          "configured": "No verified equivalent provider; durable last-known-good only",
+          "active": null
+        },
+        "unit": null
+      },
+      {
+        "indicator": "bitcoin",
+        "metric": "BTC-USD spot",
+        "source": "Coinbase + Kraken",
+        "status": "HEALTHY",
+        "last_attempt": "2026-10-11T21:03:58.701Z",
+        "last_success": "2026-10-11T21:03:58.025Z",
+        "last_valid_value": 83544.225,
+        "observation_date": "2026-10-11T21:03:58.025Z",
+        "freshness": {
+          "state": "FRESH",
+          "age_days": 0.0038977546296296295,
+          "max_age_days": 0.010416666666666666
+        },
+        "failure_reason": null,
+        "fallback": {
+          "configured": "Coinbase \u2194 Kraken, same BTC/USD spot; then durable last-known-good",
+          "active": null
+        },
+        "unit": "USD per BTC"
+      }
+    ]
+  },
+  "coverage": null,
+  "series_counts": {
+    "m2": 140,
+    "fedFunds": 141,
+    "treasury10y": 2944,
+    "treasury2y": 2944,
+    "yieldCurve": 2945,
+    "creditSpread": 2939,
+    "cpi": 139,
+    "unemployment": 140,
+    "federalDebt": 46,
+    "debtToGdp": 45,
+    "oil": 2936,
+    "gold": 141,
+    "dollar": 2931,
+    "sp500": 2514,
+    "vix": 2992,
+    "industrialProduction": 140,
+    "capacityUtilization": 140,
+    "realGdpGrowth": 46,
+    "manufacturingSurvey": 141,
+    "bitcoin": 1826
+  },
+  "raw_payload_sha256": "3c376debf2141b844e052277403d2e0915ae65786a4ae898c1226c35561bd951"
+}

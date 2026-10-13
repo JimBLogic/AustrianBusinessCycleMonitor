@@ -41,7 +41,8 @@
     "typescript": "5.9.3",
     "vinext": "0.0.50",
     "vite": "8.2.1",
-    "wrangler": "4.148.0"
+    "wrangler": "4.148.0",
+    "braces": "file:vendor/braces-bounded"
   },
   "type": "module",
   "displayName": "Austrian Business Cycle Monitor",
@@ -50,6 +51,7 @@
     "sharp": "0.35.5",
     "@esbuild-kit/core-utils": {
       "esbuild": "^0.25.0"
-    }
+    },
+    "braces": "$braces"
   }
 }

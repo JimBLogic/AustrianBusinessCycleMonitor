@@ -24,21 +24,7 @@ declare global {
   var __ABCM_RUNTIME_ENV__: RuntimeBindings | undefined;
 }
 
-let initialization: Promise<void> | null = null;
-
-const schemaStatements = [
-  `CREATE TABLE IF NOT EXISTS macro_snapshots (
-    id TEXT PRIMARY KEY,
-    requested_at TEXT NOT NULL,
-    refresh_mode TEXT NOT NULL,
-    regime TEXT NOT NULL,
-    scores_json TEXT NOT NULL,
-    metrics_json TEXT NOT NULL,
-    provenance_json TEXT NOT NULL,
-    created_at TEXT NOT NULL
-  )`,
-  "CREATE INDEX IF NOT EXISTS macro_snapshots_requested_at_idx ON macro_snapshots (requested_at)",
-] as const;
+const initializations = new WeakMap<D1Binding, Promise<void>>();
 
 export function getBindings() {
   const runtime = globalThis.__ABCM_RUNTIME_ENV__;
@@ -51,14 +37,18 @@ export function getRuntimeBindings() {
 }
 
 export async function ensureDatabase() {
+  const { db } = getBindings();
+  let initialization = initializations.get(db);
   if (!initialization) {
-    initialization = (async () => {
-      const { db } = getBindings();
-      await db.batch(schemaStatements.map((statement) => db.prepare(statement)));
-    })().catch((error) => {
-      initialization = null;
+    // Sites applies immutable Drizzle migrations before publication. Self-host
+    // applies its own compatible migrations at startup, never during a read.
+    initialization = db.prepare(`SELECT id, requested_at, refresh_mode, regime,
+      scores_json, metrics_json, provenance_json, created_at
+      FROM macro_snapshots LIMIT 0`).all().then(() => undefined).catch((error) => {
+      initializations.delete(db);
       throw error;
     });
+    initializations.set(db, initialization);
   }
   await initialization;
 }
@@ -77,7 +67,8 @@ export async function recordMacroSnapshot(snapshot: {
     const latest = await db.prepare(
       "SELECT requested_at AS requestedAt FROM macro_snapshots ORDER BY requested_at DESC LIMIT 1",
     ).first<{ requestedAt: string }>();
-    if (latest?.requestedAt && Date.now() - new Date(latest.requestedAt).getTime() < 300_000) return;
+    const age = latest?.requestedAt ? Date.now() - Date.parse(latest.requestedAt) : Number.NaN;
+    if (Number.isFinite(age) && age >= 0 && age < 300_000) return;
   }
   const now = new Date().toISOString();
   await db.prepare(

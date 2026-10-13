@@ -26,5 +26,7 @@ if [[ -n "${FRED_API_KEY:-}" ]]; then
 fi
 
 cd "${project_root}"
+"${project_root}/node_modules/.bin/wrangler" d1 migrations apply DB --local \
+  --config wrangler.selfhost.jsonc --persist-to "${data_dir}"
 # Arguments may contain the FRED API key; do not print them.
 exec "${project_root}/node_modules/.bin/${args[0]}" "${args[@]:1}"
