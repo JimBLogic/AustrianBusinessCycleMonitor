@@ -40,7 +40,8 @@ test('actual built Worker and D1 preserve snapshots across corrupt/partial rows 
     const response=await mf.dispatchFetch('http://localhost/api/data');
     assert.equal(response.status,200);
     const payload=await response.json();
-    assert.equal(payload.siteRelease,89);
+    const expectedRelease=Number((await readFile(new URL('../app/version.ts',import.meta.url),'utf8')).match(/SITE_RELEASE = (\d+)/)[1]);
+    assert.equal(payload.siteRelease,expectedRelease);
     assert.equal(payload.latest.m2.value,23000);
     assert.equal(payload.latest.cpi.value,330);
     assert.equal(payload.bitcoin.price,80000);

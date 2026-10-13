@@ -1,0 +1,70 @@
+name: Desktop and mobile browser smoke gates
+on:
+  pull_request:
+    branches: [master]
+    paths: ['qa/**', 'sites-current/**', '.github/workflows/browser-smokes.yml']
+  push:
+    branches: [master]
+    paths: ['qa/**', 'sites-current/**', '.github/workflows/browser-smokes.yml']
+  schedule:
+    - cron: '23 12 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: browser-smokes-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  browser:
+    name: ${{ matrix.target }} desktop, iPhone and Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [candidate, production]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.14'
+          cache: npm
+          cache-dependency-path: |
+            qa/package-lock.json
+            sites-current/package-lock.json
+      - name: Install and audit locked browser tools
+        working-directory: qa
+        run: |
+          npm ci
+          npm run typecheck
+          npm audit --audit-level=high
+          npx playwright install --with-deps chromium firefox webkit
+      - name: Build exact candidate Worker
+        if: matrix.target == 'candidate'
+        working-directory: sites-current
+        run: |
+          npm ci
+          npm run build
+      - name: Smoke candidate with isolated D1 and real public observations
+        if: matrix.target == 'candidate'
+        working-directory: qa
+        env:
+          ABCM_BASE_URL: http://127.0.0.1:8793
+        run: |
+          export ABCM_EXPECT_RELEASE="$(sed -n 's/^export const SITE_RELEASE = \([0-9][0-9]*\);$/\1/p' ../sites-current/app/version.ts)"
+          npm test
+      - name: Smoke public production and real refresh
+        if: matrix.target == 'production'
+        working-directory: qa
+        run: npm test
+      - name: Preserve screenshots, diagnostics and failure traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-smokes-${{ matrix.target }}
+          path: |
+            qa/playwright-report/
+            qa/test-results/
+            qa/results.json
+          retention-days: 35
+          if-no-files-found: warn
