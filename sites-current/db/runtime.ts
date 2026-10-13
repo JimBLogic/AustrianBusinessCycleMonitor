@@ -1,5 +1,6 @@
 import { recoverSnapshot } from "../lib/snapshot-recovery.mjs";
-import { supportedSnapshot } from "../lib/snapshot-policy.mjs";
+import { supportedSnapshot, SOURCE_POLICY_VERSION } from "../lib/snapshot-policy.mjs";
+import { validTimestamp } from "../lib/timestamp.mjs";
 
 type D1Statement = {
   bind(...values: unknown[]): D1Statement;
@@ -60,21 +61,28 @@ export async function recordMacroSnapshot(snapshot: {
   scores: unknown;
   metrics: unknown;
   provenance: unknown;
-}, force: boolean) {
+}, force: boolean, editionBoundary?: string): Promise<boolean> {
   await ensureDatabase();
   const { db } = getBindings();
-  if (!force) {
-    const latest = await db.prepare(
-      "SELECT requested_at AS requestedAt FROM macro_snapshots ORDER BY requested_at DESC LIMIT 1",
-    ).first<{ requestedAt: string }>();
-    const age = latest?.requestedAt ? Date.now() - Date.parse(latest.requestedAt) : Number.NaN;
-    if (Number.isFinite(age) && age >= 0 && age < 300_000) return;
-  }
+  const clock = Date.now();
+  const boundary = validTimestamp(editionBoundary)?.getTime() ?? 0;
+  const recentSince = new Date(Math.max(clock - 300_000, boundary)).toISOString();
+  const latestAllowed = new Date(clock + 60_000).toISOString();
   const now = new Date().toISOString();
-  await db.prepare(
+  // One primary-database statement decides and writes atomically. The old
+  // SELECT-then-INSERT guard could silently skip a raced generation while its
+  // caller still returned the unsaved timestamp as a successful new edition.
+  const result = await db.prepare(
     `INSERT INTO macro_snapshots
       (id, requested_at, refresh_mode, regime, scores_json, metrics_json, provenance_json, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?
+     WHERE ? = 1 OR NOT EXISTS (
+       SELECT 1 FROM macro_snapshots
+       WHERE requested_at >= ? AND requested_at <= ?
+         AND json_valid(metrics_json)
+         AND CASE WHEN json_valid(provenance_json)
+           THEN json_extract(provenance_json, '$.sourcePolicyVersion') ELSE NULL END = ?
+     )`,
   ).bind(
     crypto.randomUUID(),
     snapshot.requestedAt,
@@ -84,7 +92,12 @@ export async function recordMacroSnapshot(snapshot: {
     JSON.stringify(snapshot.metrics),
     JSON.stringify(snapshot.provenance),
     now,
+    Number(force), recentSince, latestAllowed, SOURCE_POLICY_VERSION,
   ).run();
+  const acknowledgement = result as {success?:boolean;meta?:{changes?:number}} | undefined;
+  const changes = acknowledgement?.meta?.changes;
+  if (acknowledgement?.success !== true || (changes !== 0 && changes !== 1)) throw new Error("D1 did not acknowledge the edition write");
+  return changes === 1;
 }
 
 export async function readLatestMacroSnapshot() {

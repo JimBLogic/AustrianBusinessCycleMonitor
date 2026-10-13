@@ -36,7 +36,7 @@ test('cold-start pipeline preserves sources, runs comparisons and rejects fake s
   const DB={batch:async()=>[],prepare(sql){let args=[];return {bind(...a){args=a;return this;},first:async()=>{
       const a=persisted.at(-1);
       return a?{requestedAt:a[1],refreshMode:a[2],regime:a[3],scoresJson:a[4],metricsJson:a[5],provenanceJson:a[6]}:null;
-    },all:async()=>({results:persisted.slice().reverse().map(a=>({requestedAt:a[1],refreshMode:a[2],regime:a[3],scoresJson:a[4],metricsJson:a[5],provenanceJson:a[6]}))}),run:async()=>{if(sql.startsWith('INSERT'))persisted.push(args);return {};}};}};
+    },all:async()=>({results:persisted.slice().reverse().map(a=>({requestedAt:a[1],refreshMode:a[2],regime:a[3],scoresJson:a[4],metricsJson:a[5],provenanceJson:a[6]}))}),run:async()=>{if(sql.startsWith('INSERT'))persisted.push(args);return {success:true,meta:{changes:1}};}};}};
   try{
     const env={DB,ASSETS:{fetch:async()=>new Response('',{status:404})}},ctx={waitUntil(){},passThroughOnException(){}};
     const [r1,r2]=await Promise.all([worker.fetch(new Request('http://localhost/api/data'),env,ctx),worker.fetch(new Request('http://localhost/api/data'),env,ctx)]);

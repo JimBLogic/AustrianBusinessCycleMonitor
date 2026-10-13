@@ -58,6 +58,8 @@ jobs:
       - name: Smoke public production and real refresh
         if: matrix.target == 'production'
         working-directory: qa
+        env:
+          ABCM_READ_ONLY: ${{ github.event_name == 'pull_request' && '1' || '0' }}
         run: npm test
       - name: Preserve screenshots, diagnostics and failure traces
         if: always()

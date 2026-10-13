@@ -25,6 +25,9 @@ overflow, reload, APIs, browser exceptions, failed-refresh retention and retry.
 One profile checks successful manual refresh, D1, reload and cooldown, avoiding
 four redundant provider refreshes. A browser-only intercepted 503 tests failure
 retention; it does not change the public backend or its data.
+PR production baselines are read-only (four deliberate skips); their successful
+write is exercised on the isolated candidate. Integrated and scheduled public
+checks perform the actual refresh (three deliberate skips).
 
 The browser workflow runs on integration, on demand, and daily at 12:23 UTC.
 The separate hourly production watch checks coverage, actual values, diagnostics,

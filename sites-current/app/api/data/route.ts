@@ -1168,25 +1168,35 @@ async function generateEdition(request: Request) {
     },
   };
 
+  let persistenceStatus = 200;
   if (fredAvailable > 0 || bitcoinPrice || treasuryDebt.length) {
     try {
-      await recordMacroSnapshot({
+      const written = await recordMacroSnapshot({
         requestedAt,
         refreshMode: payload.refreshMode,
         regime,
         scores: payload.derived.scores,
         metrics: { latest: payload.latest, series: payload.series, bitcoin: payload.bitcoin, changes: payload.derived.changes, derived: { correlations: payload.derived.correlations, correlationEvidence: payload.derived.correlationEvidence, ratios: payload.derived.ratios, ratioEvidence: payload.derived.ratioEvidence, sixForce: payload.derived.sixForce }, freshness: payload.freshness },
         provenance: payload.provenance,
-      }, force);
+      }, force, dailyMadridWindow(new Date(requestedAt)).currentBoundary.toISOString());
+      if (!written) {
+        // Another request has already saved the shared edition. Return that
+        // durable response, not this generation's discarded values/timestamp.
+        const retained = await readPersistedEdition(new Request(request.url, {method:"GET"}));
+        if (retained) return retained;
+        throw new Error("No readable durable edition after a concurrent refresh");
+      }
     } catch {
-      console.error("[snapshot] Durable write failed; serving observations without claiming persistence");
+      console.error("[snapshot] Durable write failed; refresh rejected and last valid snapshot retained");
       payload.provenance.persistence = "failed";
+      persistenceStatus = 503;
     }
   }
 
-  return Response.json({...payload, health:snapshotHealth({requestedAt,metrics:{series:payload.series,freshness:payload.freshness,bitcoin:payload.bitcoin},provenance:payload.provenance})}, {
+  return Response.json({...payload, ...(persistenceStatus === 503 ? {error:"Shared edition could not be persisted; the last valid snapshot is retained"} : {}), health:snapshotHealth({requestedAt,metrics:{series:payload.series,freshness:payload.freshness,bitcoin:payload.bitcoin},provenance:payload.provenance})}, {
+    status: persistenceStatus,
     headers: {
-      "Cache-Control": `public, max-age=60, s-maxage=${cacheTtlSeconds}, stale-while-revalidate=${editionTtlSeconds}`,
+      "Cache-Control": persistenceStatus === 503 ? "no-store" : `public, max-age=60, s-maxage=${cacheTtlSeconds}, stale-while-revalidate=${editionTtlSeconds}`,
       "X-ABCM-Refresh": payload.refreshMode,
       "X-ABCM-Next-Manual-Refresh": payload.cache.nextManualAt,
       "X-ABCM-Next-Daily-Edition": payload.cache.nextDailyAt,

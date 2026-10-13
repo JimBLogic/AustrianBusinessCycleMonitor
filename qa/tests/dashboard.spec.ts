@@ -122,6 +122,7 @@ test('failed refresh retains visible data and allows retry',async({page})=>{
 });
 
 test('manual refresh, persisted edition and cooldown survive reload',async({page,request},testInfo)=>{
+  test.skip(process.env.ABCM_READ_ONLY==='1','PR baseline is read-only; successful writes are tested on the isolated candidate and after integration');
   test.skip(testInfo.project.name!=='desktop-chromium','one refresh avoids provider storms across device profiles');
   test.setTimeout(180_000);
   await openDashboard(page);
