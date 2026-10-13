@@ -10,7 +10,7 @@ to production. Local volume and SQL are deleted when the test server exits.
 Four profiles: desktop Chromium, desktop Firefox, iPhone 13 / WebKit, and Pixel 7 /
 Chromium. Mobile profiles emulate viewport, touch, user agent and device scale;
 they do not certify physical hardware, iOS Safari or an Android installation.
-Both languages check eight macro cards, six market cards, twelve real charts,
+Both languages check ten macro cards, six market cards, twelve real charts,
 dates, keyboard chart inspection, mobile menu, language switching, horizontal
 overflow, reload, APIs, browser exceptions, failed-refresh retention and retry.
 One profile checks successful manual refresh, D1, reload and cooldown, avoiding

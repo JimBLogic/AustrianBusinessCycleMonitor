@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { verifyProduction } from '../../sites-current/lib/production-verification.mjs';
 
 const chartKeys=['m2','treasury2y','treasury10y','federalDebt','cpi','oil','gold','sp500','vix','industrialProduction','manufacturingSurvey','bitcoin'];
-const macroKeys=['m2','fedFunds','yieldCurve','creditSpread','cpi','unemployment','industrialProduction','capacityUtilization'];
+const macroKeys=['m2','fedFunds','yieldCurve','creditSpread','cpi','unemployment','federalDebt','dollar','oil','manufacturingSurvey'];
 
 async function openDashboard(page:Page, lang='en') {
   const response=await page.goto(`/?lang=${lang}`);
