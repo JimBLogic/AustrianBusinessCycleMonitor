@@ -62,7 +62,15 @@ for (const lang of ['en','es']) test(`${lang}: real data, all charts, layout and
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),'horizontal overflow').toBe(true);
   await page.locator('.brand').click();
   await page.screenshot({path:testInfo.outputPath(`${lang}-viewport.png`)});
-  await page.screenshot({path:testInfo.outputPath(`${lang}-dashboard.png`),fullPage:true});
+  const dimensions=await page.evaluate(()=>({width:document.documentElement.scrollWidth,height:document.documentElement.scrollHeight}));
+  // WebKit refuses images over 32767 pixels. Capture actual sections rather
+  // than shrinking, omitting assertions or changing the production layout.
+  if(Math.max(dimensions.width,dimensions.height)<32000) await page.screenshot({path:testInfo.outputPath(`${lang}-dashboard.png`),fullPage:true});
+  else {
+    await page.locator('#dashboard').screenshot({path:testInfo.outputPath(`${lang}-charts.png`)});
+    await page.locator('.market-tape-wrap').screenshot({path:testInfo.outputPath(`${lang}-market.png`)});
+    await testInfo.attach(`${lang}-capture-scope.json`,{body:JSON.stringify({...dimensions,capture:'viewport, charts and market sections',reason:'WebKit maximum image dimension'}),contentType:'application/json'});
+  }
   expect(errors).toEqual([]);
   expect(failedResponses).toEqual([]);
 });
