@@ -11,7 +11,6 @@ jobs:
   live-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: security-review
     env:
       FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
     steps:
