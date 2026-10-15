@@ -6,30 +6,22 @@ permissions:
 
 on:
   workflow_dispatch:
-    inputs:
-      fred_api_key:
-        description: "Optional per-run FRED API key (leave blank to use repo secret)"
-        required: false
-        type: string
 
 jobs:
   live-smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Resolve FRED API key
-        env:
-          INPUT_KEY: ${{ inputs.fred_api_key }}
-          SECRET_KEY: ${{ secrets.FRED_API_KEY }}
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validate masked repository FRED secret without accepting typed workflow inputs
+        shell: bash
         run: |
-          if [ -n "$INPUT_KEY" ]; then
-            echo "FRED_API_KEY=$INPUT_KEY" >> "$GITHUB_ENV"
-            echo "✔ Using fred_api_key from manual input"
-          elif [ -n "$SECRET_KEY" ]; then
-            echo "FRED_API_KEY=$SECRET_KEY" >> "$GITHUB_ENV"
-            echo "✔ Using repo secret FRED_API_KEY"
-          else
-            echo "✖ No FRED API key available (provide input or set repo secret FRED_API_KEY)" >&2
+          if [[ -z "${FRED_API_KEY:-}" ]]; then
+            echo "::error::FRED_API_KEY repository or environment secret is required; no manual plaintext input is permitted."
             exit 1
           fi
       - name: Build Docker image
@@ -40,7 +32,7 @@ jobs:
           docker rm -f abcm-live || true
           docker run -d --name abcm-live -p 5002:5002 \
             -e BACKEND_MODE=webapp \
-            -e FRED_API_KEY="$FRED_API_KEY" \
+            -e FRED_API_KEY \
             abcm-live:latest
           sleep 8
           curl -fsS http://127.0.0.1:5002/api/status | jq . || (docker logs abcm-live && exit 1)
