@@ -62,6 +62,18 @@ The **numbers are package findings across distinct dependency trees**, not a cou
 
 **No commercial data-license change or financial-advice claim.**
 
-### Evidence status
+### Verified post-patch QA (no deployment)
 
-The initial audit #38729332330 and Python result are **completed and verified**. The follow-up security hardening and Node24 compatibility CI evidence should be appended after a successful isolated workflow run, not claimed in advance.
+[GitHub Actions run #38730296300](https://github.com/JimBLogic/AustrianBusinessCycleMonitor/actions/runs/38730296300), exact tested GitHub head `5907f537476ccefa661af5f13d13a7fb808d53a9`, **all 3 audit jobs PASS**:
+
+- **7/7 new security regression tests** pass, including secret-dispatch deletion, historical build denial and fail-closed current-surface scans.
+- Maintained Site `npm ci` and `npm audit --package-lock-only --audit-level=low` under Node 24: **0 known advisories** across the full Site lockfile, no waivers.
+- Maintained Site **TypeScript, lint, Vinext production build and 192/192 tests PASS** with Node 24. The test pipeline uses local simulated upstream failures to test error handling; upstream 503 diagnostic lines in this run do **not** prove a real production provider outage.
+- QA Playwright lockfile: **0 advisories**. The three historical JavaScript trees retain their explicit findings; the gate does not pass them off as current Site risks.
+- Historical Python requirements: `pip-audit 2.10.1` reports no advisories for newly resolved packages; legacy installed-image runtime not tested.
+- Supply-chain changes are audited in the **branch** only; no actual deployment or `master` merge.
+- New GitHub Actions use immutable SHA-pinned action commits with Node24 runtimes and `contents: read`.
+
+The Node24 test provides compatibility evidence, **not a production container rollout**: the current `sites-current/Dockerfile.selfhost` is still based on Node 22.14, and Worker/D1 deployed environment and actual production browsers have not been upgraded or tested on Node24.
+
+**Disposition:** ACCEPT for PR review; no GitHub `master` merge or Site deployment until owner requests it and release-specific host/source/data tests pass.
