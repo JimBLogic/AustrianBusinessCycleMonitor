@@ -49,5 +49,22 @@ export function snapshotHealth(snapshot:Snapshot|null, now=Date.now()) {
   const available=indicators.filter(row=>row.last_valid_value!=null).length;
   const fresh=indicators.filter(row=>row.freshness.state==='FRESH').length;
   const status=!available?'UNAVAILABLE':!fresh?'STALE':indicators.some(row=>row.status!=='HEALTHY')?'DEGRADED':'HEALTHY';
-  return {status,available,total:indicators.length,fresh,snapshot_at:snapshot?.requestedAt??null,indicators};
+  // Keep the historical 20-indicator contract for existing clients.
+  // A durable daily BTC snapshot cannot satisfy a 15-minute live-spot SLO all day:
+  // expose the two separate health domains rather than relabeling a stale quote.
+  const macroIndicators = indicators.filter(row=>row.indicator!=='bitcoin');
+  const summarize = (rows:typeof indicators) => ({
+    total:rows.length,
+    available:rows.filter(row=>row.last_valid_value!=null).length,
+    fresh:rows.filter(row=>row.freshness.state==='FRESH').length,
+  });
+  const macro=summarize(macroIndicators);
+  const storedBitcoinQuote=summarize(indicators.filter(row=>row.indicator==='bitcoin'));
+  return {status,available,total:indicators.length,fresh,snapshot_at:snapshot?.requestedAt??null,indicators,
+    domains:{
+      macro,
+      storedBitcoinQuote:{...storedBitcoinQuote,quote_max_age_minutes:15,live_endpoint:'/api/bitcoin',
+        scope:'durable-edition-quote-not-live-pulse'},
+    },
+  };
 }
