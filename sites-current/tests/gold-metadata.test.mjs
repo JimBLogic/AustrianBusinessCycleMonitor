@@ -9,7 +9,8 @@ const registry = moduleUrl(await readFile(new URL('../app/data/source-registry.t
 const source = (await readFile(new URL('../app/data/snapshot-health.ts',import.meta.url),'utf8'))
   .replace("'./source-registry'",JSON.stringify(registry))
   .replace("'../../lib/gold-metadata.mjs'",JSON.stringify(new URL('../lib/gold-metadata.mjs',import.meta.url).href))
-  .replace("'../../lib/bitcoin-quote.mjs'",JSON.stringify(new URL('../lib/bitcoin-quote.mjs',import.meta.url).href));
+  .replace("'../../lib/bitcoin-quote.mjs'",JSON.stringify(new URL('../lib/bitcoin-quote.mjs',import.meta.url).href))
+  .replace("'../../lib/observation-freshness.mjs'",JSON.stringify(new URL('../lib/observation-freshness.mjs',import.meta.url).href));
 const {snapshotHealth} = await import(moduleUrl(source));
 
 test('monthly World Bank gold health does not claim a daily LBMA equivalent', () => {
