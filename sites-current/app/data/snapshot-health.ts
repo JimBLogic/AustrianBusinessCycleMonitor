@@ -23,7 +23,7 @@ export function snapshotHealth(snapshot:Snapshot|null, now=Date.now()) {
     const maxAge=key==='gold'&&row?.source==='worldbank'?75:MAX_OBSERVATION_AGE_DAYS[key as keyof typeof FRED_SERIES];
     const age=point?observationAgeDays(key,point.date,now):null;
     const retained=row?.status==='last-known-good';
-    const stale=editionOld||retained||(age!=null&&age>maxAge);
+    const stale=editionOld||retained||(point!=null&&age==null)||(age!=null&&age>maxAge);
     const backup=!!row?.source&&!['api','csv'].includes(row.source);
     const source=row?.source==='worldbank'?'World Bank Pink Sheet / monthly gold':row?.source??`FRED ${id}`;
     return {indicator:key,metric:monthlyGold?WORLD_BANK_GOLD.metric:String(id),source,status:!point?'UNAVAILABLE':stale?'STALE':backup?'DEGRADED':'HEALTHY',
