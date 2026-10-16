@@ -1,5 +1,6 @@
 import { WORLD_BANK_GOLD } from '../../lib/gold-metadata.mjs';
 import { validBitcoinQuote } from '../../lib/bitcoin-quote.mjs';
+import { observationAgeDays, referencePeriodEnd, QUARTERLY_FRED_KEYS } from '../../lib/observation-freshness.mjs';
 import { FRED_SERIES, MAX_OBSERVATION_AGE_DAYS } from './source-registry';
 
 type Point = {date:string;value:number};
@@ -20,16 +21,18 @@ export function snapshotHealth(snapshot:Snapshot|null, now=Date.now()) {
     const monthlyGold=key==='gold'&&row?.source==='worldbank';
     const point=snapshot?.metrics.series?.[key]?.at(-1);
     const maxAge=key==='gold'&&row?.source==='worldbank'?75:MAX_OBSERVATION_AGE_DAYS[key as keyof typeof FRED_SERIES];
-    const age=point?Math.max(0,(now-Date.parse(point.date))/86400000):null;
+    const age=point?observationAgeDays(key,point.date,now):null;
     const retained=row?.status==='last-known-good';
-    const stale=editionOld||retained||(age!=null&&age>maxAge);
+    const stale=editionOld||retained||(point!=null&&age==null)||(age!=null&&age>maxAge);
     const backup=!!row?.source&&!['api','csv'].includes(row.source);
     const source=row?.source==='worldbank'?'World Bank Pink Sheet / monthly gold':row?.source??`FRED ${id}`;
     return {indicator:key,metric:monthlyGold?WORLD_BANK_GOLD.metric:String(id),source,status:!point?'UNAVAILABLE':stale?'STALE':backup?'DEGRADED':'HEALTHY',
       last_attempt:row?.last_attempt??snapshot?.requestedAt??null,
       last_success:row?.last_success??(point?snapshot?.requestedAt??null:null),
       last_valid_value:point?.value??null,observation_date:point?.date??null,
-      freshness:{state:!point?'UNAVAILABLE':stale?'STALE':'FRESH',age_days:age==null?null:Math.round(age*10)/10,max_age_days:maxAge},
+      reference_period_end:point?referencePeriodEnd(key,point.date,now):null,
+      freshness:{state:!point?'UNAVAILABLE':stale?'STALE':'FRESH',age_days:age==null?null:Math.round(age*10)/10,max_age_days:maxAge,
+        age_basis:QUARTERLY_FRED_KEYS.includes(key)?'quarter_period_end':'observation_date'},
       failure_reason:row?.error??(!point?'No validated observation':stale?'Observation or edition exceeds freshness policy':monthlyGold?WORLD_BANK_GOLD.explanation:backup?'Primary unavailable; exact metric backup selected':null),
       fallback:{configured:backups[key]??'No verified equivalent provider; durable last-known-good only',active:retained?'last-known-good':backup?source:null},
       unit:key==='federalDebt'?'USD millions':key==='gold'?(monthlyGold?WORLD_BANK_GOLD.unit:'USD per troy ounce, daily LBMA AM fixing'):null};
@@ -39,8 +42,8 @@ export function snapshotHealth(snapshot:Snapshot|null, now=Date.now()) {
   const stamp=price==null?undefined:btc?.priceObservedAt;
   const stale=!stamp||btc?.priceConsensus==='stale'||now-Date.parse(stamp)>15*60_000;
   indicators.push({indicator:'bitcoin',metric:'BTC-USD spot',source:snapshot?.provenance.bitcoinPrice as string??'Coinbase + Kraken',status:price==null?'UNAVAILABLE':stale?'STALE':btc?.priceConsensus==='confirmed'?'HEALTHY':'DEGRADED',
-    last_attempt:snapshot?.requestedAt??null,last_success:stamp??null,last_valid_value:price,observation_date:stamp??null,
-    freshness:{state:price==null?'UNAVAILABLE':stale?'STALE':'FRESH',age_days:stamp?Math.max(0,now-Date.parse(stamp))/86400000:null,max_age_days:15/1440},
+    last_attempt:snapshot?.requestedAt??null,last_success:stamp??null,last_valid_value:price,observation_date:stamp??null,reference_period_end:null,
+    freshness:{state:price==null?'UNAVAILABLE':stale?'STALE':'FRESH',age_days:stamp?Math.max(0,now-Date.parse(stamp))/86400000:null,max_age_days:15/1440,age_basis:'quote_timestamp'},
     failure_reason:price==null?'No verified spot quote in durable snapshot':stale?'Last verified spot quote; live pulse has a separate timestamp':null,
     fallback:{configured:'Coinbase ↔ Kraken, same BTC/USD spot; then durable last-known-good',active:stale?'last-known-good':null},unit:'USD per BTC'});
   const available=indicators.filter(row=>row.last_valid_value!=null).length;
