@@ -17,7 +17,10 @@ export function referencePeriodEnd(key, date, now = Date.now()) {
   // FRED's standard quarterly series use the quarter's first calendar day.
   // Never shift arbitrary or invalid dates forward to manufacture freshness.
   if (day !== 1 || ![1, 4, 7, 10].includes(month)) return date;
-  return new Date(Date.UTC(year, month + 2, 0)).toISOString().slice(0, 10);
+  const periodEnd = new Date(Date.UTC(year, month + 2, 0));
+  // A quarter that has not ended cannot supply a completed official observation.
+  if (periodEnd.getTime() > now + 86_400_000) return null;
+  return periodEnd.toISOString().slice(0, 10);
 }
 
 export function observationAgeDays(key, date, now = Date.now()) {
