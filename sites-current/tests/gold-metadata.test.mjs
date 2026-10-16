@@ -9,7 +9,8 @@ const registry = moduleUrl(await readFile(new URL('../app/data/source-registry.t
 const source = (await readFile(new URL('../app/data/snapshot-health.ts',import.meta.url),'utf8'))
   .replace("'./source-registry'",JSON.stringify(registry))
   .replace("'../../lib/gold-metadata.mjs'",JSON.stringify(new URL('../lib/gold-metadata.mjs',import.meta.url).href))
-  .replace("'../../lib/bitcoin-quote.mjs'",JSON.stringify(new URL('../lib/bitcoin-quote.mjs',import.meta.url).href));
+  .replace("'../../lib/bitcoin-quote.mjs'",JSON.stringify(new URL('../lib/bitcoin-quote.mjs',import.meta.url).href))
+  .replace("'../../lib/observation-freshness.mjs'",JSON.stringify(new URL('../lib/observation-freshness.mjs',import.meta.url).href));
 const {snapshotHealth} = await import(moduleUrl(source));
 
 test('monthly World Bank gold health does not claim a daily LBMA equivalent', () => {
@@ -47,4 +48,37 @@ test('health never reports corrupt quotes as fresh and respects explicit recover
     assert.equal(health.indicators.at(-1).last_valid_value,null);
     assert.equal(health.status,'UNAVAILABLE');
   }
+});
+
+test('health separates durable macro observations from the short-lived stored BTC quote', () => {
+  const now=Date.parse('2026-10-16T12:00:00Z');
+  const snapshot={
+    requestedAt:'2026-10-16T11:59:00Z',
+    metrics:{
+      series:{
+        federalDebt:[{date:'2026-04-01',value:39462398}],
+        realGdpGrowth:[{date:'2026-04-01',value:2.2}],
+        debtToGdp:[{date:'2026-01-01',value:122.59387}],
+      },
+      freshness:[],
+      bitcoin:{price:80000,priceObservedAt:'2026-10-16T11:59:00Z',priceConsensus:'confirmed'},
+    },
+    provenance:{bitcoinPrice:'Coinbase + Kraken'},
+  };
+  const initial=snapshotHealth(snapshot,now);
+  assert.equal(initial.total,20, 'legacy indicator count must not change');
+  assert.equal(initial.domains.macro.total,19);
+  assert.equal(initial.domains.macro.available,3);
+  assert.equal(initial.domains.macro.fresh,2, 'Q2 valid, Q1 stale');
+  assert.equal(initial.domains.storedBitcoinQuote.total,1);
+  assert.equal(initial.domains.storedBitcoinQuote.fresh,1);
+  assert.equal(initial.domains.storedBitcoinQuote.quote_max_age_minutes,15);
+  assert.equal(initial.domains.storedBitcoinQuote.live_endpoint,'/api/bitcoin');
+
+  const later=snapshotHealth(snapshot,now+20*60000);
+  assert.equal(later.domains.macro.fresh,2);
+  assert.equal(later.domains.storedBitcoinQuote.fresh,0);
+  assert.equal(later.indicators.find(x=>x.indicator==='bitcoin').status,'STALE');
+  assert.equal(later.status,'DEGRADED', 'do not misrepresent incomplete data as healthy');
+  assert.equal(later.total,20);
 });
