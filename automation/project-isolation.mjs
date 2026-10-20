@@ -6,10 +6,9 @@ const projectId = 'appgprj_6a630a89bf208191bc7915a9410ae47a';
 const peerReferences = [
   /appgprj_6ace4c9cb44881918b979e11d440c586/i,
   /brangecycle\.jimblogic\.chatgpt\.site/i,
-  /(?:github\.com[/:]|github:|git@github\.com:)JimBLogic\/brangecycle(?:[\s/#.\x22\x27:]|$)/i,
-  /(?:repository|uses)\s*:\s*['\x22]?JimBLogic\/brangecycle(?:[\s/@\x22\x27]|$)/i,
+  /\bJimBLogic\/brangecycle\b/i,
 ];
-const excluded = new Set(['node_modules', '.git', '.wrangler', '.sites-runtime', 'dist', '.next', 'docs']);
+const excluded = new Set(['node_modules', '.git', '.wrangler', '.sites-runtime', 'dist', '.next']);
 const surfaces = ['sites-current/app', 'sites-current/db', 'sites-current/lib', 'sites-current/worker',
   'sites-current/build', 'sites-current/scripts', 'sites-current/vendor', 'sites-current/.openai', 'automation', '.github', 'qa',
   'sites-current/package.json', 'sites-current/package-lock.json', 'sites-current/vite.config.ts',

@@ -81,7 +81,7 @@ default is no runtime coupling, including read-only calls.
 - Live ABCM check at `2026-10-20T05:26:52.828Z`: release 91; durable edition
   `2026-10-20T05:23:23.839Z`; model coverage 12; health `DEGRADED`. Debt,
   debt/GDP and real GDP growth were explicitly stale. No empty-panel failure.
-- [Latest inspected public browser run](https://github.com/JimBLogic/AustrianBusinessCycleMonitor/actions/runs/39305206303):
+- [Baseline public browser run](https://github.com/JimBLogic/AustrianBusinessCycleMonitor/actions/runs/39305206303):
   19 October; 17 passed, 3 deliberate duplicate-refresh omissions; Chromium,
   Firefox, iPhone/WebKit, Android/Chromium and ES/EN. This is emulation, not
   physical-device testing and not a new manual browser run on 20 October.
@@ -96,3 +96,9 @@ default is no runtime coupling, including read-only calls.
 - A private health GET returned BrangeCycle database `READY`, source checks
   `OVERDUE` and model `WITHHELD`, with its own 15 October edition. A subsequent
   ABCM read retained its independent 20 October edition and 20/20 series.
+- The isolation gate's 15 local regression cases pass, covering peer endpoint
+  reads/writes, full/shorthand dependencies, checkout references, remote D1 and
+  whole-tree/individual symlinks. The real-tree scan checked 99 files.
+- Root legacy quality/security jobs still fail on unchanged historical code.
+  This safeguard change is not a release approval for that stack. Its source
+  and `sites-current/` are unchanged by the PR.

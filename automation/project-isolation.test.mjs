@@ -33,6 +33,7 @@ for (const [name, source] of [
   ['peer read dependency', "fetch('https://brangecycle.jimblogic.chatgpt.site/api/data');"],
   ['peer Site ID', "const id='appgprj_6ace4c9cb44881918b979e11d440c586';"],
   ['peer dependency', '{"dependencies":{"engine":"github:JimBLogic/brangecycle#main"}}'],
+  ['shorthand peer dependency', '{"dependencies":{"engine":"JimBLogic/brangecycle#main"}}'],
   ['peer checkout', 'repository: JimBLogic/brangecycle'],
   ['remote binding', '{"remote":true}'],
   ['remote D1 command', 'npx wrangler d1 execute DB --remote --command "DELETE FROM editions"'],
@@ -53,6 +54,10 @@ test('symlink replacing the whole Sites tree is rejected', async t => {
 });
 test('vendored executable code must also be independent', async t => {
   const root = await fixture(t, {'sites-current/vendor/imported.ts':"fetch('https://brangecycle.jimblogic.chatgpt.site/api/data');"});
+  await assert.rejects(verifyProjectIsolation(root), /peer project reference/);
+});
+test('executable code in a documentation-named subdirectory is still checked', async t => {
+  const root = await fixture(t, {'sites-current/app/docs/helper.ts':"fetch('https://brangecycle.jimblogic.chatgpt.site/api/data');"});
   await assert.rejects(verifyProjectIsolation(root), /peer project reference/);
 });
 test('peer documentation does not create runtime coupling', async t => {
