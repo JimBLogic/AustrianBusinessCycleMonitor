@@ -2,10 +2,13 @@
 
 ## Source of truth
 
-This repository has two maintained application surfaces:
+Read `AGENTS.md` and `docs/PROJECT_ISOLATION.md` before changing ingestion,
+deployment, persistence or adopting BrangeCycle work.
 
-1. `apps/` plus `packages/frontend/`: the Flask/React/FRED/SQLite production pipeline.
-2. `sites-v25/`: the reproducible source of the published ChatGPT Sites v25 reference.
+1. `sites-current/` is the maintained source of the public ABCM Site (currently v91).
+2. `apps/` plus `packages/frontend/` are the separate historical Flask/React stack;
+   publication remains blocked by its own security and quality gates.
+3. `sites-v25/` is a retained historical reference, not current production.
 
 Use `README.md`, `docs/INDEX.md`, and the nearest package README before changing code. Treat `archive/` as historical evidence only: do not import it, deploy it, or copy behavior from it without revalidating the data and security assumptions.
 
@@ -16,7 +19,8 @@ Use `README.md`, `docs/INDEX.md`, and the nearest package README before changing
 - Missing or stale inputs must remain explicit.
 - Keep public copy available in English and Spanish with matching translation keys.
 - Describe Austrian-school interpretation as an educational analytical lens, not financial advice or certain prediction.
-- Keep Sites v25 history reproducible; evolve it through new commits rather than rewriting the reference.
+- Preserve Sites history and rollback versions. Promote BrangeCycle improvements
+  through small ABCM PRs with destination-specific tests, never automatic syncing.
 
 ## Active architecture
 
@@ -27,7 +31,7 @@ Use `README.md`, `docs/INDEX.md`, and the nearest package README before changing
 - Tested Python compatibility facade: `abcm/`
 - Public React entrypoint: `packages/frontend/src/main.tsx` and `PublicApp`
 - Production deployment: `Dockerfile`, `compose.production.yml`, and `Caddyfile`
-- Sites reference: `sites-v25/`
+- Maintained Sites app: `sites-current/`; historical reference: `sites-v25/`
 
 ## Change discipline
 

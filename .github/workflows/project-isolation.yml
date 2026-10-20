@@ -1,0 +1,22 @@
+name: ABCM project isolation
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.14'
+      - name: Verify isolation gate catches unsafe changes
+        run: node --test automation/project-isolation.test.mjs
+      - name: Verify ABCM remains independent
+        run: node automation/project-isolation.mjs
