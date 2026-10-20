@@ -9,15 +9,17 @@ const peerReferences = [
   /(?:github\.com[/:]|github:|git@github\.com:)JimBLogic\/brangecycle(?:[\s/#.\x22\x27:]|$)/i,
   /(?:repository|uses)\s*:\s*['\x22]?JimBLogic\/brangecycle(?:[\s/@\x22\x27]|$)/i,
 ];
-const excluded = new Set(['node_modules', '.git', '.wrangler', '.sites-runtime', 'dist', '.next', 'docs', 'vendor']);
+const excluded = new Set(['node_modules', '.git', '.wrangler', '.sites-runtime', 'dist', '.next', 'docs']);
 const surfaces = ['sites-current/app', 'sites-current/db', 'sites-current/lib', 'sites-current/worker',
-  'sites-current/build', 'sites-current/scripts', 'sites-current/.openai', 'automation', '.github', 'qa',
+  'sites-current/build', 'sites-current/scripts', 'sites-current/vendor', 'sites-current/.openai', 'automation', '.github', 'qa',
   'sites-current/package.json', 'sites-current/package-lock.json', 'sites-current/vite.config.ts',
   'sites-current/wrangler.selfhost.jsonc', 'sites-current/compose.selfhost.yml', 'sites-current/compose.local.yml',
   'sites-current/Dockerfile.selfhost', 'sites-current/Dockerfile.local'];
 
 export async function verifyProjectIsolation(root) {
   const failures = [];
+  const site = await lstat(path.join(root, 'sites-current'));
+  if (site.isSymbolicLink() || !site.isDirectory()) throw new Error('Project isolation failed: sites-current must be a local directory');
   const manifest = JSON.parse(await readFile(path.join(root, 'sites-current/.openai/hosting.json'), 'utf8'));
   if (manifest.project_id !== projectId) failures.push('ABCM Site identity changed');
   if (manifest.d1 !== 'DB' || manifest.r2 !== null) failures.push('ABCM storage contract changed: review bindings explicitly');

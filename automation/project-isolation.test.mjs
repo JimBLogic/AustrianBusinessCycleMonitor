@@ -45,7 +45,17 @@ test('symlink to another project is rejected', async t => {
   await symlink(os.tmpdir(), path.join(root, 'sites-current/app'), 'dir');
   await assert.rejects(verifyProjectIsolation(root), /symlink/);
 });
-test('peer documentation and retained vendor provenance do not create runtime coupling', async t => {
+test('symlink replacing the whole Sites tree is rejected', async t => {
+  const root = await fixture(t);
+  await rm(path.join(root, 'sites-current'), {recursive:true});
+  await symlink(os.tmpdir(), path.join(root, 'sites-current'), 'dir');
+  await assert.rejects(verifyProjectIsolation(root), /local directory/);
+});
+test('vendored executable code must also be independent', async t => {
+  const root = await fixture(t, {'sites-current/vendor/imported.ts':"fetch('https://brangecycle.jimblogic.chatgpt.site/api/data');"});
+  await assert.rejects(verifyProjectIsolation(root), /peer project reference/);
+});
+test('peer documentation does not create runtime coupling', async t => {
   const root = await fixture(t, {'sites-current/app/docs/readme.md':'https://brangecycle.jimblogic.chatgpt.site'});
   await verifyProjectIsolation(root);
 });

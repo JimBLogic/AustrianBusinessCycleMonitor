@@ -66,6 +66,8 @@ dependencies and release automation, symlinks in these surfaces, remote D1
 bindings and remote Wrangler database commands. Documentation, historical
 archives and the guard's explicit negative fixtures are excluded. The workflow
 runs on every PR/push to master, without write credentials or deployment steps.
+`master` is currently unprotected: this workflow reports a failing check but does
+not configure a required-check branch rule or prevent an administrator bypass.
 
 This is a static regression gate, not a claim of account-level IAM enforcement.
 It cannot prove that an external token lacks cross-repository access, inspect
@@ -88,3 +90,9 @@ default is no runtime coupling, including read-only calls.
   expression is not a guaranteed hourly execution SLA.
 - BrangeCycle remains private with unresolved scheduling, hosted recovery and
   integration gates. Its pending v23 work is not approved for ABCM by this audit.
+- Fresh local verification of the unchanged deployed source: 192 application
+  tests, lint, typecheck and production build passed; the complete Sites audit
+  reported zero vulnerabilities. Six daily-scheduling policy tests also passed.
+- A private health GET returned BrangeCycle database `READY`, source checks
+  `OVERDUE` and model `WITHHELD`, with its own 15 October edition. A subsequent
+  ABCM read retained its independent 20 October edition and 20/20 series.
