@@ -128,7 +128,14 @@ test('manual refresh, persisted edition and cooldown survive reload',async({page
   await openDashboard(page);
   const responsePromise=page.waitForResponse(response=>response.url().endsWith('/api/data')&&response.request().method()==='POST',{timeout:120_000});
   await page.locator('.hero .secondary').click();
-  const response=await responsePromise;expect(response.ok()).toBe(true);
+  const response=await responsePromise;
+  // Preserve response metadata even when the real POST fails, without logging
+  // response bodies, cookies, authorization headers, tokens or private D1 data.
+  await testInfo.attach('manual-refresh-http.json',{
+    body:JSON.stringify({method:'POST',path:'/api/data',status:response.status(),ok:response.ok()}),
+    contentType:'application/json',
+  });
+  expect(response.ok(),`manual refresh POST /api/data returned HTTP ${response.status()}`).toBe(true);
   const data=await response.json();
   const health=await(await request.get('/api/health')).json();
   verifyProduction(data,health,{refresh:true});
