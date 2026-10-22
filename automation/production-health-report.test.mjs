@@ -44,7 +44,7 @@ test('quarterly stale data and old stored BTC remain explicitly visible', () => 
   assert.equal(result.storedBitcoinQuote.fresh,false);
   assert.deepEqual(result.stale,['cpi','bitcoin']);
   assert.match(economicHealthSummary(result),/fresh 1\/3/);
-  assert.match(economicHealthSummary(result),/Bitcoin quote.*STALE/);
+  assert.match(economicHealthSummary(result),/1\/2 fresh \| STALE \|/);
 });
 
 test('monitor fails closed when aggregate counters disagree with source rows', () => {
