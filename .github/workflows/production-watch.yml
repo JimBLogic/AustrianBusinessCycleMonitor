@@ -1,8 +1,11 @@
 name: Hourly production integrity watch
 on:
+  pull_request:
+    branches: [master]
+    paths: ['automation/production-watch.mjs', 'automation/production-health-report.mjs', 'automation/production-health-report.test.mjs', '.github/workflows/production-watch.yml', 'sites-current/app/version.ts']
   push:
     branches: [master]
-    paths: ['automation/production-watch.mjs', '.github/workflows/production-watch.yml', 'sites-current/app/version.ts']
+    paths: ['automation/production-watch.mjs', 'automation/production-health-report.mjs', 'automation/production-health-report.test.mjs', '.github/workflows/production-watch.yml', 'sites-current/app/version.ts']
   schedule:
     - cron: '37 * * * *'
   workflow_dispatch:
@@ -20,5 +23,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.14'
+      - name: Check deterministic monitoring regressions
+        run: node --test automation/production-health-report.test.mjs
       - name: Verify real values, coverage, health, edition age and persistence
         run: node automation/production-watch.mjs
