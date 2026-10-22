@@ -2,10 +2,10 @@ name: Desktop and mobile browser smoke gates
 on:
   pull_request:
     branches: [master]
-    paths: ['qa/**', 'sites-current/**', '.github/workflows/browser-smokes.yml']
+    paths: ['qa/**', 'sites-current/**', 'automation/production-write-policy*', '.github/workflows/browser-smokes.yml']
   push:
     branches: [master]
-    paths: ['qa/**', 'sites-current/**', '.github/workflows/browser-smokes.yml']
+    paths: ['qa/**', 'sites-current/**', 'automation/production-write-policy*', '.github/workflows/browser-smokes.yml']
   schedule:
     - cron: '23 12 * * *'
   workflow_dispatch:

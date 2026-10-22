@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
-from typing import Callable
 
 def fix_timestamp_division(ts1: pd.Timestamp, ts2: pd.Timestamp) -> float:
     """Safely divide two pandas Timestamps by converting to float seconds."""

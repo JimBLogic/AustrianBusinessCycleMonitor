@@ -8,6 +8,7 @@ on:
       - "sites-current/**"
       - ".github/workflows/sites-current.yml"
       - "automation/production-daily*"
+      - "automation/production-write-policy*"
       - ".github/workflows/production-data.yml"
   pull_request:
     branches: [master]
@@ -15,6 +16,7 @@ on:
       - "sites-current/**"
       - ".github/workflows/sites-current.yml"
       - "automation/production-daily*"
+      - "automation/production-write-policy*"
       - ".github/workflows/production-data.yml"
   workflow_dispatch:
 
@@ -49,6 +51,7 @@ jobs:
       - name: Validate maintained source
         run: |
           node --test ../automation/production-daily.test.mjs
+          node --test ../automation/production-write-policy.test.mjs
           npm run lint
           npm run typecheck
           npm test

@@ -69,6 +69,12 @@ export async function recordMacroSnapshot(snapshot: {
   const recentSince = new Date(Math.max(clock - 300_000, boundary)).toISOString();
   const latestAllowed = new Date(clock + 60_000).toISOString();
   const now = new Date().toISOString();
+  const metricsJson = JSON.stringify(snapshot.metrics);
+  const scoresJson = JSON.stringify(snapshot.scores);
+  const provenanceJson = JSON.stringify(snapshot.provenance);
+  if (!recoverSnapshot([{requestedAt:snapshot.requestedAt, refreshMode:snapshot.refreshMode, regime:snapshot.regime,
+    metricsJson, scoresJson, provenanceJson}], clock)) throw new Error('snapshot_validation');
+  const id = crypto.randomUUID();
   // One primary-database statement decides and writes atomically. The old
   // SELECT-then-INSERT guard could silently skip a raced generation while its
   // caller still returned the unsaved timestamp as a successful new edition.
@@ -84,19 +90,27 @@ export async function recordMacroSnapshot(snapshot: {
            THEN json_extract(provenance_json, '$.sourcePolicyVersion') ELSE NULL END = ?
      )`,
   ).bind(
-    crypto.randomUUID(),
+    id,
     snapshot.requestedAt,
     snapshot.refreshMode,
     snapshot.regime,
-    JSON.stringify(snapshot.scores),
-    JSON.stringify(snapshot.metrics),
-    JSON.stringify(snapshot.provenance),
+    scoresJson,
+    metricsJson,
+    provenanceJson,
     now,
     Number(force), recentSince, latestAllowed, SOURCE_POLICY_VERSION,
   ).run();
   const acknowledgement = result as {success?:boolean;meta?:{changes?:number}} | undefined;
   const changes = acknowledgement?.meta?.changes;
-  if (acknowledgement?.success !== true || (changes !== 0 && changes !== 1)) throw new Error("D1 did not acknowledge the edition write");
+  if (acknowledgement?.success !== true) throw new Error("D1 did not acknowledge the edition write");
+  if (changes !== 0 && changes !== 1) throw new Error('persistence_unconfirmed');
+  if (changes === 1) {
+    const retained = await db.prepare(`SELECT requested_at AS requestedAt, metrics_json AS metricsJson,
+      scores_json AS scoresJson, provenance_json AS provenanceJson FROM macro_snapshots WHERE id = ?`).bind(id)
+      .first<{requestedAt:string;metricsJson:string;scoresJson:string;provenanceJson:string}>();
+    if (!retained || retained.requestedAt !== snapshot.requestedAt || retained.metricsJson !== metricsJson ||
+      retained.scoresJson !== scoresJson || retained.provenanceJson !== provenanceJson) throw new Error('persistence_unconfirmed');
+  }
   return changes === 1;
 }
 

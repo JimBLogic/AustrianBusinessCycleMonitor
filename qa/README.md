@@ -29,6 +29,14 @@ PR production baselines are read-only (four deliberate skips); their successful
 write is exercised on the isolated candidate. Integrated and scheduled public
 checks perform the actual refresh (three deliberate skips).
 
+Manual public runs are read-only by default too. `ABCM_READ_ONLY=0` explicitly
+opts into public writes; only the existing authorized master schedule/dispatch
+sets this in CI. The browser intercepts automatic background POSTs in read-only
+mode as well. The isolated `127.0.0.1:8793` candidate can write by default.
+Candidate startup reuses `sites-env.sh` so Wrangler state stays writable locally.
+Failed refresh attachments contain HTTP metadata only; the API supplies fixed
+`errorCode` categories and an opaque request ID, without exception contents.
+
 The browser workflow runs on integration, on demand, and daily at 12:23 UTC.
 The separate hourly production watch checks coverage, actual values, diagnostics,
 readable D1 and snapshot age (maximum 36 hours). The existing Madrid-noon daily

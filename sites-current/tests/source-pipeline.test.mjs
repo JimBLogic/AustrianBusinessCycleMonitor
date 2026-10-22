@@ -76,11 +76,17 @@ test('cold-start pipeline preserves sources, runs comparisons and rejects fake s
     const older=await (await worker.fetch(new Request('http://localhost/api/data'),env,ctx)).json();
     assert.equal(older.provenance.mode,'stale-persisted');
     assert.ok(Date.parse(older.cache.nextDailyAt)<=Date.now(),'expired daily boundary must trigger refresh now');
-    const outage=await (await worker.fetch(new Request('http://localhost/api/data',{method:'POST'}),env,ctx)).json();
+    const beforeOutage=persisted.length;
+    const outageResponse=await worker.fetch(new Request('http://localhost/api/data',{method:'POST'}),env,ctx);
+    assert.equal(outageResponse.status,503,'a provider outage cannot masquerade as a newly persisted edition');
+    const outage=await outageResponse.json();
+    assert.equal(outage.errorCode,'provider_unavailable');
+    assert.equal(outage.requestedAt,older.requestedAt);
+    assert.equal(persisted.length,beforeOutage);
     assert.equal(outage.latest.sp500.value,p.latest.sp500.value);
     assert.equal(outage.latest.m2.value,p.latest.m2.value);
     assert.equal(outage.bitcoin.price,p.bitcoin.price);
-    assert.equal(outage.freshness.find(x=>x.key==='sp500').status,'last-known-good');
+    assert.equal(outage.freshness.find(x=>x.key==='sp500').status,'stale');
     assert.equal(outage.health.indicators.find(x=>x.indicator==='sp500').status,'STALE');
     assert.equal(outage.health.indicators.find(x=>x.indicator==='gold').status,'UNAVAILABLE');
   }finally{globalThis.fetch=original;}

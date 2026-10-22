@@ -407,7 +407,7 @@ def register_optimized_routes(app):
                 'timestamp': datetime.now().isoformat()
             }), 503
     
-    logger.info(f"Registered route: /api/dashboard-snapshot")
+    logger.info("Registered route: /api/dashboard-snapshot")
     
     @app.route('/api/dashboard-snapshot/refresh')
     def api_dashboard_refresh():
@@ -419,7 +419,7 @@ def register_optimized_routes(app):
         data = get_dashboard_snapshot(use_cache=False)
         return jsonify(data)
     
-    logger.info(f"Registered route: /api/dashboard-snapshot/refresh")
+    logger.info("Registered route: /api/dashboard-snapshot/refresh")
     
     @app.route('/api/cache/clear')
     def api_cache_clear():
@@ -430,7 +430,7 @@ def register_optimized_routes(app):
             'message': 'Cache cleared'
         })
     
-    logger.info(f"Registered route: /api/cache/clear")
+    logger.info("Registered route: /api/cache/clear")
     
     @app.route('/api/cache/stats')
     def api_cache_stats():
@@ -447,7 +447,7 @@ def register_optimized_routes(app):
         
         return jsonify(stats)
     
-    logger.info(f"Registered route: /api/cache/stats")
+    logger.info("Registered route: /api/cache/stats")
     logger.info("All optimized routes registered successfully!")
 
 

@@ -1,5 +1,15 @@
 import { test, expect, type Page } from '@playwright/test';
 import { verifyProduction } from '../../sites-current/lib/production-verification.mjs';
+import { allowsRefresh } from '../write-policy.mjs';
+
+test.beforeEach(async ({ page, baseURL }) => {
+  if (!allowsRefresh(baseURL, process.env.ABCM_READ_ONLY)) {
+    // Also stop the dashboard's automatic background refresh on public reads.
+    // A test's later route.fulfill still intercepts its own simulated failure.
+    await page.route('**/api/data', route => route.request().method() === 'POST'
+      ? route.abort('blockedbyclient') : route.fallback());
+  }
+});
 
 const chartKeys=['m2','treasury2y','treasury10y','federalDebt','cpi','oil','gold','sp500','vix','industrialProduction','manufacturingSurvey','bitcoin'];
 const macroKeys=['m2','fedFunds','yieldCurve','creditSpread','cpi','unemployment','federalDebt','dollar','oil','manufacturingSurvey'];
@@ -122,13 +132,20 @@ test('failed refresh retains visible data and allows retry',async({page})=>{
 });
 
 test('manual refresh, persisted edition and cooldown survive reload',async({page,request},testInfo)=>{
-  test.skip(process.env.ABCM_READ_ONLY==='1','PR baseline is read-only; successful writes are tested on the isolated candidate and after integration');
+  test.skip(!allowsRefresh(testInfo.project.use.baseURL,process.env.ABCM_READ_ONLY),'Public baseline is read-only by default; writes require explicit authorization');
   test.skip(testInfo.project.name!=='desktop-chromium','one refresh avoids provider storms across device profiles');
   test.setTimeout(180_000);
   await openDashboard(page);
   const responsePromise=page.waitForResponse(response=>response.url().endsWith('/api/data')&&response.request().method()==='POST',{timeout:120_000});
   await page.locator('.hero .secondary').click();
-  const response=await responsePromise;expect(response.ok()).toBe(true);
+  const response=await responsePromise;
+  // Preserve response metadata even when the real POST fails, without logging
+  // response bodies, cookies, authorization headers, tokens or private D1 data.
+  await testInfo.attach('manual-refresh-http.json',{
+    body:JSON.stringify({method:'POST',path:'/api/data',status:response.status(),ok:response.ok()}),
+    contentType:'application/json',
+  });
+  expect(response.ok(),`manual refresh POST /api/data returned HTTP ${response.status()}`).toBe(true);
   const data=await response.json();
   const health=await(await request.get('/api/health')).json();
   verifyProduction(data,health,{refresh:true});
