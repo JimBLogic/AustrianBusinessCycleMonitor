@@ -1,5 +1,5 @@
 import { snapshotHealth } from "../../data/snapshot-health";
-import { bitcoinHistoryPoints, treasuryDebtPoints, retainHistory, eligibleScores, quarterlyDebtInBillions } from "@/lib/observation-integrity.mjs";
+import { bitcoinHistoryPoints, treasuryDebtPoints, retainHistory, eligibleScores, quarterlyDebtInBillions, retainedSeriesIsNewer } from "@/lib/observation-integrity.mjs";
 import { finiteObservation, normalizeSeries, parseFredCsv, parseCboeCsv, alignedDifference, compareSeries, seriesFresh } from "@/lib/series-quality.mjs";
 import { observationAgeDays, seriesFreshForKey } from "@/lib/observation-freshness.mjs";
 import { SOURCE_POLICY_VERSION } from "@/lib/snapshot-policy.mjs";
@@ -952,7 +952,7 @@ async function generateEdition(request: Request) {
     if (persistedSeries) {
       for (const [key, result] of Object.entries(results)) {
         const backup = persistedSeries[key];
-        if (Array.isArray(backup) && backup.length && (!result.points.length || (backup.at(-1)?.date ?? "") > (result.points.at(-1)?.date ?? ""))) {
+        if (retainedSeriesIsNewer(key, backup, result.points)) {
           results[key] = {
             points: normalizePoints(backup),
             error: "live providers unavailable; last verified snapshot",

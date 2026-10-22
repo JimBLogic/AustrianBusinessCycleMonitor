@@ -14,6 +14,10 @@ async function runtime(onUpstream, mode = 'valid') {
     if(new URL(request.url).hostname==='fred.stlouisfed.org') {
       await onUpstream(db);
       if (mode === 'valid') return new Response(`observation_date,M2SL\n${new Date().toISOString().slice(0,10)},25000`,{headers:{'content-type':'text/csv'}});
+      if (mode === 'monthly') {
+        const now=new Date(),start=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()-1,1)).toISOString().slice(0,10);
+        return new Response(`observation_date,FEDFUNDS,INDPRO,TCU\n${start},3.75,103.9506,76.8504`,{headers:{'content-type':'text/csv'}});
+      }
     }
     return new Response('Isolated provider outage fixture',{status:503});
   }}));
@@ -45,6 +49,32 @@ test('a generation raced by another durable writer returns that actual edition, 
     const health=await(await mf.dispatchFetch('http://localhost/api/health')).json();
     assert.equal(health.data.snapshot_at,data.requestedAt);
     assert.equal((await db.prepare('SELECT count(*) AS n FROM macro_snapshots').first()).n,2,'atomic guard prevents a duplicate edition');
+  } finally {await mf.dispose();}
+});
+
+test('a validated FRED monthly delivery is not displaced by a retained DBnomics month-end label for the same period',async()=>{
+  const {mf,db}=await runtime(async()=>{},'monthly');
+  try {
+    const now=new Date(),start=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()-1,1)).toISOString().slice(0,10);
+    const end=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),0)).toISOString().slice(0,10);
+    const previousAt=new Date(Date.now()-86400000).toISOString();
+    await insert(db,'previous',previousAt,23000);
+    const keys=['fedFunds','industrialProduction','capacityUtilization'];
+    const metrics={series:Object.fromEntries(keys.map(key=>[key,[{date:end,value:1}]])),freshness:keys.map(key=>({key,source:'dbnomics',status:'last-known-good'}))};
+    await db.prepare('UPDATE macro_snapshots SET metrics_json=? WHERE id=?').bind(JSON.stringify(metrics),'previous').run();
+    const response=await mf.dispatchFetch('http://localhost/api/data',{method:'POST'});
+    assert.equal(response.status,200,await response.clone().text());
+    const data=await response.json();
+    for (const key of keys) {
+      assert.equal(data.latest[key].date,start,'preserve the newly downloaded original FRED label');
+      assert.notEqual(data.latest[key].value,1,'retain the actual newly validated value, not the old fixture');
+      assert.equal(data.freshness.find(row=>row.key===key).source,'csv');
+      assert.equal(data.freshness.find(row=>row.key===key).status,'live');
+      assert.equal(data.health.indicators.find(row=>row.indicator===key).freshness.state,'FRESH');
+    }
+    const saved=await(await mf.dispatchFetch('http://localhost/api/data')).json();
+    assert.equal(saved.latest.fedFunds.date,start);
+    assert.equal((await db.prepare('SELECT count(*) AS n FROM macro_snapshots').first()).n,2);
   } finally {await mf.dispose();}
 });
 

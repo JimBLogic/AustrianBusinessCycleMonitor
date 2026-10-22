@@ -2,18 +2,18 @@
 
 ## A. Resumen ejecutivo
 
-Candidata de código: `f968eefdcc93c0003923044e364eeb6515e71a79`, en
+Candidata final: el HEAD de #36, con base de implementación `f968eefdcc93c0003923044e364eeb6515e71a79` y corrección posterior de retención mensual, en
 `codex/abcm-v92-reliability-candidate`. PR DRAFT: [#36](https://github.com/JimBLogic/AustrianBusinessCycleMonitor/pull/36).
-La documentación posterior no modifica ese árbol de aplicación. No se ha
+El SHA final se consulta en la cabecera de la PR y en la entrega de esta tarea. No se ha
 incrementado la versión pública: sigue siendo 91.
 
 Se conserva #35, se recupera la frescura trimestral de #28 y el diagnóstico HTTP
 de #32, y se seleccionan controles de #25. Se añaden verificación de lectura tras
 escritura, rechazo de ediciones enteramente retenidas durante una caída total y
-protección por defecto de POST públicos desde QA. Cinco incidencias Ruff seguras
+protección por defecto de POST públicos desde QA. La retención mensual también compara períodos equivalentes entre FRED y DBnomics, sin reescribir fechas. Cinco incidencias Ruff seguras
 se corrigen; los fallos históricos restantes siguen visibles y bloquean su imagen.
 
-Resultados locales: 205/205 pruebas de aplicación, Worker y D1; 54/54 pruebas de
+Resultados locales: 208/208 pruebas de aplicación, Worker y D1; 54/54 pruebas de
 política/seguridad; lint, TypeScript, build, SSR/assets, contenedor y reinicios
 aprobados. Chromium 154 del sistema: 9 PASS, 1 SKIPPED en candidata con escritorio
 y Android emulado. Los navegadores fijados de Playwright no se pudieron descargar
@@ -118,8 +118,17 @@ LBMA equivalente); dólar 121.4048 (2026-10-16, FRESH); SP500 7757.17
 (2026-10-21, FRESH); VIX 17.31 (2026-10-20, FRESH); producción industrial 103.9506
 y utilización de capacidad 76.8504 (2026-09-30, retenidas STALE).
 
-fedFunds, producción industrial y capacidad estaban retenidos por fallos de
-proveedor, aun dentro de sus ventanas estadísticas. No se atribuye el mismo
+fedFunds, producción industrial y capacidad figuraban retenidos por fallos de
+proveedor, aun dentro de sus ventanas estadísticas. Una consulta posterior directa
+obtuvo HTTP 200 y exactamente los mismos valores para septiembre con etiqueta
+FRED `2026-09-01`, frente al `2026-09-30` retenido de DBnomics. Se identificó y
+corrigió una causa adicional en la candidata: el comparador literal prefería el
+día 30 como más reciente incluso cuando ambos cubrían el mismo mes. La nueva
+retención compara el mes solo para las siete series mensuales conocidas. Mantiene
+las fechas originales, retiene períodos realmente más nuevos y conserva el orden
+diario en series diarias. Dos regresiones unitarias y una prueba Worker/D1
+verifican sustitución, valor, procedencia, frescura y persistencia. No es un cambio
+de umbrales ni evidencia de reparación ya desplegada. No se atribuye el mismo
 problema a deuda/PIB: el endpoint oficial devolvía Q1. No hay evidencia que
 justifique inventar Q2, extender 160 días o sustituirlo por una serie anual.
 
@@ -144,14 +153,17 @@ Se mantienen los veinte indicadores históricos del contrato y se añaden
 `domains.macro` y `domains.storedBitcoinQuote`.
 
 La edición local de integración `2026-10-22T11:53:06.297Z` sobrevivió a reinicio con
-valores/series/fecha BTC idénticos: 20 disponibles, 15 frescos en esa lectura;
-macro 14/19 y BTC almacenado 1/1. Es una medición aislada, no salud productiva.
+valores/series/fecha BTC idénticos. Después de la corrección mensual, el refresh
+local real creó `2026-10-22T12:10:49.336Z`: 20 disponibles, 18 frescos; macro 17/19
+y BTC almacenado 1/1. Las tres series mensuales recuperaron procedencia CSV,
+etiqueta FRED original y estado live. Permanecieron STALE deuda/PIB y oro
+retenido por fallo de descarga. Son mediciones aisladas, no salud productiva.
 
 ## E. Backend, Worker y D1
 
 | Control local sobre el árbol de aplicación indicado | Resultado |
 | --- | --- |
-| Suite de aplicación y Worker, con D1 Miniflare | PASS, 205/205, cero omitidas |
+| Suite de aplicación y Worker, con D1 Miniflare | PASS, 208/208, cero omitidas |
 | Corrupción, parcialidad, recuperación y esquema idempotente | PASS |
 | Escritores concurrentes y prevención de edición duplicada | PASS |
 | Escritura D1 rechazada mediante trigger | PASS: 503 y edición previa legible |
@@ -159,7 +171,8 @@ macro 14/19 y BTC almacenado 1/1. Es una medición aislada, no salud productiva.
 | Snapshot inválido o futuro | PASS: no INSERT |
 | Caída total del proveedor | PASS: 503, sin nueva edición de datos retenidos |
 | Transporte Worker: JSON, redirect, timeout, corrupción y 429 | PASS |
-| Cuatrimestres, D1 y estados API/UI coherentes | PASS para las regresiones trimestrales |
+| Trimestres, D1 y estados API/UI coherentes | PASS para las regresiones trimestrales |
+| Etiquetas mensuales FRED/DBnomics en el mismo mes | PASS, sin reescritura de fechas y con persistencia verificada |
 | Build ESM Worker + manifest y SSR/assets self-host | PASS |
 | Docker del Site: build, salud, HTML, manifest y reinicio | PASS |
 | Flask histórico: factory, GET salud y 42 pruebas | PASS; separado de Sites |
@@ -176,7 +189,7 @@ La escritura sigue siendo una admisión SQL atómica; no se anuncia como lease
 completo de escritores distribuidos. No se certifican backups remotos, siete días
 de operación continua, cuota máxima de D1 o resistencia a toda carga posible.
 
-El contenedor local `sha256:fd8b1965fd30c2a9494da2afaae3240440532e6ae901e21dc67cf571dad23c44`
+El contenedor local `sha256:8d1bb1961a924c7827a6d58369a6c4b579ef078e57821fb7ab2f4719708ea056`
 usa Node 22.14. Sus 120 archivos de runtime e inputs de build rastreados coinciden
 por SHA-256 con el checkout; se excluyeron pruebas, docs y README de esa comparación.
 Su origen de build es `http://localhost`; el build de navegador usa
@@ -210,9 +223,11 @@ lint y auditoría npm. Backend, frontend y Docker históricos pasan; publicació
 Para #36 en `f968eef` se verificaron en Actions: Site/self-host, auditoría completa,
 Node 24, inventario npm, auditoría Python, aislamiento, backend/frontend y Docker
 históricos y QA pública PASS. Calidad histórica, su auditoría npm y v25 FAIL de
-forma esperada; publicación SKIPPED. La QA candidata completa seguía pendiente al
-redactar esta sección: consultar el estado exacto en la PR. No se propaga el PASS
-anterior de #35 a este HEAD.
+forma esperada; publicación SKIPPED. Esa ejecución fue sustituida al actualizar la PR; no debe
+confundirse su SHA con el de la corrección mensual posterior. En `55fd521`, los logs completos confirmaron candidata 17 PASS/3 SKIPPED y
+producción 16 PASS/4 SKIPPED (Chromium, Firefox, iPhone/WebKit y Android). La
+corrección mensual posterior requiere sus propios checks del HEAD final; consultar
+la PR. No se propaga el PASS anterior de #35 o de `55fd521` a otro código.
 
 Master sigue `protected: false`. #30 se conserva como acción administrativa
 separada; no se activaron reglas ni auto-merge.
@@ -287,8 +302,12 @@ Inventario para reutilización futura, sin copiar nada a BrangeCycle:
   candidata exacta; no basta el Chromium local ni la QA pública de #35.
 - P0 ACTIVE BLOCKER: correspondencia y checkpoint publicable verificables antes
   de GO; no hay autorización de despliegue o merge.
-- P1 NEEDS FIX: investigar fedFunds/producción/capacidad retenidos y observar
-  recuperación de proveedores; se mantiene la degradación visible.
+- P1 CORREGIDO EN CANDIDATA, pendiente de aprobación: selección de fedFunds/
+  producción/capacidad por mes equivalente entre FRED y DBnomics. Requiere observar
+  la próxima edición tras una publicación expresamente autorizada; no se atribuye
+  una reparación productiva a las regresiones locales.
+- P1 DEGRADED operativo: el oro mensual quedó retenido por fallo de descarga en
+  la última edición local; no se lo convirtió en un fixing diario ni en un PASS.
 - P1 DEGRADED legítimo: deuda/PIB sigue en Q1 según el endpoint oficial. No es
   evidencia de parseo roto ni motivo para fabricar otra observación.
 - P1 HISTORICAL NON-DEPLOYED: Ruff, Black, lint, avisos npm y v25; publicación
