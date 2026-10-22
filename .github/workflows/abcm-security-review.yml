@@ -1,12 +1,26 @@
 name: Isolated ABCM dependency security review (no deployment)
 
 on:
-  push:
-    branches:
-      - audit/security-patches-20261015
+  pull_request:
+    branches: [master]
     paths:
-      - security/**
-      - .github/workflows/abcm-security-review.yml
+      - 'security/**'
+      - 'sites-current/**'
+      - 'qa/package-lock.json'
+      - 'packages/frontend/package-lock.json'
+      - 'sites-v25/package-lock.json'
+      - 'archive/**/package-lock.json'
+      - '.github/workflows/abcm-security-review.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'security/**'
+      - 'sites-current/**'
+      - 'qa/package-lock.json'
+      - 'packages/frontend/package-lock.json'
+      - 'sites-v25/package-lock.json'
+      - 'archive/**/package-lock.json'
+      - '.github/workflows/abcm-security-review.yml'
   workflow_dispatch:
 
 permissions:
