@@ -2,6 +2,9 @@
 set -euo pipefail
 qa_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 app_root="${qa_root}/../sites-current"
+if [[ "${SITES_ENV_READY:-}" != "1" ]]; then
+  exec bash "${app_root}/scripts/sites-env.sh" -- bash "${qa_root}/start-candidate.sh" "$@"
+fi
 runtime_dir="$(mktemp -d)"
 server_pid=""
 cleanup() {

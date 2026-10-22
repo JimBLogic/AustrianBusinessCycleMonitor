@@ -1,5 +1,17 @@
 import { finiteObservation, normalizeSeries } from './series-quality.mjs';
 
+// Equivalent monthly deliveries can label the same observation at either end
+// of the month. Rank periods for retention; never rewrite the original dates.
+const MONTHLY_FRED_KEYS = new Set(['m2','fedFunds','cpi','unemployment','industrialProduction','capacityUtilization','manufacturingSurvey']);
+export function retainedSeriesIsNewer(key, previous, candidate) {
+  const prior = normalizeSeries(previous).at(-1);
+  const incoming = normalizeSeries(candidate).at(-1);
+  if (!prior) return false;
+  if (!incoming) return true;
+  const period = date => MONTHLY_FRED_KEYS.has(key) ? date.slice(0,7) : date;
+  return period(prior.date) > period(incoming.date);
+}
+
 export function bitcoinHistoryPoints(payload) {
   const points = (Array.isArray(payload?.values) ? payload.values : []).flatMap(item => {
     const seconds = finiteObservation(item?.x);

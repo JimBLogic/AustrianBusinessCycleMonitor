@@ -37,6 +37,12 @@ jobs:
           cache: npm
           cache-dependency-path: sites-v25/package-lock.json
 
+      # This tree is a historical snapshot, not a supported release candidate.
+      # Fail CLOSED on the known Next.js critical/other production advisories.
+      # Do not npm install, build or dockerize vulnerable archived code.
+      - name: Reject archived v25 build while high/critical production advisories remain
+        run: npm audit --package-lock-only --omit=dev --audit-level=high
+
       - name: Install locked dependencies
         run: npm run install:ci
 

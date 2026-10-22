@@ -16,6 +16,7 @@ type CircuitState = {
   lastFailureAt: string | null;
   lastSuccessAt: string | null;
   reason: string | null;
+  failureKind: string | null;
 };
 
 const circuits = new Map<string, CircuitState>();
@@ -30,6 +31,7 @@ function circuit(id: string) {
     lastFailureAt: null,
     lastSuccessAt: null,
     reason: null,
+    failureKind: null,
   };
   circuits.set(id, created);
   return created;
@@ -48,13 +50,15 @@ function recordSuccess(id: string, latencyMs: number) {
   state.coolingUntil = 0;
   state.lastSuccessAt = new Date().toISOString();
   state.reason = null;
+  state.failureKind = null;
 }
 
-function recordFailure(id: string, reason: string, response: Response | null = null) {
+function recordFailure(id: string, reason: string, response: Response | null = null, kind?: string) {
   const state = circuit(id);
   state.failures += 1;
   state.lastFailureAt = new Date().toISOString();
   state.reason = reason;
+  state.failureKind = kind ?? (response?.status === 429 ? 'rate_limit' : [401,403].includes(response?.status ?? 0) ? 'authorization' : 'http');
   if ((state.failures >= FAILURE_THRESHOLD && (!response || RETRYABLE_STATUS.has(response.status))) || [401,403,429].includes(response?.status ?? 0)) {
     state.coolingUntil = Date.now() + Math.max(DEFAULT_COOLDOWN_MS, retryAfterMs(response));
   }
@@ -75,6 +79,7 @@ export function getUpstreamHealth() {
     lastFailureAt: state.lastFailureAt,
     lastSuccessAt: state.lastSuccessAt,
     reason: state.reason,
+    failureKind: state.failureKind,
   }));
 }
 
@@ -134,7 +139,9 @@ export async function fetchUpstream(
     } catch (error) {
       lastError = error;
       if (attempt === policy.maxAttempts - 1) {
-        recordFailure(policy.id, error instanceof Error && /body exceeds|Invalid JSON|Unexpected HTML|Redirect blocked/.test(error.message) ? error.message : error instanceof TypeError ? "request runtime or transport TypeError" : "timeout or network failure");
+        const invalid = error instanceof Error && /body exceeds|Invalid JSON|Unexpected HTML|Redirect blocked/.test(error.message);
+        const kind = controller.signal.aborted ? 'timeout' : invalid ? 'invalid_response' : error instanceof TypeError ? 'network' : 'internal';
+        recordFailure(policy.id, invalid ? error.message : kind === 'timeout' ? 'request timed out' : 'request transport failed', null, kind);
         throw new Error(`${policy.id}: timeout, invalid payload or network failure`);
       }
     } finally {

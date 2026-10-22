@@ -2,10 +2,10 @@ name: Desktop and mobile browser smoke gates
 on:
   pull_request:
     branches: [master]
-    paths: ['qa/**', 'sites-current/**', '.github/workflows/browser-smokes.yml']
+    paths: ['qa/**', 'sites-current/**', 'automation/production-write-policy*', '.github/workflows/browser-smokes.yml']
   push:
     branches: [master]
-    paths: ['qa/**', 'sites-current/**', '.github/workflows/browser-smokes.yml']
+    paths: ['qa/**', 'sites-current/**', 'automation/production-write-policy*', '.github/workflows/browser-smokes.yml']
   schedule:
     - cron: '23 12 * * *'
   workflow_dispatch:
@@ -32,6 +32,8 @@ jobs:
           cache-dependency-path: |
             qa/package-lock.json
             sites-current/package-lock.json
+      - name: Verify production write policy
+        run: node --test automation/production-write-policy.test.mjs
       - name: Install and audit locked browser tools
         working-directory: qa
         run: |
@@ -59,7 +61,8 @@ jobs:
         if: matrix.target == 'production'
         working-directory: qa
         env:
-          ABCM_READ_ONLY: ${{ github.event_name == 'pull_request' && '1' || '0' }}
+          # Default to read-only; only existing master schedules/manual runs may POST.
+          ABCM_READ_ONLY: ${{ (github.ref == 'refs/heads/master' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')) && '0' || '1' }}
         run: npm test
       - name: Preserve screenshots, diagnostics and failure traces
         if: always()

@@ -29,6 +29,7 @@ test('actual Workers transport accepts valid JSON and blocks redirects before a 
     ],
     outboundService:async request=>{
       calls.push(request.url);
+      if(request.url.endsWith('/limited')) return new Response('Rate limited',{status:429});
       if(request.url.endsWith("/timeout")) await new Promise(resolve=>setTimeout(resolve,500));
       if(request.url.endsWith("/corrupt")) return new Response("{broken");
       return request.url.endsWith('/redirect')
@@ -48,7 +49,11 @@ test('actual Workers transport accepts valid JSON and blocks redirects before a 
     for(const path of ['/corrupt','/timeout']) {
       const failed=await mf.dispatchFetch('http://localhost'+path);
       assert.equal(failed.status,502,path+' must fail explicitly');
-      assert.ok((await failed.json()).error);
+      const payload=await failed.json();
+      assert.ok(payload.error);
+      assert.equal(payload.health.find(item=>item.id===path.slice(1)).failureKind,path==='/timeout'?'timeout':'invalid_response');
     }
+    const limited=await(await mf.dispatchFetch('http://localhost/limited')).json();
+    assert.equal(limited.health.find(item=>item.id==='limited').failureKind,'rate_limit');
   } finally {await mf.dispose();}
 });

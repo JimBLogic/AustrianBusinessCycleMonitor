@@ -1,7 +1,9 @@
 import { snapshotHealth } from "../../data/snapshot-health";
-import { bitcoinHistoryPoints, treasuryDebtPoints, retainHistory, eligibleScores, quarterlyDebtInBillions } from "@/lib/observation-integrity.mjs";
+import { bitcoinHistoryPoints, treasuryDebtPoints, retainHistory, eligibleScores, quarterlyDebtInBillions, retainedSeriesIsNewer } from "@/lib/observation-integrity.mjs";
 import { finiteObservation, normalizeSeries, parseFredCsv, parseCboeCsv, alignedDifference, compareSeries, seriesFresh } from "@/lib/series-quality.mjs";
+import { observationAgeDays, seriesFreshForKey } from "@/lib/observation-freshness.mjs";
 import { SOURCE_POLICY_VERSION } from "@/lib/snapshot-policy.mjs";
+import { refreshFailure, unavailableRefreshCode } from "@/lib/refresh-diagnostics.mjs";
 import { getRuntimeBindings, readLatestMacroSnapshot, recordMacroSnapshot } from "../../../db/runtime";
 import { strFromU8, unzipSync } from "fflate";
 import {
@@ -358,7 +360,7 @@ async function baaComponents(force: boolean): Promise<SeriesResult> {
 }
 
 async function fillMacroFallbacks(results: Record<string, SeriesResult>, force: boolean) {
-  const needs = (key: FredSeriesKey) => !seriesFresh(results[key].points, MAX_OBSERVATION_AGE_DAYS[key]);
+  const needs = (key: FredSeriesKey) => !seriesFreshForKey(results[key].points, key, MAX_OBSERVATION_AGE_DAYS[key]);
   const select = (key: FredSeriesKey, candidate: SeriesResult) => {
     // Keep verified historical observations even when their publication is late.
     // Freshness labels and modelSeries still exclude stale inputs from scoring.
@@ -424,11 +426,11 @@ function freshnessStatus(key: FredSeriesKey, result: SeriesResult) {
   if (result.error === "live providers unavailable; last verified snapshot") return "last-known-good";
   const observation = latest(result.points);
   if (!observation) return "unavailable";
-  const ageDays = (Date.now() - Date.parse(observation.date)) / 86_400_000;
+  const ageDays = observationAgeDays(key, observation.date);
   const maximumAgeDays = key === "gold" && result.source === "worldbank"
     ? 75
     : MAX_OBSERVATION_AGE_DAYS[key];
-  return ageDays <= maximumAgeDays ? "live" : "stale";
+  return ageDays != null && ageDays <= maximumAgeDays ? "live" : "stale";
 }
 
 function valueBefore(points: Point[], days: number) {
@@ -616,7 +618,8 @@ function buildRatioModel(series: Record<string, Point[]>) {
     debtToM2: pairedMonthlyRatio(seriesFresh(series.treasuryDebt ?? [], 14) ? series.treasuryDebt : quarterlyDebtInBillions(series.federalDebt ?? []), series.m2 ?? [], 160),
     realRate: alignedRealRate(series.fedFunds ?? [], series.cpi ?? []),
   };
-  const debtSourceFresh = seriesFresh(seriesFresh(series.treasuryDebt ?? [], 14) ? series.treasuryDebt : series.federalDebt ?? [], seriesFresh(series.treasuryDebt ?? [], 14) ? 14 : 160);
+  const debtSourceFresh = seriesFresh(series.treasuryDebt ?? [], 14) ||
+    seriesFreshForKey(series.federalDebt ?? [], "federalDebt", 160);
   if (!debtSourceFresh && readings.debtToM2.status === "available") readings.debtToM2 = {...readings.debtToM2, value:null, status:"stale"};
   return {
     ratios: Object.fromEntries(Object.entries(readings).map(([key, reading]) => [key, reading.value])),
@@ -729,8 +732,8 @@ function buildSixForceContext(series: Record<string, Point[]>, debtSeries: Point
   // Context retains old observations, but they cannot confirm a current pattern.
   for (const reading of Object.values(forces)) {
     const maxAge = MAX_OBSERVATION_AGE_DAYS[reading.sourceKey as FredSeriesKey] ?? 14;
-    const age = reading.observedAt ? (Date.now()-Date.parse(reading.observedAt))/86_400_000 : Infinity;
-    if (reading.available && age > maxAge) { reading.available = false; reading.state = "stale"; }
+    const age = reading.observedAt ? observationAgeDays(reading.sourceKey, reading.observedAt) : null;
+    if (reading.available && (age == null || age > maxAge)) { reading.available = false; reading.state = "stale"; }
   }
   const activePatterns: string[] = [];
   if (forces.oil.available && forces.manufacturing.available && n(oilMomentum) > 5 && manufacturing && manufacturing.value < -10) activePatterns.push("energy-pressure-below-trend-manufacturing");
@@ -906,6 +909,17 @@ export async function readPersistedEdition(request: Request) {
   return null;
 }
 
+async function rejectRefresh(request: Request, code: string) {
+  const failure = refreshFailure(code);
+  const retained = await readPersistedEdition(new Request(request.url, { method: 'GET' }));
+  if (!retained) return failure;
+  const previous = await retained.json();
+  const diagnostic = await failure.json();
+  return Response.json({ ...previous, ...diagnostic, provenance: { ...previous.provenance, ...diagnostic.provenance } }, {
+    status: failure.status, headers: failure.headers,
+  });
+}
+
 async function generateEdition(request: Request) {
   const manual = request.method === "POST";
   const force = false;
@@ -938,7 +952,7 @@ async function generateEdition(request: Request) {
     if (persistedSeries) {
       for (const [key, result] of Object.entries(results)) {
         const backup = persistedSeries[key];
-        if (Array.isArray(backup) && backup.length && (!result.points.length || (backup.at(-1)?.date ?? "") > (result.points.at(-1)?.date ?? ""))) {
+        if (retainedSeriesIsNewer(key, backup, result.points)) {
           results[key] = {
             points: normalizePoints(backup),
             error: "live providers unavailable; last verified snapshot",
@@ -967,6 +981,13 @@ async function generateEdition(request: Request) {
   ]);
   const treasury = await treasuryPromise;
 
+  // A new request timestamp must not turn a complete provider outage into a
+  // successful daily edition made entirely from retained observations.
+  const validatedMacro = Object.values(results).some(result => result.points.length && result.error !== "live providers unavailable; last verified snapshot");
+  if (!validatedMacro && bitcoinSpot.price == null && !treasuryDebtPoints(treasury).length) {
+    return rejectRefresh(request, unavailableRefreshCode(getUpstreamHealth()));
+  }
+
   const bitcoinCandidate = bitcoinHistoryPoints(bitcoinChart);
   const bitcoinHistory: Point[] = retainHistory(bitcoinCandidate, persistedSnapshot?.metrics?.series?.bitcoin ?? []);
   const treasuryCandidate = treasuryDebtPoints(treasury);
@@ -980,7 +1001,7 @@ async function generateEdition(request: Request) {
   const annualFlow = 3.125 * 144 * 365;
 
   const modelSeries = Object.fromEntries(Object.entries(series).map(([key, points]) => [key,
-    seriesFresh(points, key === "gold" && results.gold.source === "worldbank" ? 75 : MAX_OBSERVATION_AGE_DAYS[key as FredSeriesKey] ?? 14) ? points : [],
+    seriesFreshForKey(points, key, key === "gold" && results.gold.source === "worldbank" ? 75 : MAX_OBSERVATION_AGE_DAYS[key as FredSeriesKey] ?? 14) ? points : [],
   ])) as Record<string, Point[]>;
   const m2Growth = change(modelSeries.m2, 365);
   const rateChange = delta(modelSeries.fedFunds, 365);
@@ -1168,8 +1189,7 @@ async function generateEdition(request: Request) {
     },
   };
 
-  let persistenceStatus = 200;
-  if (fredAvailable > 0 || bitcoinPrice || treasuryDebt.length) {
+  if (validatedMacro || bitcoinPrice || treasuryDebt.length) {
     try {
       const written = await recordMacroSnapshot({
         requestedAt,
@@ -1184,19 +1204,16 @@ async function generateEdition(request: Request) {
         // durable response, not this generation's discarded values/timestamp.
         const retained = await readPersistedEdition(new Request(request.url, {method:"GET"}));
         if (retained) return retained;
-        throw new Error("No readable durable edition after a concurrent refresh");
+        return rejectRefresh(request, 'writer_conflict');
       }
-    } catch {
-      console.error("[snapshot] Durable write failed; refresh rejected and last valid snapshot retained");
-      payload.provenance.persistence = "failed";
-      persistenceStatus = 503;
+    } catch (error) {
+      return rejectRefresh(request, error instanceof Error && ['snapshot_validation','persistence_unconfirmed'].includes(error.message) ? error.message : 'persistence_failed');
     }
   }
 
-  return Response.json({...payload, ...(persistenceStatus === 503 ? {error:"Shared edition could not be persisted; the last valid snapshot is retained"} : {}), health:snapshotHealth({requestedAt,metrics:{series:payload.series,freshness:payload.freshness,bitcoin:payload.bitcoin},provenance:payload.provenance})}, {
-    status: persistenceStatus,
+  return Response.json({...payload, health:snapshotHealth({requestedAt,metrics:{series:payload.series,freshness:payload.freshness,bitcoin:payload.bitcoin},provenance:payload.provenance})}, {
     headers: {
-      "Cache-Control": persistenceStatus === 503 ? "no-store" : `public, max-age=60, s-maxage=${cacheTtlSeconds}, stale-while-revalidate=${editionTtlSeconds}`,
+      "Cache-Control": `public, max-age=60, s-maxage=${cacheTtlSeconds}, stale-while-revalidate=${editionTtlSeconds}`,
       "X-ABCM-Refresh": payload.refreshMode,
       "X-ABCM-Next-Manual-Refresh": payload.cache.nextManualAt,
       "X-ABCM-Next-Daily-Edition": payload.cache.nextDailyAt,
@@ -1226,7 +1243,8 @@ export async function GET(request: Request) {
   } catch {
     console.error("[snapshot] Edition delivery failed; attempting durable recovery");
     const recovered = await readPersistedEdition(new Request(request.url));
-    return recovered ?? Response.json({status:"UNAVAILABLE",error:"No durable edition and live refresh failed"},{status:503,headers:{"Cache-Control":"no-store"}});
+    if (request.method === 'POST') return rejectRefresh(request, 'internal_error');
+    return recovered ?? refreshFailure('internal_error');
   }
 }
 
