@@ -30,7 +30,7 @@ export type VisitBaselinePreference = {
 };
 
 type ManualRefreshPreference = {
-  previousSnapshot: VisitBaselinePreference;
+  previousSnapshot: VisitBaselinePreference | null;
   nextAllowedAt: number;
 };
 
@@ -123,8 +123,8 @@ export function readManualRefreshPreference(): ManualRefreshPreference | null {
     const value = localStorageOrNull()?.getItem(MANUAL_REFRESH_STORAGE_KEY);
     if (!value) return null;
     const parsed = JSON.parse(value) as Partial<ManualRefreshPreference>;
-    const previousSnapshot = parseVisitBaseline(parsed.previousSnapshot);
-    if (!previousSnapshot || !Number.isFinite(parsed.nextAllowedAt)) return null;
+    const previousSnapshot = parsed.previousSnapshot === null ? null : parseVisitBaseline(parsed.previousSnapshot);
+    if ((parsed.previousSnapshot !== null && !previousSnapshot) || !Number.isFinite(parsed.nextAllowedAt)) return null;
     return { previousSnapshot, nextAllowedAt: Number(parsed.nextAllowedAt) };
   } catch {
     return null;
@@ -132,10 +132,10 @@ export function readManualRefreshPreference(): ManualRefreshPreference | null {
 }
 
 export function saveManualRefreshPreference(
-  previousSnapshot: VisitBaselinePreference,
+  previousSnapshot: VisitBaselinePreference | null,
   nextAllowedAt: number,
 ) {
-  if (!Number.isFinite(nextAllowedAt) || !parseVisitBaseline(previousSnapshot)) return false;
+  if (!Number.isFinite(nextAllowedAt) || (previousSnapshot !== null && !parseVisitBaseline(previousSnapshot))) return false;
   try {
     const storage = localStorageOrNull();
     if (!storage) return false;

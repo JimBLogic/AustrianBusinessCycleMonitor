@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
+import { zipSync, strToU8 } from 'fflate';
 import { SOURCE_POLICY_VERSION } from '../lib/snapshot-policy.mjs';
 
 async function runtime(onUpstream, mode = 'valid') {
@@ -11,9 +12,34 @@ async function runtime(onUpstream, mode = 'valid') {
   const modules=await Promise.all(['index.js',...paths].map(async path=>({type:'ESModule',path:fileURLToPath(new URL(path,root)),contents:await readFile(new URL(path,root),'utf8')})));
   let db;
   const mf=new Miniflare(convertV4MiniflareOptions({name:'abcm-refresh-race',modules,compatibilityDate:'2026-08-08',compatibilityFlags:['nodejs_compat'],d1Databases:['DB'],serviceBindings:{ASSETS:async()=>new Response('Not found',{status:404})},outboundService:async request=>{
+    const url = new URL(request.url);
+    if (mode.startsWith('vix-') && ['cdn-api.cboe.com','cdn.cboe.com'].includes(url.hostname) && url.pathname.endsWith('/VIX_History.csv')) {
+      const rows=Array.from({length:7},(_,i)=>{
+        const date=new Date(Date.now()-(7-i)*86400000).toISOString().slice(0,10);
+        const [year,month,day]=date.split('-');
+        return `${month}/${day}/${year},${mode==='vix-matched'?17.5:30}`;
+      });
+      return new Response(`DATE,CLOSE\n${rows.join('\n')}`,{headers:{'content-type':'text/csv'}});
+    }
     if(new URL(request.url).hostname==='fred.stlouisfed.org') {
       await onUpstream(db);
+      if (mode.startsWith('vix-')) {
+        const rows=Array.from({length:6},(_,i)=>`${new Date(Date.now()-(7-i)*86400000).toISOString().slice(0,10)},25000,17.5`);
+        return new Response(`observation_date,M2SL,VIXCLS\n${rows.join('\n')}`,{headers:{'content-type':'text/csv'}});
+      }
       if (mode === 'valid') return new Response(`observation_date,M2SL\n${new Date().toISOString().slice(0,10)},25000`,{headers:{'content-type':'text/csv'}});
+      if (mode === 'zip') {
+        const now = new Date();
+        const month = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth()-1, 1)).toISOString().slice(0,10);
+        const quarter = new Date(Date.UTC(now.getUTCFullYear(), Math.floor(now.getUTCMonth()/3)*3-3, 1)).toISOString().slice(0,10);
+        const day = new Date(Date.now()-86400000).toISOString().slice(0,10);
+        return new Response(zipSync({
+          'README.txt': strToU8('Synthetic isolated mixed-frequency FRED fixture'),
+          'daily.csv': strToU8(`observation_date,DTWEXBGS\n${day},121.32`),
+          'monthly.csv': strToU8(`observation_date,INDPRO,TCU,CFSBCACTIVITYMFG\n${month},103.9506,76.8504,45.45`),
+          'quarterly.csv': strToU8(`observation_date,A191RL1Q225SBEA\n${quarter},2.2`),
+        }), {headers:{'content-type':'application/zip'}});
+      }
       if (mode === 'monthly') {
         const now=new Date(),start=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()-1,1)).toISOString().slice(0,10);
         return new Response(`observation_date,FEDFUNDS,INDPRO,TCU\n${start},3.75,103.9506,76.8504`,{headers:{'content-type':'text/csv'}});
@@ -154,4 +180,47 @@ test('quarterly period freshness survives D1 recovery and matches API/UI source 
     }
     assert.equal(data.derived.scores.composite??null,null,'three fresh series alone cannot manufacture a model score');
   } finally {await mf.dispose();}
+});
+
+
+test('actual Worker ingests mixed-frequency FRED ZIP and persists all five previously retained series', async () => {
+  const {mf,db}=await runtime(async()=>{},'zip');
+  try {
+    const response=await mf.dispatchFetch('http://localhost/api/data',{method:'POST'});
+    assert.equal(response.status,200,await response.clone().text());
+    const data=await response.json();
+    for (const [key,value] of Object.entries({dollar:121.32,industrialProduction:103.9506,capacityUtilization:76.8504,manufacturingSurvey:45.45,realGdpGrowth:2.2})) {
+      assert.equal(data.latest[key].value,value,key);
+      const row=data.health.indicators.find(x=>x.indicator===key);
+      assert.equal(row.source,'csv',key);
+      assert.equal(row.status,'HEALTHY',key);
+    }
+    const saved=await(await mf.dispatchFetch('http://localhost/api/data')).json();
+    assert.equal(saved.requestedAt,data.requestedAt);
+    assert.equal(saved.latest.industrialProduction.value,103.9506);
+    assert.equal((await db.prepare('SELECT count(*) AS n FROM macro_snapshots').first()).n,1);
+  } finally {await mf.dispose();}
+});
+
+
+test('actual Worker revalidates a selected newer Cboe backup only when its live comparison matches', async () => {
+  for (const mode of ['vix-matched','vix-divergent']) {
+    const {mf,db}=await runtime(async()=>{},mode);
+    try {
+      const previousAt=new Date(Date.now()-86400000).toISOString();
+      await insert(db,'previous',previousAt,23000);
+      const date=new Date(Date.now()-86400000).toISOString().slice(0,10);
+      const metrics={series:{vix:[{date,value:17.5}]},freshness:[{key:'vix',source:'cboe',status:'live'}]};
+      await db.prepare('UPDATE macro_snapshots SET metrics_json=? WHERE id=?').bind(JSON.stringify(metrics),'previous').run();
+      const response=await mf.dispatchFetch('http://localhost/api/data',{method:'POST'});
+      assert.equal(response.status,200,await response.clone().text());
+      const data=await response.json();
+      assert.equal(data.latest.vix.date,date);
+      assert.equal(data.latest.vix.value,17.5,'never adopt divergent backup');
+      const row=data.health.indicators.find(x=>x.indicator==='vix');
+      assert.equal(row.source,'cboe');
+      assert.equal(row.freshness.state,mode==='vix-matched'?'FRESH':'STALE');
+      assert.equal(row.status,mode==='vix-matched'?'DEGRADED':'STALE','working backup stays disclosed as backup');
+    } finally {await mf.dispose();}
+  }
 });

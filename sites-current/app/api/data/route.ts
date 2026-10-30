@@ -1,6 +1,7 @@
+import { parseFredDownload } from "@/lib/fred-download.mjs";
 import { snapshotHealth } from "../../data/snapshot-health";
 import { bitcoinHistoryPoints, treasuryDebtPoints, retainHistory, eligibleScores, quarterlyDebtInBillions, retainedSeriesIsNewer } from "@/lib/observation-integrity.mjs";
-import { finiteObservation, normalizeSeries, parseFredCsv, parseCboeCsv, alignedDifference, compareSeries, seriesFresh } from "@/lib/series-quality.mjs";
+import { finiteObservation, normalizeSeries, parseCboeCsv, alignedDifference, compareSeries, seriesFresh } from "@/lib/series-quality.mjs";
 import { observationAgeDays, seriesFreshForKey } from "@/lib/observation-freshness.mjs";
 import { SOURCE_POLICY_VERSION } from "@/lib/snapshot-policy.mjs";
 import { refreshFailure, unavailableRefreshCode } from "@/lib/refresh-diagnostics.mjs";
@@ -79,8 +80,6 @@ type SixForceContext = {
 const FRED: Record<FredSeriesKey, string> = FRED_SERIES;
 const WORLD_BANK_MONTHLY_PRICES_URL = "https://thedocs.worldbank.org/en/doc/74e8be41ceb20fa0da750cda2f6b9e4e-0050012026/related/CMO-Historical-Data-Monthly.xlsx";
 
-function parseCsv(text: string): Point[] { return Object.values(parseFredCsv(text))[0] ?? []; }
-function parseFredBatchCsv(text: string): Record<string, Point[]> { return parseFredCsv(text); }
 
 async function fredSeries(series: string, force: boolean): Promise<SeriesResult> {
   if (series === "GOLDAMGBD228NLBM") return { points: [], error: "Former FRED gold series retired; use World Bank monthly gold" };
@@ -122,7 +121,7 @@ async function fredSeries(series: string, force: boolean): Promise<SeriesResult>
       console.warn(`[upstream:FRED_CSV] ${series} HTTP ${response.status}`);
       return { points: [], error: `HTTP ${response.status}` };
     }
-    const points = parseCsv(await response.text());
+    const points = parseFredDownload(await response.arrayBuffer())[series] ?? [];
     return { points, error: points.length ? null : "empty series", source: "csv" };
   } catch (error) {
     console.warn(`[upstream:FRED_CSV] ${series} ${error instanceof Error ? error.message : "request failed"}`);
@@ -144,7 +143,7 @@ async function fredBatch(force: boolean): Promise<Record<string, SeriesResult>> 
       console.warn(`[upstream:FRED_CSV_BATCH] HTTP ${response.status}`);
       return Object.fromEntries(Object.keys(FRED).map((key) => [key, { points: [], error: `HTTP ${response.status}` }]));
     }
-    const byId = parseFredBatchCsv(await response.text());
+    const byId = parseFredDownload(await response.arrayBuffer());
     return Object.fromEntries(Object.entries(FRED).map(([key, id]) => [
       key,
       { points: byId[id] ?? [], error: byId[id]?.length ? null : "empty series", source: "csv" },
@@ -411,7 +410,15 @@ async function fillMacroFallbacks(results: Record<string, SeriesResult>, force: 
     { key:"sp500", candidate:"Cboe SPX daily history", independence:"different delivery origin; same underlying index", ...compareSeries(results.sp500.points.length ? results.sp500.points : previous?.metrics?.series?.sp500 ?? [],spxBackup.points) },
   ];
   for (const [key,candidate,check] of [["vix",vixBackup,checks[0]],["creditSpread",baaBackup,checks[1]],["sp500",spxBackup,checks[2]]] as const) {
-    if (needs(key) && !["divergent","stale-comparison"].includes(check.status)) select(key,candidate);
+    // Revalidate a previously selected backup even when the primary is fresh
+    // but lags that backup by a day. Otherwise retention below restores the
+    // newer backup and incorrectly calls it unverified despite this live check.
+    const previousSource = previous?.metrics?.freshness?.find((row: {key:string;source?:string}) => row.key === key)?.source;
+    const previousDate = previous?.metrics?.series?.[key]?.at(-1)?.date;
+    const revalidated = previousSource === candidate.source && check.status === "matched" &&
+      seriesFresh(candidate.points, 14) && Boolean(previousDate) &&
+      (candidate.points.at(-1)?.date ?? "") >= (previousDate ?? "");
+    if ((needs(key) || revalidated) && !["divergent","stale-comparison"].includes(check.status)) select(key,candidate);
   }
   return { checks, blsCheckedAt };
 }
@@ -735,6 +742,12 @@ function buildSixForceContext(series: Record<string, Point[]>, debtSeries: Point
     const age = reading.observedAt ? observationAgeDays(reading.sourceKey, reading.observedAt) : null;
     if (reading.available && (age == null || age > maxAge)) { reading.available = false; reading.state = "stale"; }
   }
+  // The Treasury reading also consumes the curve; a current 10Y yield must
+  // not lend its timestamp to an expired T10Y2Y secondary observation.
+  if (forces.treasury.available && !seriesFreshForKey(series.yieldCurve ?? [], "yieldCurve", MAX_OBSERVATION_AGE_DAYS.yieldCurve)) {
+    forces.treasury.available = false;
+    forces.treasury.state = "stale";
+  }
   const activePatterns: string[] = [];
   if (forces.oil.available && forces.manufacturing.available && n(oilMomentum) > 5 && manufacturing && manufacturing.value < -10) activePatterns.push("energy-pressure-below-trend-manufacturing");
   if (forces.treasury.available && forces.debt.available && n(treasuryChange) > 0.25 && n(debtGrowth) > 5) activePatterns.push("rising-yields-with-fiscal-refinancing-pressure");
@@ -796,6 +809,47 @@ function dailyMadridWindow(now = new Date()) {
   return { currentBoundary, nextBoundary };
 }
 
+// Stored scores belong to the edition that calculated them. Recheck only
+// their actual observation dependencies at read time; provider labels, monthly
+// gold context and the separate stored BTC quote do not change model eligibility.
+function storedModelInputExpired(
+  series: Record<string, Point[]>,
+  scores: Record<string, number>,
+  provenance: { signalReady?: Partial<SignalReadiness>; engineReady?: Partial<EngineReadiness> },
+  generatedAt: number,
+) {
+  // Reconstruct the original debt-source choice at generation, never silently
+  // replace an expired daily input with a quarterly value for an old score.
+  const debtKey = seriesFresh(series.treasuryDebt ?? [], 14, generatedAt) ? "treasuryDebt" : "federalDebt";
+  const signalInputs: Record<keyof SignalReadiness, string[]> = {
+    money: ["m2"],
+    monetaryStance: ["fedFunds", "cpi"],
+    creditRisk: ["creditSpread", "vix"],
+    termStructure: ["yieldCurve"],
+    production: ["industrialProduction", "capacityUtilization"],
+    labour: ["unemployment"],
+    consumerPrices: ["cpi"],
+    resourcesFx: ["oil", "dollar"],
+    debtBurden: ["debtToGdp"],
+    fiscalImpulse: [debtKey],
+  };
+  const engineSignals: Record<keyof EngineReadiness, Array<keyof SignalReadiness>> = {
+    liquidity: ["money", "monetaryStance"],
+    credit: ["creditRisk", "termStructure"],
+    realEconomy: ["production", "labour"],
+    inflation: ["consumerPrices", "resourcesFx"],
+    fiscal: ["debtBurden", "fiscalImpulse"],
+  };
+  const expired = (key: string) => !seriesFreshForKey(series[key] ?? [], key,
+    key === "treasuryDebt" ? 14 : MAX_OBSERVATION_AGE_DAYS[key as FredSeriesKey]);
+  const usedSignalExpired = Object.entries(signalInputs).some(([key, inputs]) =>
+    Number.isFinite(scores[key]) && provenance.signalReady?.[key as keyof SignalReadiness] !== false && inputs.some(expired));
+  const usedEngineExpired = Object.entries(engineSignals).some(([key, signals]) =>
+    Number.isFinite(scores[key]) && provenance.engineReady?.[key as keyof EngineReadiness] !== false &&
+    signals.some(signal => signalInputs[signal].some(expired)));
+  return usedSignalExpired || usedEngineExpired;
+}
+
 export async function readPersistedEdition(request: Request) {
   const manual = request.method === "POST";
   // Fast path: every visitor receives the latest durable edition immediately.
@@ -849,6 +903,8 @@ export async function readPersistedEdition(request: Request) {
       // scores: those are different formulas and cannot serve as substitutes.
       const normalizedScores = { ...storedScores };
       const hasNativeTenSignals = Number.isFinite(storedScores.money);
+      const modelInputExpired = storedModelInputExpired(storedSeries, storedScores, persisted.provenance, persistedAt);
+      const storedModelWithheld = storedModelExpired || !hasNativeTenSignals || modelInputExpired;
       const generatedAt = persisted.requestedAt;
       const nextManualAt = new Date(persistedAt + 15 * 60_000).toISOString();
       const nextDailyAt = (currentMainEdition ? madridWindow.nextBoundary : madridWindow.currentBoundary).toISOString();
@@ -874,7 +930,7 @@ export async function readPersistedEdition(request: Request) {
         bitcoin: storedBitcoin,
         derived: {
           changes: metrics.changes ?? {},
-          scores: eligibleScores(normalizedScores, persisted.provenance, storedModelExpired || !hasNativeTenSignals),
+          scores: eligibleScores(normalizedScores, persisted.provenance, storedModelWithheld),
           regime: persisted.regime,
           correlations: storedCorrelationModel.correlations,
           correlationEvidence: storedCorrelationModel.correlationEvidence,
@@ -889,8 +945,15 @@ export async function readPersistedEdition(request: Request) {
           ...persisted.provenance,
           bitcoinNetwork: storedBitcoinNetwork,
           mode: currentMainEdition ? "daily-persisted" : "stale-persisted",
-          modelStatus: storedModelExpired || !hasNativeTenSignals ? "withheld" : persisted.provenance.modelStatus,
-          ...((storedModelExpired || !hasNativeTenSignals) ? { modelReady: false, signalReady: Object.fromEntries(Object.keys(persisted.provenance.signalReady ?? {}).map(key => [key,false])), engineReady: Object.fromEntries(Object.keys(persisted.provenance.engineReady ?? {}).map(key => [key,false])) } : {}),
+          modelStatus: storedModelWithheld ? "withheld" : persisted.provenance.modelStatus,
+          ...(storedModelWithheld ? {
+            modelReady: false,
+            modelInputsAvailable: 0,
+            availableWeight: 0,
+            modelWithheldReason: modelInputExpired ? "input-expired" : storedModelExpired ? "edition-expired" : "legacy-model-unavailable",
+            signalReady: Object.fromEntries(Object.keys(persisted.provenance.signalReady ?? {}).map(key => [key,false])),
+            engineReady: Object.fromEntries(Object.keys(persisted.provenance.engineReady ?? {}).map(key => [key,false])),
+          } : {}),
         },
       }, {
         headers: {

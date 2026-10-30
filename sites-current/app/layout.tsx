@@ -1,10 +1,14 @@
 import { SITE_ORIGIN } from "@/lib/site-config";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./fonts.css";
 import "./globals.css";
 import "./engine.css";
 import "./academy.css";
 import "./progressive.css";
+import "./interaction.css";
+import { OrangePulse } from "./OrangePulse";
+
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
 
 
 export const metadata: Metadata = {
@@ -66,6 +70,7 @@ export default function RootLayout({
           description: "Monitor verificable del ciclo económico con datos públicos e interpretación austriaca diferenciada.",
         }) }} />
         {children}
+        <OrangePulse />
         <footer className="site-legal-footer"><nav aria-label="Información legal / Legal information"><a href="/aviso-legal">Aviso legal · Legal notice</a><a href="/privacidad">Privacidad · Privacy</a><a href="mailto:jrf91@pm.me">Contacto · Contact</a></nav></footer>
       </body>
     </html>

@@ -22,6 +22,13 @@ echo "Checking TypeScript..."
 "${SITES_PROJECT_ROOT}/node_modules/.bin/tsc" --noEmit --incremental false
 
 echo "Running bounded vinext build..."
+# Vite's multiple environments share dist and may preserve removed public files.
+# Preserve previous output outside dist; never ship removed QA/obsolete assets.
+if [[ -e "${SITES_PROJECT_ROOT}/dist" ]]; then
+  mkdir -p "${SITES_PROJECT_ROOT}/.sites-runtime"
+  previous_output="$(mktemp -d "${SITES_PROJECT_ROOT}/.sites-runtime/previous-build.XXXXXX")"
+  mv -- "${SITES_PROJECT_ROOT}/dist" "${previous_output}/dist"
+fi
 timeout \
   --signal=TERM \
   --kill-after="${SITES_BUILD_KILL_AFTER:-10s}" \
