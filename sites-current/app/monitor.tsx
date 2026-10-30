@@ -20,7 +20,7 @@ import {
   type WatchPreference,
 } from "@/lib/local-preferences";
 import { ClearLocalPreferencesButton } from "./privacidad/ClearLocalPreferencesButton";
-import { CONTEXT_MODEL_VERSION, DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "./version";
+import { APP_VERSION, CONTEXT_MODEL_VERSION, DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "./version";
 
 type Lang = "en" | "es";
 type SignalKey = "money" | "monetaryStance" | "creditRisk" | "termStructure" | "production" | "labour" | "consumerPrices" | "resourcesFx" | "debtBurden" | "fiscalImpulse";
@@ -2354,7 +2354,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
           </article>
           <article className="freshness-panel" aria-labelledby="source-status-title">
             <div className="backend-title">
-              <div><span className="kicker">{lang === "es" ? `MOTOR ${ENGINE_VERSION} · SITES V${SITE_RELEASE}` : `ENGINE ${ENGINE_VERSION} · SITES V${SITE_RELEASE}`}</span><h3 id="source-status-title">{lang === "es" ? "Estado de las fuentes" : "Source status"}</h3></div>
+              <div><span className="kicker">{lang === "es" ? `ABCM ${APP_VERSION} · MOTOR ${ENGINE_VERSION} · CHECKPOINT ${SITE_RELEASE}` : `ABCM ${APP_VERSION} · ENGINE ${ENGINE_VERSION} · CHECKPOINT ${SITE_RELEASE}`}</span><h3 id="source-status-title">{lang === "es" ? "Estado de las fuentes" : "Source status"}</h3></div>
               <span className={`backend-live ${sourceHealthState}`}><i aria-hidden="true" />{sourceHealthState === "ok" ? (lang === "es" ? "AL DÍA" : "CURRENT") : sourceHealthState === "partial" ? (lang === "es" ? "COBERTURA PARCIAL" : "PARTIAL COVERAGE") : (lang === "es" ? "SIN DATOS ACTUALES" : "NO CURRENT DATA")}</span>
             </div>
             <p>{lang === "es"
@@ -2563,7 +2563,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
       <footer>
         <span>{lang === "es" ? "ABCM · CONTEXTO HOY. MEJORES DECISIONES MAÑANA." : "ABCM · CONTEXT TODAY. BETTER DECISIONS TOMORROW."}</span>
         <span>
-          SITES V{SITE_RELEASE} · DATA {DATA_SCHEMA_VERSION} · <a href="/api/health" target="_blank" rel="noreferrer">{lang === "es" ? "Integridad ↗" : "Integrity ↗"}</a> · <a href={`/learn?lang=${lang}`} target="_blank" rel="noreferrer">{lang === "es" ? "Aprende ↗" : "Learn ↗"}</a> · <a href="/privacidad">{lang === "es" ? "Privacidad" : "Privacy"}</a> · JimBLogic · 2026 · <a href="https://github.com/JimBLogic/AustrianBusinessCycleMonitor">GitHub ↗</a>
+          <a href={`/releases?lang=${lang}`} aria-label={lang === "es" ? `Versión ${APP_VERSION}: ver novedades` : `Version ${APP_VERSION}: view what's new`}>ABCM {APP_VERSION} · {lang === "es" ? "Novedades" : "What's new"}</a> · <a href="/api/health" target="_blank" rel="noreferrer">{lang === "es" ? "Integridad ↗" : "Integrity ↗"}</a> · <a href={`/learn?lang=${lang}`} target="_blank" rel="noreferrer">{lang === "es" ? "Aprende ↗" : "Learn ↗"}</a> · <a href="/privacidad">{lang === "es" ? "Privacidad" : "Privacy"}</a> · JimBLogic · 2026 · <a href="https://github.com/JimBLogic/AustrianBusinessCycleMonitor">GitHub ↗</a>
         </span>
         <ClearLocalPreferencesButton compact language={lang} />
       </footer>

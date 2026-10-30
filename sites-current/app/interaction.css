@@ -9,6 +9,16 @@
 .detail-layer.detail-watch p { color: #c0c7c3; }
 .detail-layer b { display: block; line-height: 1.5; }
 .detail-disclaimer { padding: 16px; }
+.release-history { display: grid; gap: 20px; max-width: 960px; margin-block: 28px 48px; }
+.release-entry { min-width: 0; padding: clamp(20px, 4vw, 32px); border: 1px solid var(--line); background: var(--paper2); }
+.release-entry h2 { margin: 12px 0 16px; font: clamp(25px, 4vw, 36px)/1.15 Georgia, serif; }
+.release-entry p, .release-entry li, .release-entry dd { line-height: 1.65; overflow-wrap: anywhere; }
+.release-entry ul { padding-inline-start: 22px; }
+.release-entry li + li { margin-top: 10px; }
+.release-policy { display: grid; gap: 16px; }
+.release-policy > div { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 16px; }
+.release-policy dt { font: 700 15px/1.65 monospace; }
+.release-policy dd { margin: 0; }
 .orange-pulse {
   position: fixed; z-index: 1200; pointer-events: none; background: transparent; opacity: 0;
   box-shadow: 0 0 0 2px rgb(var(--pulse-color) / var(--pulse-edge)), 0 0 9px 4px rgb(var(--pulse-color) / var(--pulse-ambient));
