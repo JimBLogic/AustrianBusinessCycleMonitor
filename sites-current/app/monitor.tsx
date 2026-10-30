@@ -2574,7 +2574,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
           <div className="detail-head"><h2 id="detail-title">{detail.title}</h2><strong>{detail.value}</strong></div>
           <div className="detail-layer fact"><b>{detail.factLabel ?? (lang === "es" ? "QUÉ DICE EL DATO" : "WHAT THE DATA SAYS")}</b><p>{detail.fact}</p></div>
           <div className="detail-layer lens"><b>{detail.interpretationLabel ?? (lang === "es" ? "INTERPRETACIÓN AUSTRIACA CONDICIONAL" : "CONDITIONAL AUSTRIAN INTERPRETATION")}</b><p>{detail.interpretation}</p></div>
-          <div className="detail-layer watch"><b>{detail.watchLabel ?? (lang === "es" ? "QUÉ PODRÍA CONFIRMAR O INVALIDAR LA LECTURA" : "WHAT COULD CONFIRM OR INVALIDATE THE READING")}</b><p>{detail.watch}</p></div>
+          <div className="detail-layer detail-watch"><b>{detail.watchLabel ?? (lang === "es" ? "QUÉ PODRÍA CONFIRMAR O INVALIDAR LA LECTURA" : "WHAT COULD CONFIRM OR INVALIDATE THE READING")}</b><p>{detail.watch}</p></div>
           <div className="detail-disclaimer">{lang === "es" ? "Información educativa y análisis macroeconómico experimental. No constituye asesoramiento financiero, recomendación de inversión ni señal de compraventa." : "Educational information and experimental macro analysis. This is not financial advice, an investment recommendation or a trading signal."}</div>
           <a className="detail-source" href={detail.sourceUrl} target="_blank" rel="noopener noreferrer">{detail.sourceLabel} ↗</a>
         </article>

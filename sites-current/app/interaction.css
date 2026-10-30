@@ -1,5 +1,14 @@
 /* OrangePulse: transparent center, fixed shadow, opacity-only activation. */
 :root { --pulse-color: 247 147 26; --pulse-edge: .19; --pulse-ambient: .23; --touch-target: 44px; }
+/* Filled explanation panels need their own inset, independent of list rows. */
+.detail-layer.lens { padding-inline: clamp(16px, 2vw, 20px); }
+.detail-layer.detail-watch {
+  margin-top: 12px; padding: 18px clamp(16px, 2vw, 20px);
+  background: #151f1a; color: #f3f0e5;
+}
+.detail-layer.detail-watch p { color: #c0c7c3; }
+.detail-layer b { display: block; line-height: 1.5; }
+.detail-disclaimer { padding: 16px; }
 .orange-pulse {
   position: fixed; z-index: 1200; pointer-events: none; background: transparent; opacity: 0;
   box-shadow: 0 0 0 2px rgb(var(--pulse-color) / var(--pulse-edge)), 0 0 9px 4px rgb(var(--pulse-color) / var(--pulse-ambient));
