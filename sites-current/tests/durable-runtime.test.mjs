@@ -42,6 +42,8 @@ test('actual built Worker and D1 preserve snapshots across corrupt/partial rows 
     const payload=await response.json();
     const expectedRelease=Number((await readFile(new URL('../app/version.ts',import.meta.url),'utf8')).match(/SITE_RELEASE = (\d+)/)[1]);
     assert.equal(payload.siteRelease,expectedRelease);
+    const packageInfo=JSON.parse(await readFile(new URL('../package.json',import.meta.url),'utf8'));
+    assert.equal(payload.appVersion,packageInfo.version);
     assert.equal(payload.latest.m2.value,23000);
     assert.equal(payload.latest.cpi.value,330);
     assert.equal(payload.bitcoin.price,80000);

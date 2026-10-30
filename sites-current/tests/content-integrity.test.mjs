@@ -74,7 +74,7 @@ test("documents resilient Bitcoin sourcing and truthful initial UI states", () =
     "per-provider circuit breaker",
     "PENDIENTE DE LA PRIMERA CARGA",
     "Cambiar idioma a inglés",
-    "SITE_RELEASE}",
+    "APP_VERSION}",
   ]) assert.ok(source.includes(expected), `missing audited behavior: ${expected}`);
   assert.equal(source.includes("new Date(0)"), false);
 });
