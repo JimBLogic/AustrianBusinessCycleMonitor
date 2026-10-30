@@ -3,9 +3,10 @@
 import { retainDashboardSeries } from "@/lib/dashboard-recovery.mjs";
 import { validChartPoints, timePosition, chartSegments } from "@/lib/chart-geometry.mjs";
 import { manualRefreshBlocked } from "@/lib/refresh-policy.mjs";
+import { createDailyRefreshBudget, dailyRefreshRetryAt, scheduleDailyRefresh } from "@/lib/daily-refresh.mjs";
 import { validTimestamp } from "@/lib/timestamp.mjs";
 import { validBitcoinQuote } from "@/lib/bitcoin-quote.mjs";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   hasAcceptedEducationalNotice,
   readLanguagePreference,
@@ -51,6 +52,12 @@ type Detail = {
   sourceUrl: string;
 };
 type VisitBaseline = VisitBaselinePreference;
+type DataLoadResult = {
+  kind: "received" | "busy" | "blocked" | "failed" | "cancelled";
+  retryAt: number;
+  requestedAt?: string;
+  nextDailyAt?: string;
+};
 export type Data = {
   health?: {status:string; indicators:Array<{indicator:string;source:string;status:string;last_attempt:string|null;last_success:string|null;last_valid_value:number|null;observation_date:string|null;failure_reason:string|null;fallback:{configured:string;active:string|null}}>};
   observedAt: string;
@@ -424,29 +431,32 @@ function compactChartValue(value: number, lang: Lang) {
   }).format(value);
 }
 
-function LineChart({ points, color, unit, horizon, lang, status, state }: { points: Point[]; color: string; unit: string; horizon: number; lang: Lang; status: string; state: string }) {
+const LineChart = memo(function LineChart({ points, color, unit, horizon, lang, status, state }: { points: Point[]; color: string; unit: string; horizon: number; lang: Lang; status: string; state: string }) {
   const [cursor, setCursor] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const safePoints = prepareChartPoints(points);
-  const latestDate = safePoints.at(-1)?.date;
-  const cutoff = latestDate && horizon > 0 ? new Date(`${latestDate}T00:00:00Z`) : null;
-  if (cutoff) cutoff.setUTCFullYear(cutoff.getUTCFullYear() - horizon);
-  const shown = cutoff ? safePoints.filter((point) => point.date >= cutoff.toISOString().slice(0, 10)) : safePoints;
-  const values = shown.map((p) => p.value);
-  const min = values.length ? Math.min(...values) : 0;
-  const max = values.length ? Math.max(...values) : 0;
-  const rawRange = max - min || Math.max(Math.abs(max) * 0.1, 1);
-  const plotMin = min - rawRange * 0.08;
-  const plotMax = max + rawRange * 0.08;
-  const range = plotMax - plotMin || 1;
-  const coords = shown.map((p) => ({
-    ...p, x: timePosition(p.date, shown[0].date, shown.at(-1)!.date),
-    y: 88 - ((p.value - plotMin) / range) * 74,
-  }));
-  const gaps = shown.slice(1).map((point,index)=>(Date.parse(point.date)-Date.parse(shown[index].date))/86400000).sort((a,b)=>a-b);
-  const typicalGap = gaps[Math.floor((gaps.length-1)/2)] ?? 1;
-  // Daily series allow weekends/holidays; monthly/quarterly gaps remain visible.
-  const segments = chartSegments(coords, typicalGap < 7 ? 7 : typicalGap * 1.6) as typeof coords[];
+  const { coords, segments, plotMin, plotMax } = useMemo(() => {
+    const safePoints = prepareChartPoints(points);
+    const latestDate = safePoints.at(-1)?.date;
+    const cutoff = latestDate && horizon > 0 ? new Date(`${latestDate}T00:00:00Z`) : null;
+    if (cutoff) cutoff.setUTCFullYear(cutoff.getUTCFullYear() - horizon);
+    const shown = cutoff ? safePoints.filter((point) => point.date >= cutoff.toISOString().slice(0, 10)) : safePoints;
+    const values = shown.map((p) => p.value);
+    const min = values.length ? Math.min(...values) : 0;
+    const max = values.length ? Math.max(...values) : 0;
+    const rawRange = max - min || Math.max(Math.abs(max) * 0.1, 1);
+    const plotMin = min - rawRange * 0.08;
+    const plotMax = max + rawRange * 0.08;
+    const range = plotMax - plotMin || 1;
+    const coords = shown.map((p) => ({
+      ...p, x: timePosition(p.date, shown[0].date, shown.at(-1)!.date),
+      y: 88 - ((p.value - plotMin) / range) * 74,
+    }));
+    const gaps = shown.slice(1).map((point,index)=>(Date.parse(point.date)-Date.parse(shown[index].date))/86400000).sort((a,b)=>a-b);
+    const typicalGap = gaps[Math.floor((gaps.length-1)/2)] ?? 1;
+    // Daily series allow weekends/holidays; monthly/quarterly gaps remain visible.
+    const segments = chartSegments(coords, typicalGap < 7 ? 7 : typicalGap * 1.6) as typeof coords[];
+    return { coords, segments, plotMin, plotMax };
+  }, [points, horizon]);
   const selectedIndex = coords.length ? Math.min(cursor ?? coords.length - 1, coords.length - 1) : 0;
   const selected = coords[selectedIndex];
   const start = coords[0];
@@ -499,7 +509,7 @@ function LineChart({ points, color, unit, horizon, lang, status, state }: { poin
         : <div className="chart-empty" role="status"><b>{lang === "es" ? "Histórico no disponible" : "History unavailable"}</b><span>{lang === "es" ? "Se muestra la última observación verificada, sin inventar una tendencia." : "The latest verified observation is shown without inventing a trend."}</span></div>}
     </div>
   );
-}
+});
 
 const mixMeta: Record<string, { en: string; es: string; color: string }> = {
   m2: { en: "M2", es: "M2", color: "#c7ff18" },
@@ -837,50 +847,85 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
 
   const requestState = useRef({lang, manualRefreshNext});
   const dataRequestPending = useRef(false);
+  const dailyRefreshBudget = useRef(createDailyRefreshBudget());
   useEffect(() => { requestState.current = {lang, manualRefreshNext}; }, [lang, manualRefreshNext]);
   useEffect(() => {
     const clear = () => { setWatchlist([]); setVisitBaseline(null); setManualRefreshNext(null); setBaselineSavedThisVisit(false); setBaselineSessionOnly(false); setWatchlistSessionOnly(false); setDisclaimerOpen(true); };
     window.addEventListener("abcm:preferences-cleared", clear);
     return () => window.removeEventListener("abcm:preferences-cleared", clear);
   }, []);
-  const load = useCallback(async (manual = false, userInitiated = false) => {
+  const load = useCallback(async (manual = false, userInitiated = false, signal?: AbortSignal): Promise<DataLoadResult> => {
     const {lang, manualRefreshNext} = requestState.current;
-    if (dataRequestPending.current) return;
-    if (manual && manualRefreshBlocked(userInitiated, manualRefreshNext)) return;
+    if (signal?.aborted) return { kind: "cancelled", retryAt: 0 };
+    if (dataRequestPending.current) return { kind: "busy", retryAt: 0 };
+    if (manual && manualRefreshBlocked(userInitiated, manualRefreshNext)) return { kind: "blocked", retryAt: manualRefreshNext ?? 0 };
+    const attemptAt = Date.now();
+    let retryAt = 0;
+    const requestController = new AbortController();
+    const timeoutSignal = AbortSignal.timeout(90_000);
+    const abortRequest = () => requestController.abort();
+    timeoutSignal.addEventListener("abort", abortRequest, { once: true });
+    signal?.addEventListener("abort", abortRequest, { once: true });
     dataRequestPending.current = true;
     setLoading(true);
     setRefreshNotice(manual ? (lang === "es" ? "Consultando fuentes y comparando con tu instantánea anterior…" : "Checking sources and comparing with your previous snapshot…") : "");
     try {
       const response = await fetch("/api/data", {
-        signal: AbortSignal.timeout(90_000),
+        signal: requestController.signal,
         method: manual ? "POST" : "GET",
         cache: "no-store",
         credentials: "omit",
         referrerPolicy: "no-referrer",
       });
+      retryAt = dailyRefreshRetryAt(response.headers.get("Retry-After"), null, Date.now());
+      const payload = await response.json();
+      retryAt = Math.max(retryAt, dailyRefreshRetryAt(null, payload, Date.now()));
+      if (signal?.aborted) return { kind: "cancelled", retryAt };
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const next = retainDashboardSeries(previousData.current, await response.json()) as Data;
+      const next = retainDashboardSeries(previousData.current, payload) as Data;
       if (next.provenance.mode === "fallback") throw new Error("No upstream source returned a usable snapshot");
       const old = previousData.current;
       const changedMacro = Object.keys(next.latest).filter((key) => next.latest[key]?.date !== old.latest[key]?.date).length;
       const btcMove = old.bitcoin.price && next.bitcoin.price ? next.bitcoin.price - old.bitcoin.price : null;
+      const sharedCooldown = next.refreshMode === "manual-cooldown" && next.requestedAt === old.requestedAt;
       setData(next);
       previousData.current = next;
       if (manual && userInitiated) {
-        const previousSnapshot = snapshotBaseline(old);
-        const nextAllowedAt = Date.now() + 30 * 60_000;
-        const saved = saveManualRefreshPreference(previousSnapshot, nextAllowedAt);
-        setBaselineSavedThisVisit(saved);
-        setBaselineSessionOnly(!saved);
+        const nextAllowedAt = attemptAt + 30 * 60_000;
+        if (sharedCooldown) {
+          // Count the attempt without fabricating a new comparison baseline.
+          saveManualRefreshPreference(readManualRefreshPreference()?.previousSnapshot ?? null, nextAllowedAt);
+        } else {
+          const previousSnapshot = snapshotBaseline(old);
+          const saved = saveManualRefreshPreference(previousSnapshot, nextAllowedAt);
+          setBaselineSavedThisVisit(saved);
+          setBaselineSessionOnly(!saved);
+          setVisitBaseline(previousSnapshot);
+        }
         setManualRefreshNext(nextAllowedAt);
-        setVisitBaseline(previousSnapshot);
       }
-      if (manual) setRefreshNotice(lang === "es"
-        ? `Instantánea sincronizada · BTC ${btcMove == null ? "sin dato" : `${btcMove >= 0 ? "+" : ""}$${format(btcMove, 0)}`} · ${changedMacro} series macro con nueva fecha`
-        : `Snapshot synchronized · BTC ${btcMove == null ? "unavailable" : `${btcMove >= 0 ? "+" : ""}$${format(btcMove, 0)}`} · ${changedMacro} macro series with a new date`);
+      if (manual) {
+        const sharedNext = validTimestamp(next.cache?.nextManualAt);
+        const sharedWait = sharedNext ? Math.max(0, Math.ceil((sharedNext.getTime() - Date.now()) / 60_000)) : null;
+        setRefreshNotice(sharedCooldown
+          ? lang === "es"
+            ? `Edición conservada: el límite compartido impidió generar una nueva.${sharedWait == null ? "" : ` Espera compartida: ${sharedWait} min.`}`
+            : `Edition retained: the shared cooldown prevented a new edition.${sharedWait == null ? "" : ` Shared wait: ${sharedWait} min.`}`
+          : lang === "es"
+            ? `Instantánea sincronizada · BTC ${btcMove == null ? "sin dato" : `${btcMove >= 0 ? "+" : ""}$${format(btcMove, 0)}`} · ${changedMacro} series macro con nueva fecha`
+            : `Snapshot synchronized · BTC ${btcMove == null ? "unavailable" : `${btcMove >= 0 ? "+" : ""}$${format(btcMove, 0)}`} · ${changedMacro} macro series with a new date`);
+      }
+      return { kind: "received", requestedAt: next.requestedAt, nextDailyAt: next.cache?.nextDailyAt, retryAt };
     } catch {
+      if (signal?.aborted) return { kind: "cancelled", retryAt };
       setRefreshNotice(lang === "es" ? "No se pudo completar la consulta. Se conserva el último snapshot válido." : "Fresh query failed. Keeping the last valid snapshot.");
-    } finally { dataRequestPending.current = false; setLoading(false); }
+      return { kind: "failed", retryAt };
+    } finally {
+      timeoutSignal.removeEventListener("abort", abortRequest);
+      signal?.removeEventListener("abort", abortRequest);
+      dataRequestPending.current = false;
+      setLoading(false);
+    }
   }, []);
   const loadBitcoin = useCallback(async () => {
     try {
@@ -943,9 +988,27 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
       setClock(Date.now());
       void load(false);
     }, 0);
-    const id = window.setInterval(() => setClock(Date.now()), 1_000);
-    return () => { window.clearTimeout(initial); window.clearInterval(id); };
+    return () => window.clearTimeout(initial);
   }, [load]);
+  useEffect(() => {
+    let timer: number;
+    const tick = () => {
+      if (document.hidden) return;
+      setClock(Date.now());
+      // Only the visible cooldown needs seconds; ages are displayed in minutes.
+      timer = window.setTimeout(tick, (manualRefreshNext ?? 0) > Date.now() ? 1_000 : 60_000);
+    };
+    const visibility = () => {
+      window.clearTimeout(timer);
+      if (!document.hidden) timer = window.setTimeout(tick, 0);
+    };
+    timer = window.setTimeout(tick, 0);
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", visibility);
+    };
+  }, [manualRefreshNext]);
   useEffect(() => {
     void loadBitcoin();
     const id = window.setInterval(() => void loadBitcoin(), 60_000);
@@ -956,16 +1019,12 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
       ? new Date(data.cache.nextDailyAt).getTime()
       : new Date(data.requestedAt).getTime() + 86_400_000;
     if (!Number.isFinite(validUntil) || data.provenance.mode === "fallback") return;
-    // A small per-device jitter prevents every open tab requesting the new
-    // shared snapshot on the exact same millisecond.
-    const expired = validUntil <= Date.now();
-    const delay = expired
-      ? 2_000 + Math.floor(Math.random() * 8_000)
-      : Math.max(60_000, validUntil - Date.now() + Math.floor(Math.random() * 30_000));
-    // Render the durable edition first. If its daily window has elapsed, a
-    // single gated POST refreshes it without holding the page hostage.
-    const id = window.setTimeout(() => void load(expired, false), delay);
-    return () => window.clearTimeout(id);
+    return scheduleDailyRefresh({
+      boundary: validUntil, budget: dailyRefreshBudget.current, load,
+      readLatest: () => previousData.current,
+      setTimer: (callback: () => void, delay: number) => window.setTimeout(callback, delay),
+      clearTimer: (timer: number | undefined) => window.clearTimeout(timer),
+    });
   }, [data.cache?.nextDailyAt, data.cache?.validUntil, data.provenance.mode, data.requestedAt, load]);
   useEffect(() => { const id = setInterval(() => setQuote((q) => (q + 1) % quotes.length), 12_000); return () => clearInterval(id); }, []);
   useEffect(() => {
@@ -1039,7 +1098,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
     const onPointerDown = (event: PointerEvent) => {
       if (navRef.current && !navRef.current.contains(event.target as Node)) closeMenu();
     };
-    const onResize = () => { if (window.innerWidth > 760) closeMenu(); };
+    const onResize = () => { if (window.innerWidth > 1000) closeMenu(); };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("resize", onResize);

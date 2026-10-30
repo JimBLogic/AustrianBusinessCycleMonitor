@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 import type { D1Binding } from "../db/runtime";
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
@@ -53,7 +54,11 @@ function withSecurityHeaders(response: Response, request: Request) {
   // A plain-HTTP loopback self-host server has no TLS endpoint. WebKit upgrades
   // its scripts and API requests otherwise, preventing hydration entirely.
   // Public origins retain the production policy, including forced upgrades.
-  if (url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)) {
+  const httpLoopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  // The managed preview is HTTP too. Vite removes this development-only
+  // exception from the production bundle; a public/production Host cannot opt in.
+  const managedDevelopmentPreview = import.meta.env.DEV && url.hostname === "terminal.local";
+  if (url.protocol === "http:" && (httpLoopback || managedDevelopmentPreview)) {
     headers.set("Content-Security-Policy", SECURITY_HEADERS["Content-Security-Policy"].replace("; upgrade-insecure-requests", ""));
   }
   headers.delete("Server");
