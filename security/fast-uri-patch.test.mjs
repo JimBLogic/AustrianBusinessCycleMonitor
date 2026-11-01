@@ -9,7 +9,7 @@ import test from 'node:test';
 const patchedFloor = new Map([[2, [2, 4, 8]], [3, [3, 1, 9]], [4, [4, 2, 3]]]);
 
 export function hasPatchedFastUri(version) {
-  const match = /^(\\d+)\\.(\\d+)\\.(\\d+)$/.exec(version || '');
+  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version || '');
   if (!match) return false; // unknown/pre-release is not verified
   const actual = match.slice(1).map(Number);
   const required = patchedFloor.get(actual[0]);
