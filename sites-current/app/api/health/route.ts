@@ -1,6 +1,6 @@
 import { snapshotHealth } from "../../data/snapshot-health";
 import { ensureDatabase, getBindings, getRuntimeBindings, readLatestMacroSnapshot } from "../../../db/runtime";
-import { CONTEXT_MODEL_VERSION, DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "../../version";
+import { APP_VERSION, CONTEXT_MODEL_VERSION, DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "../../version";
 import { getUpstreamHealth } from "../../data/upstream";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +24,7 @@ export async function GET() {
     data,
     persistence: {binding:"DB", status:database, snapshotReadable:Boolean(snapshot)},
     service: "austrian-business-cycle-monitor",
+    appVersion: APP_VERSION,
     siteRelease: SITE_RELEASE,
     engine: ENGINE_VERSION,
     contextModel: CONTEXT_MODEL_VERSION,

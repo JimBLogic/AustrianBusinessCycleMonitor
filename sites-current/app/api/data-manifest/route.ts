@@ -1,11 +1,12 @@
 import { WORLD_BANK_GOLD } from '../../../lib/gold-metadata.mjs';
 import { FRED_SERIES, SOURCE_REGISTRY } from "../../data/source-registry";
-import { CONTEXT_MODEL_VERSION, DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "../../version";
+import { APP_VERSION, CONTEXT_MODEL_VERSION, DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "../../version";
 
 export async function GET() {
   return Response.json({
     schemaVersion: DATA_SCHEMA_VERSION,
     build: {
+      appVersion: APP_VERSION,
       siteRelease: SITE_RELEASE,
       engineVersion: ENGINE_VERSION,
       contextModelVersion: CONTEXT_MODEL_VERSION,

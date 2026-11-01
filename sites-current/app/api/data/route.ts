@@ -15,7 +15,7 @@ import {
 } from "../../data/source-registry";
 import { loadBitcoinSpot } from "../../data/bitcoin-spot";
 import { fetchUpstream, getUpstreamHealth } from "../../data/upstream";
-import { CONTEXT_MODEL_VERSION, DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE } from "../../version";
+import { APP_VERSION, CONTEXT_MODEL_VERSION, DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE } from "../../version";
 
 export const dynamic = "force-dynamic";
 
@@ -913,6 +913,7 @@ export async function readPersistedEdition(request: Request) {
         engineVersion: ENGINE_VERSION,
         contextModelVersion: CONTEXT_MODEL_VERSION,
         siteRelease: SITE_RELEASE,
+        appVersion: APP_VERSION,
         requestedAt: generatedAt,
         observedAt: generatedAt,
         refreshMode: manual ? "manual-cooldown" : currentMainEdition ? "daily-edition" : "stale-while-refresh",
@@ -1180,6 +1181,7 @@ async function generateEdition(request: Request) {
     engineVersion: ENGINE_VERSION,
     contextModelVersion: CONTEXT_MODEL_VERSION,
     siteRelease: SITE_RELEASE,
+    appVersion: APP_VERSION,
     requestedAt,
     observedAt: requestedAt,
     refreshMode: manual ? "manual-refresh" : "daily-edition",

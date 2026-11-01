@@ -2,12 +2,17 @@ import { test, expect, type Page } from '@playwright/test';
 import { verifyProduction } from '../../sites-current/lib/production-verification.mjs';
 import { allowsRefresh } from '../write-policy.mjs';
 
+// Only the test harness can account for blocked public POSTs. Unexpected
+// application errors and failed asset requests must still fail the smoke gate.
+const intentionallyBlockedPosts = new WeakMap<Page, number>();
 test.beforeEach(async ({ page, baseURL }) => {
   if (!allowsRefresh(baseURL, process.env.ABCM_READ_ONLY)) {
-    // Also stop the dashboard's automatic background refresh on public reads.
-    // A test's later route.fulfill still intercepts its own simulated failure.
-    await page.route('**/api/data', route => route.request().method() === 'POST'
-      ? route.abort('blockedbyclient') : route.fallback());
+    // Stop automatic POSTs, without sending any write to public production.
+    await page.route('**/api/data', route => {
+      if (route.request().method() !== 'POST') return route.fallback();
+      intentionallyBlockedPosts.set(page, (intentionallyBlockedPosts.get(page) ?? 0) + 1);
+      return route.abort('blockedbyclient');
+    });
   }
 });
 
@@ -28,15 +33,24 @@ async function openDashboard(page:Page, lang='en') {
 
 for (const lang of ['en','es']) test(`${lang}: real data, all charts, layout and navigation`,async({page,isMobile},testInfo)=>{
   const errors:string[]=[];
+  const readOnlyAbortConsoleErrors:string[]=[];
   let hostingCookieWarnings=0;
   page.on('pageerror',error=>errors.push(error.message));
   page.on('console',message=>{
     if(message.type()!=='error') return;
     const text=message.text();
+    // The read-only harness aborts POST /api/data before network transmission.
+    // Chromium may surface its own abort as a console error. Recognize only
+    // that exact fingerprint; the counted POSTs are asserted below.
+    const publicApiData = new URL('/api/data', testInfo.project.use.baseURL!).href;
+    if (text === 'Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector'
+        && message.location().url === publicApiData) {
+      readOnlyAbortConsoleErrors.push(text);
+    }
     // Firefox reports the hosting layer's rejected bot-management cookie as
     // an error. Record this exact platform warning; application errors and
     // CSP/asset failures still fail the gate. No cookie values are collected.
-    if(/Cookie [“"]__cf_bm[”"] has been rejected for invalid domain\./.test(text)) hostingCookieWarnings++;
+    else if(/Cookie [“"]__cf_bm[”"] has been rejected for invalid domain\./.test(text)) hostingCookieWarnings++;
     else errors.push(text);
   });
   const failedResponses:string[]=[];
@@ -96,6 +110,14 @@ for (const lang of ['en','es']) test(`${lang}: real data, all charts, layout and
     await testInfo.attach(`${lang}-capture-scope.json`,{body:JSON.stringify({...dimensions,capture:'viewport, charts and market sections',reason:'WebKit maximum image dimension'}),contentType:'application/json'});
   }
   if(hostingCookieWarnings) await testInfo.attach('hosting-cookie-warning.json',{body:JSON.stringify({provider:'Cloudflare',warning:'__cf_bm rejected for invalid domain',count:hostingCookieWarnings,applicationChecks:'independently asserted'}),contentType:'application/json'});
+  const accountedPosts = intentionallyBlockedPosts.get(page) ?? 0;
+  // If the same Chrome error appears without an intentional read-only abort,
+  // or appears more often than the harness aborted, it is NOT ignored.
+  expect(readOnlyAbortConsoleErrors.length,'unexpected /api/data client-blocked errors').toBeLessThanOrEqual(accountedPosts);
+  if (readOnlyAbortConsoleErrors.length) await testInfo.attach('readonly-post-interception.json',{
+    body:JSON.stringify({method:'POST',path:'/api/data',count:readOnlyAbortConsoleErrors.length,expectedAborts:accountedPosts,reason:'intentional read-only Playwright route.abort; no production write'}),
+    contentType:'application/json',
+  });
   expect(errors).toEqual([]);
   expect(failedResponses).toEqual([]);
 });
