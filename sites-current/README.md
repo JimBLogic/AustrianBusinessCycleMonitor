@@ -238,7 +238,8 @@ recreates the application, not its production macro editions.
 ## Release discipline
 
 1. Change source in the maintained checkout.
-2. Update `app/version.ts` once for the next immutable Sites release.
+2. Follow `docs/VERSIONING.md`: update the product version and release notes;
+   update the independent numeric checkpoint in `app/version.ts` for Sites.
 3. Run lint, tests, the production build, and dependency audit.
 4. Publish and verify the Site.
 5. Mirror the exact source into `sites-current/` through a PR.

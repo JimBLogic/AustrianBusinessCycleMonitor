@@ -6,6 +6,15 @@ The public application displays deterministic snapshots derived from official ob
 
 ## Current public Sites application
 
+The product uses three-part versions: major changes / security or medium
+changes / small adjustments. Checkpoint 100 is the 1.0.0 milestone baseline;
+the first delivery displaying the new scheme is 1.0.1. See the
+[versioning policy](sites-current/docs/VERSIONING.md) and the authoritative
+[`sites-current/package.json`](sites-current/package.json). Runtime
+`/api/health.appVersion` identifies the product; `siteRelease` is the independent
+numeric Sites checkpoint. Versioning does not change data freshness or audit
+status.
+
 The maintained source of the live application is
 [`sites-current/`](sites-current/README.md). It contains the full bilingual
 frontend, Worker/API backend, D1 persistence for shared macro snapshots, local-only preferences,
