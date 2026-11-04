@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createDailyRefreshBudget, dailyRefreshRetryAt, scheduleDailyRefresh, DAILY_REFRESH_RETRY_MS } from '../lib/daily-refresh.mjs';
+import { createDailyRefreshBudget, dailyRefreshRetryAt, scheduleDailyRefresh, DAILY_REFRESH_RETRY_MS, madridRefreshWindow, nextMadridRefreshWindow } from '../lib/daily-refresh.mjs';
 
 const boundary = Date.parse('2026-10-29T11:00:00Z');
 const iso = stamp => new Date(stamp).toISOString();
@@ -22,7 +22,7 @@ function runtime(load) {
     }),
     async fireNext() {
       const [id, timer] = [...timers].sort((a, b) => a[1].at - b[1].at)[0];
-      timers.delete(id); now = timer.at; await timer.callback();
+      timers.delete(id); now = Math.max(now, timer.at); await timer.callback();
     },
     nextAt: () => Math.min(...[...timers.values()].map(timer => timer.at)),
   };
@@ -34,7 +34,8 @@ test('three automatic failures exhaust the mounted-window budget, spaced five mi
   const cleanup = r.mount();
   for (let index = 0; index < 3; index++) await r.fireNext();
   assert.equal(r.calls.length, 3);
-  assert.equal(r.timers.size, 0);
+  assert.equal(r.timers.size, 1);
+  assert.equal(r.nextAt(), nextMadridRefreshWindow(boundary));
   assert.equal(r.budget.attempts, 3);
   for (let index = 1; index < r.calls.length; index++) {
     assert.equal(r.calls[index].at - r.calls[index - 1].at, DAILY_REFRESH_RETRY_MS + 10000);
@@ -86,7 +87,7 @@ test('effect teardown and setup for the same boundary preserve both budget and r
   await r.fireNext();
   cleanup(); cleanup = r.mount();
   assert.equal(r.calls.length, 3);
-  assert.equal(r.timers.size, 0);
+  assert.equal(r.timers.size, 1);
   cleanup();
 });
 
@@ -151,4 +152,104 @@ test('late cancelled completion preserves spacing and advertised deadline for a 
   assert.ok(r.calls[1].at - completionAt >= DAILY_REFRESH_RETRY_MS);
   assert.ok(r.calls[1].at >= advertisedRetryAt);
   cleanupReplacement();
+});
+
+
+test('exhaustion rolls over automatically and an old-boundary remount cannot replenish quota', async () => {
+  const r = runtime(async () => ({ kind: 'failed' }));
+  let cleanup = r.mount();
+  for (let i = 0; i < 3; i++) await r.fireNext();
+  await r.fireNext();
+  assert.equal(r.calls.length, 4);
+  assert.equal(r.budget.boundary, nextMadridRefreshWindow(boundary));
+  assert.equal(r.budget.attempts, 1);
+  cleanup(); cleanup = r.mount();
+  assert.equal(r.budget.attempts, 1);
+  assert.equal(r.budget.boundary, nextMadridRefreshWindow(boundary));
+  cleanup();
+  assert.equal(r.timers.size, 0);
+});
+
+test('Madrid noon follows spring and autumn DST calendars', () => {
+  const spring = Date.parse('2026-03-28T11:00:00Z');
+  const autumn = Date.parse('2026-10-24T10:00:00Z');
+  assert.equal(nextMadridRefreshWindow(spring) - spring, 23 * 3600000);
+  assert.equal(nextMadridRefreshWindow(autumn) - autumn, 25 * 3600000);
+  assert.equal(madridRefreshWindow(Date.parse('2026-03-29T09:59:59Z')), spring);
+  assert.equal(madridRefreshWindow(Date.parse('2026-03-29T10:00:00Z')), nextMadridRefreshWindow(spring));
+  assert.equal(madridRefreshWindow(Date.parse('2026-10-25T10:59:59Z')), autumn);
+  assert.equal(madridRefreshWindow(Date.parse('2026-10-25T11:00:00Z')), nextMadridRefreshWindow(autumn));
+});
+
+test('cooldown beyond the next window survives rollover and stale remount', async () => {
+  const deadline = Date.parse('2026-10-31T15:00:00Z');
+  const r = runtime(async () => ({ kind: 'failed', retryAt: deadline }));
+  let cleanup = r.mount();
+  await r.fireNext();
+  assert.equal(r.nextAt(), deadline);
+  r.advance(26 * 3600000);
+  cleanup(); cleanup = r.mount();
+  assert.equal(r.budget.attempts, 0);
+  assert.equal(r.budget.nextAt, deadline);
+  assert.equal(r.nextAt(), deadline);
+  await r.fireNext();
+  assert.equal(r.calls.length, 2);
+  assert.equal(r.calls[1].at, deadline);
+  assert.equal(r.budget.boundary, madridRefreshWindow(deadline));
+  cleanup();
+});
+
+test('background wake skips missed days without catch-up requests', async () => {
+  const r = runtime(async () => ({ kind: 'failed' }));
+  const cleanup = r.mount();
+  for (let i = 0; i < 3; i++) await r.fireNext();
+  r.advance(4 * 24 * 3600000);
+  const resumed = r.now;
+  await r.fireNext();
+  assert.equal(r.calls.length, 4);
+  assert.equal(r.calls[3].at, resumed);
+  assert.equal(r.budget.boundary, madridRefreshWindow(resumed));
+  assert.equal(r.budget.attempts, 1);
+  cleanup();
+});
+
+test('an active request crossing noon preserves Retry-After and completion spacing in the new window', async () => {
+  for (const advertisedDelay of [20 * 60000, 0]) {
+    let finish;
+    const r = runtime(() => new Promise(resolve => { finish = resolve; }));
+    const next = nextMadridRefreshWindow(boundary);
+    // The jitter starts this request 30 seconds before Madrid noon.
+    r.advance(next - 32000 - r.now);
+    const cleanup = r.mount();
+    const pending = r.fireNext();
+    assert.equal(r.calls[0].at, next - 30000);
+    r.advance(90000);
+    const completedAt = r.now;
+    finish({ kind: 'failed', retryAt: advertisedDelay ? completedAt + advertisedDelay : 0 });
+    await pending;
+    assert.equal(r.budget.boundary, next);
+    assert.equal(r.budget.attempts, 0, 'old-window request cannot consume the new quota');
+    const deadline = completedAt + Math.max(DAILY_REFRESH_RETRY_MS, advertisedDelay);
+    assert.equal(r.budget.nextAt, deadline);
+    assert.equal(r.nextAt(), deadline);
+    assert.equal(r.calls.length, 1, 'crossing noon must not trigger an immediate extra POST');
+    cleanup();
+    assert.equal(r.timers.size, 0);
+  }
+});
+
+
+test('exhausted timers wake at actual DST noon and cleanup removes rollover work', async () => {
+  for (const day of ['2026-03-28T11:00:00Z', '2026-10-24T10:00:00Z']) {
+    const start = Date.parse(day);
+    const r = runtime(async () => ({ kind: 'failed' }));
+    r.advance(start + 1000 - r.now);
+    r.setLatest({ requestedAt: iso(start - 3600000), provenance: { mode: 'stale-persisted' } });
+    const cleanup = r.mount(start);
+    for (let i = 0; i < 3; i++) await r.fireNext();
+    assert.equal(r.calls.length, 3);
+    assert.equal(r.nextAt(), nextMadridRefreshWindow(start));
+    cleanup();
+    assert.equal(r.timers.size, 0);
+  }
 });

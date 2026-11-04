@@ -1,4 +1,5 @@
 import { validBitcoinQuote } from './bitcoin-quote.mjs';
+import { retainedSeriesIsNewer } from './observation-integrity.mjs';
 
 /** Preserve independently verified series if a later partial response loses them.
  * Model readiness remains that of the new response; recovery never invents scores.
@@ -7,7 +8,9 @@ export function retainDashboardSeries(previous, incoming) {
   if (!incoming || !incoming.series || !incoming.latest || !incoming.provenance || !incoming.bitcoin) throw new Error('Invalid snapshot shape');
   const next={...incoming,series:{...incoming.series},latest:{...incoming.latest},freshness:[...(incoming.freshness??[])]};
   for(const [key,points] of Object.entries(previous.series??{})) {
-    if(!points?.length || (next.series[key]?.length && next.series[key].at(-1).date>=points.at(-1).date)) continue;
+    // Match the writer's reference-period comparison: a month-end fallback
+    // label must not displace a validated revision of the same monthly period.
+    if(!retainedSeriesIsNewer(key,points,next.series[key])) continue;
     next.series[key]=points;
     next.latest[key]=points.at(-1);
     const old=(previous.freshness??[]).find(row=>row.key===key);

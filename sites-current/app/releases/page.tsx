@@ -19,6 +19,17 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
     </section>
     <div className="release-history">
       <article className="release-entry">
+        <span className="eyebrow">1.1.0 · <time dateTime="2026-11-04">04/11/2026</time></span>
+        <h2>{en ? "Recovery across days and sources" : "Recuperación entre días y fuentes"}</h2>
+        <ul>
+          <li>{en ? "An open tab can retry on a new daily window after exhausting the previous day's attempts, while respecting provider cooldowns." : "Una pestaña abierta puede reintentar en una nueva ventana diaria tras agotar los intentos del día anterior, respetando las pausas de los proveedores."}</li>
+          <li>{en ? "Monthly revisions remain visible when providers label the same month with different days." : "Las revisiones mensuales siguen visibles cuando los proveedores etiquetan el mismo mes con días distintos."}</li>
+          <li>{en ? "Refresh feedback follows the selected language, including during an active request." : "Los avisos de actualización siguen el idioma elegido, incluso durante una petición en curso."}</li>
+          <li>{en ? "A targeted build dependency security patch, without changing the economic model." : "Parche de seguridad acotado en una dependencia de build, sin cambiar el modelo económico."}</li>
+        </ul>
+        <p>{en ? "Missing data remains missing and prior verified observations stay available during recovery." : "Los datos ausentes siguen identificados y las observaciones verificadas anteriores se conservan durante la recuperación."}</p>
+      </article>
+      <article className="release-entry">
         <span className="eyebrow">1.0.1 · <time dateTime="2026-10-30">30/10/2026</time></span>
         <h2>{en ? "A version you can follow" : "Una versión que puedes seguir"}</h2>
         <ul>
@@ -37,8 +48,8 @@ export default async function ReleasesPage({ searchParams }: { searchParams: Pro
         <h2 id="version-policy">{en ? "How versions change" : "Cómo cambia la versión"}</h2>
         <dl className="release-policy">
           <div><dt>2.0.0</dt><dd>{en ? "Major changes: substantial new capabilities or changes to the model or architecture." : "Cambios mayores: nuevas capacidades sustanciales o cambios de modelo o arquitectura."}</dd></div>
-          <div><dt>1.1.0</dt><dd>{en ? "Security fixes and medium-sized improvements." : "Correcciones de seguridad y mejoras de alcance medio."}</dd></div>
-          <div><dt>1.0.2</dt><dd>{en ? "Small adjustments: spacing, copy and localized usability fixes." : "Ajustes pequeños: márgenes, textos y correcciones puntuales de uso."}</dd></div>
+          <div><dt>1.2.0</dt><dd>{en ? "Security fixes and medium-sized improvements." : "Correcciones de seguridad y mejoras de alcance medio."}</dd></div>
+          <div><dt>1.1.1</dt><dd>{en ? "Small adjustments: spacing, copy and localized usability fixes." : "Ajustes pequeños: márgenes, textos y correcciones puntuales de uso."}</dd></div>
         </dl>
         <p>{en ? "These are examples of the next version in each category, not announced releases. A software version does not describe whether market data is fresh: each observation retains its own date and status." : "Son ejemplos del siguiente número en cada categoría, no anuncios de futuras entregas. La versión del programa no indica si los datos de mercado están al día: cada observación conserva su fecha y estado."}</p>
       </section>

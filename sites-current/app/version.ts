@@ -4,7 +4,7 @@ import packageInfo from "../package.json";
 // Package metadata is the single source of the public product version.
 export const APP_VERSION = packageInfo.version;
 // Internal Sites checkpoint; retained as a number for existing automation.
-export const SITE_RELEASE = 101;
+export const SITE_RELEASE = 102;
 export const ENGINE_VERSION = "abcm-sites-7-ten-signal";
 export const CONTEXT_MODEL_VERSION = "abcm-six-force-2";
 export const DATA_SCHEMA_VERSION = "1.5.0";

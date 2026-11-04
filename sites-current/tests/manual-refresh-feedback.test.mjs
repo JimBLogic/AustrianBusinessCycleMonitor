@@ -6,6 +6,7 @@ import { manualRefreshBlocked } from '../lib/refresh-policy.mjs';
 import { retainDashboardSeries } from '../lib/dashboard-recovery.mjs';
 import { validTimestamp } from '../lib/timestamp.mjs';
 import { dailyRefreshRetryAt } from '../lib/daily-refresh.mjs';
+import { formatRefreshNotice } from '../lib/refresh-notice.mjs';
 
 const compile = code => 'data:text/javascript;base64,' + Buffer.from(ts.transpileModule(code, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
@@ -49,7 +50,7 @@ async function runLoad({ existing = null, sameEdition = true, mode = 'manual-coo
   if (existing) preferences.saveManualRefreshPreference(existing, attemptAt - 1);
   const old = { requestedAt: new Date(attemptAt - 60000).toISOString(), series: {}, latest: {}, bitcoin: { price: 80000 }, freshness: [], provenance: { mode: 'daily-persisted' } };
   const next = { ...old, requestedAt: sameEdition ? old.requestedAt : new Date(attemptAt).toISOString(), refreshMode: mode, cache: { nextManualAt: new Date(attemptAt + 120000).toISOString() } };
-  const state = { baselineCalls: [], captureCalls: 0, deadline: null, notice: '', fetches: 0 };
+  const state = { baselineCalls: [], captureCalls: 0, deadline: null, notice: null, inFlightNotice: null, fetches: 0 };
   const requestState = { current: { lang, manualRefreshNext: null } };
   class Clock extends Date { static now() { return now; } }
   const noop = () => {};
@@ -57,7 +58,12 @@ async function runLoad({ existing = null, sameEdition = true, mode = 'manual-coo
     useCallback: fn => fn, requestState, dataRequestPending: { current: false },
     manualRefreshBlocked: (userInitiated, nextAllowedAt) => manualRefreshBlocked(userInitiated, nextAllowedAt, now),
     setLoading: noop, setRefreshNotice: value => { state.notice = value; },
-    fetch: async () => { state.fetches++; now += 60000; return { ok: true, headers: new Headers(), json: async () => next }; },
+    fetch: async () => {
+      state.fetches++;
+      state.inFlightNotice = state.notice;
+      now += 60000;
+      return { ok: true, headers: new Headers(), json: async () => next };
+    },
     retainDashboardSeries, previousData: { current: old }, setData: noop,
     snapshotBaseline: () => { state.captureCalls++; return baseline; },
     saveManualRefreshPreference: preferences.saveManualRefreshPreference,
@@ -81,9 +87,10 @@ test('shared cooldown retains the edition without a false baseline or a synchron
   assert.deepEqual(result.baselineCalls, []);
   assert.equal(result.captureCalls, 0);
   assert.equal(result.persisted.previousSnapshot, null);
-  assert.match(result.notice, /Edición conservada/);
-  assert.match(result.notice, /Espera compartida: 1 min/);
-  assert.doesNotMatch(result.notice, /sincronizada/);
+  const notice = formatRefreshNotice(result.notice, 'es');
+  assert.match(notice, /Edición conservada/);
+  assert.match(notice, /Espera compartida: 1 min/);
+  assert.doesNotMatch(notice, /sincronizada/);
 });
 
 test('shared cooldown preserves an existing comparison instead of replacing it', async () => {
@@ -91,8 +98,8 @@ test('shared cooldown preserves an existing comparison instead of replacing it',
   assert.deepEqual(result.persisted.previousSnapshot, baseline);
   assert.deepEqual(result.baselineCalls, []);
   assert.equal(result.captureCalls, 0);
-  assert.match(result.notice, /Edition retained/);
-  assert.match(result.notice, /Shared wait: 1 min/);
+  assert.match(formatRefreshNotice(result.notice, 'en'), /Edition retained/);
+  assert.match(formatRefreshNotice(result.notice, 'en'), /Shared wait: 1 min/);
 });
 
 test('a newly received edition keeps the normal comparison behavior even if a concurrent writer triggered shared cooldown', async () => {
@@ -100,5 +107,20 @@ test('a newly received edition keeps the normal comparison behavior even if a co
   assert.deepEqual(result.baselineCalls, [baseline]);
   assert.equal(result.captureCalls, 1);
   assert.deepEqual(result.persisted.previousSnapshot, baseline);
-  assert.match(result.notice, /Instantánea sincronizada/);
+  assert.match(formatRefreshNotice(result.notice, 'es'), /Instantánea sincronizada/);
+});
+
+test('a request started in ES translates in-flight and completed results to EN without changing its comparison', async () => {
+  const result = await runLoad({ sameEdition: false, lang: 'es' });
+  const originalNotice = structuredClone(result.notice);
+  const originalBaseline = structuredClone(result.persisted.previousSnapshot);
+  assert.match(formatRefreshNotice(result.inFlightNotice, 'es'), /Consultando fuentes/);
+  assert.match(formatRefreshNotice(result.inFlightNotice, 'en'), /Checking sources/);
+  assert.match(formatRefreshNotice(result.notice, 'es'), /Instantánea sincronizada/);
+  assert.match(formatRefreshNotice(result.notice, 'en'), /Snapshot synchronized/);
+  assert.deepEqual(result.notice, originalNotice, 'language changes preserve the completed request outcome');
+  assert.deepEqual(result.persisted.previousSnapshot, originalBaseline, 'language changes preserve the saved comparison');
+  assert.deepEqual(result.baselineCalls, [baseline]);
+  assert.equal(result.captureCalls, 1);
+  assert.equal(result.fetches, 1);
 });
