@@ -6,8 +6,6 @@ on:
   push:
     branches: [master]
     paths: ['automation/production-watch.mjs', 'automation/production-health-report.mjs', 'automation/production-health-report.test.mjs', '.github/workflows/production-watch.yml', 'sites-current/app/version.ts']
-  schedule:
-    - cron: '37 * * * *'
   workflow_dispatch:
 permissions:
   contents: read

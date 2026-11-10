@@ -6,8 +6,6 @@ on:
   push:
     branches: [master]
     paths: ['qa/**', 'sites-current/**', 'automation/production-write-policy*', '.github/workflows/browser-smokes.yml']
-  schedule:
-    - cron: '23 12 * * *'
   workflow_dispatch:
 permissions:
   contents: read

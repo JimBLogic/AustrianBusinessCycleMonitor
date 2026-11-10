@@ -9,8 +9,6 @@ on:
       - 'sites-current/lib/production-verification.mjs'
       - 'sites-current/lib/timestamp.mjs'
       - 'automation/production-daily.mjs'
-  schedule:
-    - cron: '0 10,11 * * *'
   workflow_dispatch:
 permissions:
   contents: read
