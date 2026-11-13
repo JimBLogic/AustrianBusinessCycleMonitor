@@ -16,9 +16,10 @@ frontend, Worker/API backend, D1 persistence for shared macro snapshots, local-o
 - Local full-stack start: `cd sites-current && npm run install:ci && npm run dev`
 - Complete reconstruction and hosting guide: [`sites-current/README.md`](sites-current/README.md)
 - Automated desktop, iPhone/WebKit and Android/Chromium checks: [`qa/`](qa/README.md).
-- Production verification runs hourly; browser checks run daily, with 35-day
-  evidence retention and no planned schedule expiry. GitHub Actions records
-  failures without automatically deploying or rolling back.
+- Daily production updates run in Sites. GitHub Actions checks integrity and
+  browser behavior on relevant code changes and manual dispatch, with 35-day
+  browser evidence retention. After verifying a new Sites deployment, update
+  the production release pin in [the integrity check](automation/production-watch.mjs).
 
 Do not derive the active release from a README title. The canonical source value
 is [`sites-current/app/version.ts`](sites-current/app/version.ts), and the
