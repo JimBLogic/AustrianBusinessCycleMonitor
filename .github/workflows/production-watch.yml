@@ -1,4 +1,4 @@
-name: Hourly production integrity watch
+name: Production integrity watch
 on:
   pull_request:
     branches: [master]

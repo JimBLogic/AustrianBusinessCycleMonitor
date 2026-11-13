@@ -1,16 +1,15 @@
 import { verifyProduction } from '../sites-current/lib/production-verification.mjs';
 import assert from 'node:assert/strict';
-import { appendFile, readFile } from 'node:fs/promises';
+import { appendFile } from 'node:fs/promises';
 import { assessEconomicHealth, economicHealthSummary } from './production-health-report.mjs';
 const origin='https://austrian-business-cycle-monitor.jimblogic.chatgpt.site';
+// Update after verifying a Sites deployment. The GitHub mirror can lag production.
+const expectedRelease=104; // Sites source 9e48b7fa73d333d22a04b852f53d65b2e56c93fa
 const get=async path=>{
   const response=await fetch(`${origin}${path}`,{signal:AbortSignal.timeout(120000),cache:'no-store'});
   assert.ok(response.ok,`${path} HTTP ${response.status}`);return response.json();
 };
 const data=await get('/api/data'),health=await get('/api/health');
-const version=await readFile(new URL('../sites-current/app/version.ts',import.meta.url),'utf8');
-const expectedRelease=Number(version.match(/SITE_RELEASE = (\d+);/)?.[1]);
-assert.ok(Number.isInteger(expectedRelease),'missing canonical release identity');
 verifyProduction(data,health,{expectedRelease});
 const economic=assessEconomicHealth(health);
 assert.ok(Date.now()-Date.parse(data.requestedAt)<36*60*60*1000,'daily snapshot is more than 36h old');
