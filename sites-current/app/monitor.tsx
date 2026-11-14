@@ -3,6 +3,7 @@
 import { retainDashboardSeries } from "@/lib/dashboard-recovery.mjs";
 import { validChartPoints, timePosition, chartSegments } from "@/lib/chart-geometry.mjs";
 import { manualRefreshBlocked } from "@/lib/refresh-policy.mjs";
+import { formatRefreshNotice, type RefreshNotice } from "@/lib/refresh-notice.mjs";
 import { createDailyRefreshBudget, dailyRefreshRetryAt, scheduleDailyRefresh } from "@/lib/daily-refresh.mjs";
 import { validTimestamp } from "@/lib/timestamp.mjs";
 import { validBitcoinQuote } from "@/lib/bitcoin-quote.mjs";
@@ -20,7 +21,7 @@ import {
   type WatchPreference,
 } from "@/lib/local-preferences";
 import { ClearLocalPreferencesButton } from "./privacidad/ClearLocalPreferencesButton";
-import { CONTEXT_MODEL_VERSION, DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "./version";
+import { APP_VERSION, CONTEXT_MODEL_VERSION, DATA_SCHEMA_VERSION, ENGINE_VERSION, SITE_RELEASE, SOURCE_MIRROR } from "./version";
 
 type Lang = "en" | "es";
 type SignalKey = "money" | "monetaryStance" | "creditRisk" | "termStructure" | "production" | "labour" | "consumerPrices" | "resourcesFx" | "debtBurden" | "fiscalImpulse";
@@ -815,7 +816,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
   const [menu, setMenu] = useState(false);
   const [activeSection, setActiveSection] = useState("top");
   const [selectedMix, setSelectedMix] = useState(["m2", "sp500", "gold", "bitcoin"]);
-  const [refreshNotice, setRefreshNotice] = useState("");
+  const [refreshNotice, setRefreshNotice] = useState<RefreshNotice | null>(null);
   const [manualRefreshNext, setManualRefreshNext] = useState<number | null>(null);
   const [detail, setDetail] = useState<Detail | null>(null);
   const [visitBaseline, setVisitBaseline] = useState<VisitBaseline | null>(null);
@@ -855,7 +856,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
     return () => window.removeEventListener("abcm:preferences-cleared", clear);
   }, []);
   const load = useCallback(async (manual = false, userInitiated = false, signal?: AbortSignal): Promise<DataLoadResult> => {
-    const {lang, manualRefreshNext} = requestState.current;
+    const {manualRefreshNext} = requestState.current;
     if (signal?.aborted) return { kind: "cancelled", retryAt: 0 };
     if (dataRequestPending.current) return { kind: "busy", retryAt: 0 };
     if (manual && manualRefreshBlocked(userInitiated, manualRefreshNext)) return { kind: "blocked", retryAt: manualRefreshNext ?? 0 };
@@ -868,7 +869,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
     signal?.addEventListener("abort", abortRequest, { once: true });
     dataRequestPending.current = true;
     setLoading(true);
-    setRefreshNotice(manual ? (lang === "es" ? "Consultando fuentes y comparando con tu instantánea anterior…" : "Checking sources and comparing with your previous snapshot…") : "");
+    setRefreshNotice(manual ? { kind: "checking" } : null);
     try {
       const response = await fetch("/api/data", {
         signal: requestController.signal,
@@ -908,17 +909,13 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
         const sharedNext = validTimestamp(next.cache?.nextManualAt);
         const sharedWait = sharedNext ? Math.max(0, Math.ceil((sharedNext.getTime() - Date.now()) / 60_000)) : null;
         setRefreshNotice(sharedCooldown
-          ? lang === "es"
-            ? `Edición conservada: el límite compartido impidió generar una nueva.${sharedWait == null ? "" : ` Espera compartida: ${sharedWait} min.`}`
-            : `Edition retained: the shared cooldown prevented a new edition.${sharedWait == null ? "" : ` Shared wait: ${sharedWait} min.`}`
-          : lang === "es"
-            ? `Instantánea sincronizada · BTC ${btcMove == null ? "sin dato" : `${btcMove >= 0 ? "+" : ""}$${format(btcMove, 0)}`} · ${changedMacro} series macro con nueva fecha`
-            : `Snapshot synchronized · BTC ${btcMove == null ? "unavailable" : `${btcMove >= 0 ? "+" : ""}$${format(btcMove, 0)}`} · ${changedMacro} macro series with a new date`);
+          ? { kind: "retained", sharedWait }
+          : { kind: "synchronized", btcMove, changedMacro });
       }
       return { kind: "received", requestedAt: next.requestedAt, nextDailyAt: next.cache?.nextDailyAt, retryAt };
     } catch {
       if (signal?.aborted) return { kind: "cancelled", retryAt };
-      setRefreshNotice(lang === "es" ? "No se pudo completar la consulta. Se conserva el último snapshot válido." : "Fresh query failed. Keeping the last valid snapshot.");
+      setRefreshNotice({ kind: "failed" });
       return { kind: "failed", retryAt };
     } finally {
       timeoutSignal.removeEventListener("abort", abortRequest);
@@ -1765,7 +1762,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
                   ? (lang === "es" ? `La edición diaria tiene ${Math.floor(snapshotAgeMinutes / 60)} h. La próxima lectura solicitará una edición nueva; mientras tanto se conserva esta copia verificada.` : `The daily edition is ${Math.floor(snapshotAgeMinutes / 60)} h old. The next read will request a new edition; this verified copy remains available meanwhile.`)
                   : (lang === "es" ? `Edición principal de las 12:00 (hora española). Cada navegador puede pedir una comparación con su estado anterior cada 30 minutos.` : `Main edition at 12:00 Spain time. Each browser can request a comparison with its previous state every 30 minutes.`)}</p>
             </div>
-            {refreshNotice && <div className={`refresh-notice ${refreshNotice.includes("failed") || refreshNotice.includes("No se") ? "error" : ""}`} role="status" aria-live="polite">{refreshNotice}</div>}
+            {refreshNotice && <div className={`refresh-notice ${refreshNotice.kind === "failed" ? "error" : ""}`} role="status" aria-live="polite">{formatRefreshNotice(refreshNotice, lang)}</div>}
           </div>
           <article className="regime-card">
             <div className="card-top"><span>{lang === "es" ? "BANDA DEL ÍNDICE" : "INDEX SCORE BAND"}</span><span className="status">{regimeStatus}</span></div>
@@ -2354,7 +2351,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
           </article>
           <article className="freshness-panel" aria-labelledby="source-status-title">
             <div className="backend-title">
-              <div><span className="kicker">{lang === "es" ? `MOTOR ${ENGINE_VERSION} · SITES V${SITE_RELEASE}` : `ENGINE ${ENGINE_VERSION} · SITES V${SITE_RELEASE}`}</span><h3 id="source-status-title">{lang === "es" ? "Estado de las fuentes" : "Source status"}</h3></div>
+              <div><span className="kicker">{lang === "es" ? `ABCM ${APP_VERSION} · MOTOR ${ENGINE_VERSION} · CHECKPOINT ${SITE_RELEASE}` : `ABCM ${APP_VERSION} · ENGINE ${ENGINE_VERSION} · CHECKPOINT ${SITE_RELEASE}`}</span><h3 id="source-status-title">{lang === "es" ? "Estado de las fuentes" : "Source status"}</h3></div>
               <span className={`backend-live ${sourceHealthState}`}><i aria-hidden="true" />{sourceHealthState === "ok" ? (lang === "es" ? "AL DÍA" : "CURRENT") : sourceHealthState === "partial" ? (lang === "es" ? "COBERTURA PARCIAL" : "PARTIAL COVERAGE") : (lang === "es" ? "SIN DATOS ACTUALES" : "NO CURRENT DATA")}</span>
             </div>
             <p>{lang === "es"
@@ -2563,7 +2560,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
       <footer>
         <span>{lang === "es" ? "ABCM · CONTEXTO HOY. MEJORES DECISIONES MAÑANA." : "ABCM · CONTEXT TODAY. BETTER DECISIONS TOMORROW."}</span>
         <span>
-          SITES V{SITE_RELEASE} · DATA {DATA_SCHEMA_VERSION} · <a href="/api/health" target="_blank" rel="noreferrer">{lang === "es" ? "Integridad ↗" : "Integrity ↗"}</a> · <a href={`/learn?lang=${lang}`} target="_blank" rel="noreferrer">{lang === "es" ? "Aprende ↗" : "Learn ↗"}</a> · <a href="/privacidad">{lang === "es" ? "Privacidad" : "Privacy"}</a> · JimBLogic · 2026 · <a href="https://github.com/JimBLogic/AustrianBusinessCycleMonitor">GitHub ↗</a>
+          <a href={`/releases?lang=${lang}`} aria-label={lang === "es" ? `Versión ${APP_VERSION}: ver novedades` : `Version ${APP_VERSION}: view what's new`}>ABCM {APP_VERSION} · {lang === "es" ? "Novedades" : "What's new"}</a> · <a href="/api/health" target="_blank" rel="noreferrer">{lang === "es" ? "Integridad ↗" : "Integrity ↗"}</a> · <a href={`/learn?lang=${lang}`} target="_blank" rel="noreferrer">{lang === "es" ? "Aprende ↗" : "Learn ↗"}</a> · <a href="/privacidad">{lang === "es" ? "Privacidad" : "Privacy"}</a> · JimBLogic · 2026 · <a href="https://github.com/JimBLogic/AustrianBusinessCycleMonitor">GitHub ↗</a>
         </span>
         <ClearLocalPreferencesButton compact language={lang} />
       </footer>
@@ -2574,7 +2571,7 @@ export default function Monitor({ initialData }: {initialData?:Data|null}) {
           <div className="detail-head"><h2 id="detail-title">{detail.title}</h2><strong>{detail.value}</strong></div>
           <div className="detail-layer fact"><b>{detail.factLabel ?? (lang === "es" ? "QUÉ DICE EL DATO" : "WHAT THE DATA SAYS")}</b><p>{detail.fact}</p></div>
           <div className="detail-layer lens"><b>{detail.interpretationLabel ?? (lang === "es" ? "INTERPRETACIÓN AUSTRIACA CONDICIONAL" : "CONDITIONAL AUSTRIAN INTERPRETATION")}</b><p>{detail.interpretation}</p></div>
-          <div className="detail-layer watch"><b>{detail.watchLabel ?? (lang === "es" ? "QUÉ PODRÍA CONFIRMAR O INVALIDAR LA LECTURA" : "WHAT COULD CONFIRM OR INVALIDATE THE READING")}</b><p>{detail.watch}</p></div>
+          <div className="detail-layer detail-watch"><b>{detail.watchLabel ?? (lang === "es" ? "QUÉ PODRÍA CONFIRMAR O INVALIDAR LA LECTURA" : "WHAT COULD CONFIRM OR INVALIDATE THE READING")}</b><p>{detail.watch}</p></div>
           <div className="detail-disclaimer">{lang === "es" ? "Información educativa y análisis macroeconómico experimental. No constituye asesoramiento financiero, recomendación de inversión ni señal de compraventa." : "Educational information and experimental macro analysis. This is not financial advice, an investment recommendation or a trading signal."}</div>
           <a className="detail-source" href={detail.sourceUrl} target="_blank" rel="noopener noreferrer">{detail.sourceLabel} ↗</a>
         </article>

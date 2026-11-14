@@ -59,11 +59,16 @@ async function insert(db,id,requestedAt,value) {
 }
 
 test('a generation raced by another durable writer returns that actual edition, not discarded values',async()=>{
-  let concurrentAt,inserted=false;
+  let concurrentAt,concurrentWrite;
   const {mf,db}=await runtime(async db=>{
-    if(inserted) return;
-    inserted=true;concurrentAt=new Date().toISOString();
-    await insert(db,'concurrent',concurrentAt,24000);
+    // A timed-out first provider call may be followed by another while its
+    // D1 insertion is still pending. Every valid response must await the same
+    // durable commit, rather than treating an insertion attempt as completed.
+    concurrentWrite ??= (async () => {
+      concurrentAt=new Date().toISOString();
+      await insert(db,'concurrent',concurrentAt,24000);
+    })();
+    await concurrentWrite;
   });
   try {
     await insert(db,'previous',new Date(Date.now()-86400000).toISOString(),23000);
